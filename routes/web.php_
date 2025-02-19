@@ -1,0 +1,15 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+   // return view('welcome');
+return "Olá Sejam Bem vindo a Api Totem ";
+});
+/*
+Route::get('/produto', 'App\Http\Controllers\api\ProdutoController@index');
+Route::post('/produto', 'App\Http\Controllers\api\ProdutoController@store');
+Route::get('/produto/{id}', 'App\Http\Controllers\api\ProdutoController@show');
+Route::put('/produto/{id}', 'App\Http\Controllers\api\ProdutoController@update');
+Route::delete('/produto/{id}', 'App\Http\Controllers\api\ProdutoController@destroy');
+*/
