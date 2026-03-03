@@ -1,0 +1,73 @@
+RELACIONAMENTOS DO SISTEMA (RESUMO)
+
+1) EMPRESA
+- Tabela: empresa
+- Model: Empresa
+- Relacionamentos:
+  * Empresa tem muitos Departamentos (hasMany)
+  * Empresa tem muitos Grupos (hasMany)
+  * Empresa tem muitas Configuracoes (hasMany)
+  * Empresa tem muitos Users (hasMany)
+
+2) DEPARTAMENTO
+- Tabela: departamentos
+- Model: Departamento
+- Campos principais: id, nome, empresa_id
+- Relacionamentos:
+  * Departamento pertence a Empresa (belongsTo)
+  * Departamento tem muitos Grupos (hasMany)
+  * Departamento tem muitos Produtos (hasMany)
+
+3) GRUPO
+- Tabela: grupos
+- Model: Grupo
+- Campos principais: id, nome, departamento_id, empresa_id
+- Relacionamentos:
+  * Grupo pertence a Empresa (belongsTo)
+  * Grupo pertence a Departamento (belongsTo)
+  * Grupo tem muitos Produtos (hasMany)
+
+4) PRODUTO
+- Tabela: produto
+- Model: Produto
+- Campos principais: CODIGO, NOME, cnpj_cpf, departamento_id, grupo_id
+- Relacionamentos:
+  * Produto pertence a Departamento (belongsTo)
+  * Produto pertence a Grupo (belongsTo)
+- Observacao:
+  * Produto NAO tem empresa_id direto na tabela.
+  * O isolamento por empresa usa cnpj_cpf + validacoes de departamento/grupo por empresa.
+
+5) CONFIGURACAO
+- Tabela: configuracoes
+- Model: Configuracao
+- Campo principal de vinculo: empresa_id
+- Relacionamentos:
+  * Configuracao pertence a Empresa (belongsTo)
+
+6) USER
+- Tabela: users
+- Model: User
+- Campo principal de vinculo: empresa_id
+- Relacionamentos:
+  * User pertence a Empresa (belongsTo)
+
+--------------------------------------------------
+REGRAS DE ISOLAMENTO (MULTIEMPRESA)
+--------------------------------------------------
+- WEB (usuarios nao-admin):
+  * Filtra dados por empresa_id/cnpj do usuario logado.
+  * Nao-admin so enxerga dados da propria empresa.
+
+- API:
+  * Endpoints validam cnpj_cpf informado.
+  * Dados de produtos, grupos, departamentos e configuracao sao retornados somente da empresa do cnpj_cpf enviado.
+
+--------------------------------------------------
+MIGRATIONS IMPORTANTES
+--------------------------------------------------
+- add_empresa_id_to_departamentos_grupos_configuracoes
+- add_empresa_id_to_users_table
+- add_foreign_keys_to_produto
+- make_departamento_grupo_required_in_produto
+- update_produto_codigo_unique_per_cnpj

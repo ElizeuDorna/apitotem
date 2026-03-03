@@ -7,6 +7,48 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Usuário padrão em novo servidor
+
+Para garantir um usuário padrão após migração para outro servidor, este projeto usa `UserSeeder` com `updateOrCreate`.
+
+Defina no `.env`:
+
+- `DEFAULT_ADMIN_EMAIL`
+- `DEFAULT_ADMIN_DOCUMENT` (somente números)
+- `DEFAULT_ADMIN_PASSWORD`
+
+Em produção, `DEFAULT_ADMIN_PASSWORD` é obrigatório.
+
+Depois execute:
+
+- `php artisan migrate --force`
+- `php artisan db:seed --class=UserSeeder --force`
+
+Isso cria (ou atualiza) o usuário padrão de forma idempotente.
+
+## Swagger (OpenAPI)
+
+A documentação da API foi configurada com L5-Swagger.
+
+Principais arquivos:
+
+- `config/l5-swagger.php`
+- `app/OpenApi/ApiDocumentation.php`
+
+Passos para usar:
+
+1. Defina no `.env`:
+	- `L5_SWAGGER_TITLE="API Totem"`
+	- `L5_SWAGGER_CONST_HOST="http://localhost:8000"` (ou URL do seu servidor)
+2. Gere os arquivos da documentação:
+	- `php artisan l5-swagger:generate`
+3. Acesse no navegador:
+	- `/api/documentation`
+
+Observação:
+
+- O ambiente CLI precisa das extensões PHP XML/DOM habilitadas para comandos Artisan relacionados ao Swagger.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

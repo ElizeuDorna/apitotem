@@ -1,0 +1,869 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "API Totem",
+        "description": "Documentação da API Totem com autenticação por token de empresa e token de dispositivo (TV).",
+        "version": "2.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Servidor local"
+        }
+    ],
+    "paths": {
+        "/admin/ativar-tv": {
+            "get": {
+                "tags": [
+                    "Admin TV"
+                ],
+                "summary": "Exibe página de ativação de TV no painel admin",
+                "operationId": "a6df2e4dfa3becdf6243d6b56cf5b989",
+                "responses": {
+                    "200": {
+                        "description": "Página carregada"
+                    },
+                    "403": {
+                        "description": "Sem permissão"
+                    }
+                }
+            }
+        },
+        "/admin/activate-device": {
+            "post": {
+                "tags": [
+                    "Admin TV"
+                ],
+                "summary": "Processa ativação de TV por código",
+                "operationId": "9698df9566ca451c04054e62f52ddb3f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminActivateDevicePayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "302": {
+                        "description": "Redireciona com sucesso/erro de validação"
+                    },
+                    "403": {
+                        "description": "Sem permissão"
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Autentica empresa e retorna token da API",
+                "operationId": "dcf90ce65219b0ad51fc32e9f7f69843",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmpresaLoginPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login realizado com sucesso"
+                    },
+                    "401": {
+                        "description": "Credenciais inválidas"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                }
+            }
+        },
+        "/api/configuracoes": {
+            "get": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Obtém configuração da empresa autenticada",
+                "description": "Get the current configuration.\nGET /api/configuracao",
+                "operationId": "2edec197249cd4e6c11a719ed1d78b9a",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Atualiza configuração da empresa autenticada",
+                "description": "Update (PUT) the configuration.\nPUT /api/configuracao",
+                "operationId": "062a3c5dfe5af7890d0104eba3325ab8",
+                "responses": {
+                    "200": {
+                        "description": "Configuração atualizada"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Salva configuração da empresa autenticada",
+                "description": "Update the configuration.\nPOST/PUT /api/configuracao",
+                "operationId": "01aa8dee7795651d5ad188a51ceb1fe2",
+                "responses": {
+                    "200": {
+                        "description": "Configuração salva"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Operação não suportada para reset automático",
+                "description": "Reset configuration to defaults.\nDELETE /api/configuracao",
+                "operationId": "8c9101fd811073ba7576d77aad6f7d44",
+                "responses": {
+                    "405": {
+                        "description": "Método não permitido"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/configuracao": {
+            "get": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Obtém configuração da empresa autenticada",
+                "operationId": "aed36f8bca518e5b3a75620912164c0b",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Atualiza configuração da empresa autenticada",
+                "operationId": "581ada9fc01b4a5904101a2759261104",
+                "responses": {
+                    "200": {
+                        "description": "Configuração atualizada"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Salva configuração da empresa autenticada",
+                "operationId": "523baccdb2453d9da1e7855a9960b8f4",
+                "responses": {
+                    "200": {
+                        "description": "Configuração salva"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Configurações"
+                ],
+                "summary": "Operação não suportada para reset automático",
+                "operationId": "570afb8508e2c80631ce9a68be6a9c68",
+                "responses": {
+                    "405": {
+                        "description": "Método não permitido"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/departamentos": {
+            "get": {
+                "tags": [
+                    "Departamentos"
+                ],
+                "summary": "Lista departamentos da empresa autenticada",
+                "description": "Display a listing of the resource.",
+                "operationId": "8f67cca908527786195d5efd02911ab4",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Departamentos"
+                ],
+                "summary": "Cria departamento",
+                "operationId": "c288cfc72036fe95d515c7c0ef3df4f7",
+                "responses": {
+                    "201": {
+                        "description": "Criado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/grupos": {
+            "get": {
+                "tags": [
+                    "Grupos"
+                ],
+                "summary": "Lista grupos da empresa autenticada",
+                "description": "Display a listing of the resource.",
+                "operationId": "97063c2305e129495d0968c0fc0b8084",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Grupos"
+                ],
+                "summary": "Cria grupo",
+                "description": "Store a newly created resource in storage.",
+                "operationId": "711593bbabd74fa797fc020e29eab58e",
+                "responses": {
+                    "201": {
+                        "description": "Criado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/produtos": {
+            "get": {
+                "tags": [
+                    "Produtos"
+                ],
+                "summary": "Lista produtos da empresa autenticada",
+                "operationId": "ff4eeb91e587a0df77631ccd714d9344",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Produtos"
+                ],
+                "summary": "Cria um produto",
+                "operationId": "0f94cb8e97d212f1b83331b15ecc3862",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProdutoPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/produtos/{produto}": {
+            "get": {
+                "tags": [
+                    "Produtos"
+                ],
+                "summary": "Busca produto",
+                "operationId": "e35c815ea8ee79452fb9210509f0e96d",
+                "parameters": [
+                    {
+                        "name": "produto",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Produtos"
+                ],
+                "summary": "Atualiza um produto",
+                "operationId": "ab0172a44c47da4da79063dc385ea0dd",
+                "parameters": [
+                    {
+                        "name": "produto",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProdutoPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Produtos"
+                ],
+                "summary": "Remove um produto",
+                "operationId": "21de4bdcad844fc813a2fed0f0c5ef1e",
+                "parameters": [
+                    {
+                        "name": "produto",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removido"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/tv/activation-code": {
+            "post": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Gera código de ativação para TV",
+                "operationId": "70ad0f38eccde936ae4fcb662c79f1f4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TvActivationCodePayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Código gerado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                }
+            }
+        },
+        "/api/tv/check-activation": {
+            "post": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Consulta status de ativação da TV",
+                "operationId": "f6f11694b14ff65711ba5dc62967baf7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TvCheckActivationPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status pending ou activated"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                }
+            }
+        },
+        "/api/tv/heartbeat": {
+            "post": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Atualiza last_seen_at da TV",
+                "operationId": "d46b8a9f51726b9f97b700607b224292",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TvHeartbeatPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Heartbeat atualizado"
+                    },
+                    "401": {
+                        "description": "Token inválido"
+                    },
+                    "422": {
+                        "description": "Token não informado"
+                    }
+                }
+            }
+        },
+        "/api/tv/produtos": {
+            "get": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Lista produtos da empresa vinculada ao dispositivo",
+                "operationId": "1f3740dba350072b33ed34058b871440",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Token do device inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "DeviceBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/tv/bootstrap": {
+            "get": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Retorna bootstrap da TV com dados de device, configuração e template",
+                "operationId": "8033a85db8791fc4a6a26359814a9a35",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Token do device inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "DeviceBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/tv/midias": {
+            "get": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Retorna mídias do template da TV (vídeos, imagens, banners)",
+                "operationId": "5f675de7bbbf665224a9a65dfff9119f",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Token do device inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "DeviceBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/tv/ofertas": {
+            "get": {
+                "tags": [
+                    "TV"
+                ],
+                "summary": "Lista ofertas da empresa vinculada ao dispositivo",
+                "operationId": "bbc1997266d9dc5396a6047ea429e47c",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Token do device inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "DeviceBearer": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ProdutoPayload": {
+                "required": [
+                    "NOME",
+                    "PRECO",
+                    "departamento_id",
+                    "grupo_id"
+                ],
+                "properties": {
+                    "CODIGO": {
+                        "type": "string",
+                        "maxLength": 14
+                    },
+                    "NOME": {
+                        "type": "string"
+                    },
+                    "PRECO": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "OFERTA": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "IMG": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "departamento_id": {
+                        "type": "integer"
+                    },
+                    "grupo_id": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "EmpresaLoginPayload": {
+                "properties": {
+                    "cnpj": {
+                        "type": "string",
+                        "example": "12345678000199"
+                    },
+                    "cnpj_cpf": {
+                        "type": "string",
+                        "example": "12345678000199"
+                    },
+                    "senha": {
+                        "type": "string",
+                        "example": "senha_da_empresa"
+                    },
+                    "chave": {
+                        "type": "string",
+                        "example": "senha_da_empresa"
+                    }
+                },
+                "type": "object",
+                "anyOf": [
+                    {
+                        "required": [
+                            "cnpj",
+                            "senha"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "cnpj",
+                            "chave"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "cnpj_cpf",
+                            "senha"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "cnpj_cpf",
+                            "chave"
+                        ]
+                    }
+                ]
+            },
+            "TvActivationCodePayload": {
+                "required": [
+                    "device_uuid"
+                ],
+                "properties": {
+                    "device_uuid": {
+                        "type": "string",
+                        "example": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
+                    }
+                },
+                "type": "object"
+            },
+            "TvCheckActivationPayload": {
+                "required": [
+                    "device_uuid"
+                ],
+                "properties": {
+                    "device_uuid": {
+                        "type": "string",
+                        "example": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
+                    }
+                },
+                "type": "object"
+            },
+            "TvHeartbeatPayload": {
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "example": "TOKEN_DA_TV",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AdminActivateDevicePayload": {
+                "required": [
+                    "code",
+                    "empresa_id",
+                    "nome_tv"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "84721"
+                    },
+                    "empresa_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nome_tv": {
+                        "type": "string",
+                        "example": "TV Açougue"
+                    },
+                    "local": {
+                        "type": "string",
+                        "example": "Setor Açougue",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "CompanyBearer": {
+                "type": "http",
+                "bearerFormat": "Token",
+                "scheme": "bearer"
+            },
+            "DeviceBearer": {
+                "type": "http",
+                "bearerFormat": "Token",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Admin TV",
+            "description": "Admin TV"
+        },
+        {
+            "name": "Auth",
+            "description": "Auth"
+        },
+        {
+            "name": "Configurações",
+            "description": "Configurações"
+        },
+        {
+            "name": "Departamentos",
+            "description": "Departamentos"
+        },
+        {
+            "name": "Grupos",
+            "description": "Grupos"
+        },
+        {
+            "name": "Produtos",
+            "description": "Produtos"
+        },
+        {
+            "name": "TV",
+            "description": "TV"
+        }
+    ]
+}
