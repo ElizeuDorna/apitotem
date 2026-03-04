@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
+use App\Models\Empresa;
+use App\Models\GlobalImageGallery;
+use App\Models\Produto;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,9 +26,41 @@ class WebScreenConfigController extends Controller
             'empresa_id' => $empresaId,
         ], []);
 
+        $config = $config->fresh();
+        $config->rightSidebarImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
+
         return view('admin.web-screen-config', [
-            'config' => $config->fresh(),
+            'config' => $config,
+            'companyGalleryImages' => $this->listCompanyGalleryImages(),
         ]);
+    }
+
+    public function searchProducts(Request $request): JsonResponse
+    {
+        $empresaId = $this->resolveEmpresaId();
+        $query = trim((string) $request->query('q', ''));
+
+        if ($query === '') {
+            return response()->json(['items' => []]);
+        }
+
+        $items = Produto::query()
+            ->where('empresa_id', $empresaId)
+            ->where(function ($builder) use ($query) {
+                $builder
+                    ->where('CODIGO', 'like', $query.'%')
+                    ->orWhere('NOME', 'like', '%'.$query.'%');
+            })
+            ->orderBy('NOME')
+            ->limit(20)
+            ->get(['CODIGO', 'NOME'])
+            ->map(fn (Produto $produto) => [
+                'codigo' => (string) $produto->CODIGO,
+                'nome' => (string) $produto->NOME,
+            ])
+            ->values();
+
+        return response()->json(['items' => $items]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -119,6 +156,18 @@ class WebScreenConfigController extends Controller
             'showRightSidebarBorder' => ['nullable', 'boolean'],
             'rightSidebarBorderColor' => ['required', 'string', 'max:9'],
             'rightSidebarBorderWidth' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'rightSidebarMediaType' => ['required', 'in:video,image,hybrid'],
+            'rightSidebarGlobalGalleryCode' => ['nullable', 'string', 'regex:/^\d{1,14}$/'],
+            'rightSidebarImageUrls' => ['nullable', 'string', 'max:10000'],
+            'suggestedProductImageSource' => ['nullable', 'string', 'regex:/^(none|slot_[1-3]|company_upload|company_existing_\d+)$/'],
+            'suggestedSlideImageSources' => ['nullable', 'array'],
+            'suggestedSlideImageSources.*' => ['string', 'regex:/^(slot_[1-3]|company_upload|company_existing_\d+)$/'],
+            'selectedProductCode' => ['nullable', 'string', 'max:14'],
+            'companyGalleryUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'rightSidebarImageInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
+            'rightSidebarImageFit' => ['required', 'in:contain,cover'],
+            'rightSidebarHybridVideoDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'rightSidebarHybridImageDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'isVideoPanelTransparent' => ['nullable', 'boolean'],
             'rowBackgroundColor' => ['required', 'string', 'max:9'],
             'borderColor' => ['required', 'string', 'max:7'],
@@ -164,6 +213,16 @@ class WebScreenConfigController extends Controller
         $validated['videoBackgroundColor'] = (string) ($validated['videoBackgroundColor'] ?? '#000000');
         $validated['rightSidebarBorderColor'] = (string) ($validated['rightSidebarBorderColor'] ?? '#334155');
         $validated['rightSidebarBorderWidth'] = (int) ($validated['rightSidebarBorderWidth'] ?? 1);
+        $validated['rightSidebarMediaType'] = (string) ($validated['rightSidebarMediaType'] ?? 'video');
+        $validated['rightSidebarGlobalGalleryCode'] = substr(preg_replace('/\D/', '', (string) ($validated['rightSidebarGlobalGalleryCode'] ?? '')) ?? '', 0, 14);
+        $validated['rightSidebarImageUrls'] = $this->normalizeImageUrlsList((string) ($validated['rightSidebarImageUrls'] ?? ''));
+        $validated['suggestedProductImageSource'] = (string) ($validated['suggestedProductImageSource'] ?? 'none');
+        $validated['suggestedSlideImageSources'] = array_values(array_unique((array) ($validated['suggestedSlideImageSources'] ?? [])));
+        $validated['selectedProductCode'] = substr(preg_replace('/\D/', '', (string) ($validated['selectedProductCode'] ?? '')) ?? '', 0, 14);
+        $validated['rightSidebarImageInterval'] = (int) ($validated['rightSidebarImageInterval'] ?? 8);
+        $validated['rightSidebarImageFit'] = (string) ($validated['rightSidebarImageFit'] ?? 'contain');
+        $validated['rightSidebarHybridVideoDuration'] = (int) ($validated['rightSidebarHybridVideoDuration'] ?? 2);
+        $validated['rightSidebarHybridImageDuration'] = (int) ($validated['rightSidebarHybridImageDuration'] ?? 4);
         $validated['rowBorderWidth'] = (int) ($validated['rowBorderWidth'] ?? 1);
         $validated['imageWidth'] = (int) ($validated['imageWidth'] ?? 56);
         $validated['imageHeight'] = (int) ($validated['imageHeight'] ?? 56);
@@ -183,6 +242,97 @@ class WebScreenConfigController extends Controller
         if (! $validated['showBackgroundImage']) {
             $validated['backgroundImageUrl'] = null;
         }
+
+        $manualSlideUrls = collect(preg_split('/\r?\n/', (string) ($validated['rightSidebarImageUrls'] ?? '')) ?: [])
+            ->map(fn (string $line) => trim($line))
+            ->filter(fn (string $line) => $line !== '')
+            ->values()
+            ->all();
+
+        $availableGalleryImages = [];
+        if ($validated['rightSidebarGlobalGalleryCode'] !== '') {
+            $availableGalleryImages = $this->resolveGlobalGalleryImageUrlsBySlot($validated['rightSidebarGlobalGalleryCode']);
+            $galleryImageUrls = array_values($availableGalleryImages);
+
+            if (empty($galleryImageUrls)) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'rightSidebarGlobalGalleryCode' => 'Código da galeria geral não encontrado ou sem imagens cadastradas.',
+                    ])
+                    ->withInput();
+            }
+        } else {
+            $validated['rightSidebarGlobalGalleryCode'] = null;
+        }
+
+        $companyUploadUrl = null;
+        if ($request->hasFile('companyGalleryUpload')) {
+            $companyUploadPath = $this->storeCompanyGalleryImage($request, $validated['rightSidebarGlobalGalleryCode'] ?: 'manual');
+            $companyUploadUrl = $this->publicStorageUrl($companyUploadPath);
+        }
+
+        $availableSources = $availableGalleryImages;
+        if ($companyUploadUrl) {
+            $availableSources['company_upload'] = $companyUploadUrl;
+        }
+
+        $companyExistingImages = $this->listCompanyGalleryImages();
+        foreach ($companyExistingImages as $index => $item) {
+            $sourceKey = 'company_existing_'.$index;
+            $availableSources[$sourceKey] = (string) ($item['url'] ?? '');
+        }
+
+        $selectedSlideUrls = collect($validated['suggestedSlideImageSources'])
+            ->map(fn (string $sourceKey) => $availableSources[$sourceKey] ?? null)
+            ->filter(fn ($url) => is_string($url) && $url !== '')
+            ->values()
+            ->all();
+
+        $managedSourceUrls = collect($availableSources)
+            ->filter(fn ($url) => is_string($url) && $url !== '')
+            ->values()
+            ->all();
+
+        $manualSlideUrlsWithoutManaged = collect($manualSlideUrls)
+            ->reject(fn ($url) => in_array($url, $managedSourceUrls, true))
+            ->values()
+            ->all();
+
+        $finalSlideUrls = array_values(array_unique(array_merge($manualSlideUrlsWithoutManaged, $selectedSlideUrls)));
+
+        if (empty($finalSlideUrls) && !empty($availableGalleryImages)) {
+            $finalSlideUrls = array_values($availableGalleryImages);
+        }
+
+        $validated['rightSidebarImageUrls'] = implode("\n", $finalSlideUrls);
+
+        $validated['rightSidebarImageUrls'] = $this->normalizeImageUrlsList((string) ($validated['rightSidebarImageUrls'] ?? ''));
+
+        $selectedProductImageUrl = $availableSources[$validated['suggestedProductImageSource']] ?? null;
+        if (is_string($selectedProductImageUrl) && $selectedProductImageUrl !== '' && $validated['selectedProductCode'] !== '') {
+            $targetProduct = Produto::query()
+                ->where('empresa_id', $empresaId)
+                ->where('CODIGO', $validated['selectedProductCode'])
+                ->first();
+
+            if (! $targetProduct) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selectedProductCode' => 'Produto não encontrado para o código informado na empresa logada.',
+                    ])
+                    ->withInput();
+            }
+
+            $targetProduct->update(['IMG' => $selectedProductImageUrl]);
+        }
+
+        if ($validated['rightSidebarMediaType'] === 'video') {
+            $validated['rightSidebarImageUrls'] = null;
+        }
+
+        unset($validated['suggestedProductImageSource'], $validated['suggestedSlideImageSources'], $validated['selectedProductCode'], $validated['companyGalleryUpload']);
 
         $embedStatuses = $this->buildYouTubeEmbedStatuses($validated['videoPlaylist'] ?? []);
         $embedWarnings = collect($embedStatuses)
@@ -207,6 +357,117 @@ class WebScreenConfigController extends Controller
         $redirect->with('embedStatuses', $embedStatuses);
 
         return $redirect;
+    }
+
+    private function resolveGlobalGalleryImageUrlsBySlot(string $code): array
+    {
+        $gallery = GlobalImageGallery::query()
+            ->where('code', $code)
+            ->with('items')
+            ->first();
+
+        if (! $gallery) {
+            return [];
+        }
+
+        return $gallery->items
+            ->sortBy('slot')
+            ->mapWithKeys(function ($item) {
+                $slotKey = 'slot_'.(int) $item->slot;
+                if ($item->source_type === 'link') {
+                    return [$slotKey => trim((string) ($item->external_url ?? ''))];
+                }
+
+                if ($item->source_type === 'upload' && !empty($item->file_path)) {
+                    return [$slotKey => $this->publicStorageUrl((string) $item->file_path)];
+                }
+
+                return [$slotKey => ''];
+            })
+            ->filter(fn ($url) => $url !== '')
+            ->all();
+    }
+
+    private function storeCompanyGalleryImage(Request $request, string $code): string
+    {
+        $normalizedCode = substr(preg_replace('/\D/', '', $code) ?? 'manual', 0, 14) ?: 'manual';
+        $document = $this->resolveCompanyStorageDocument();
+
+        $upload = $request->file('companyGalleryUpload');
+        $extension = strtolower((string) $upload->getClientOriginalExtension());
+        $fileName = $normalizedCode.'_empresa_'.time().($extension ? '.'.$extension : '');
+
+        return $upload->storeAs('empresas/'.$document.'/galeria', $fileName, 'public');
+    }
+
+    private function listCompanyGalleryImages(): array
+    {
+        $documents = $this->resolveCompanyStorageDocuments();
+
+        $files = collect($documents)
+            ->map(fn (string $document) => 'empresas/'.$document.'/galeria')
+            ->flatMap(fn (string $directory) => Storage::disk('public')->exists($directory) ? Storage::disk('public')->files($directory) : [])
+            ->unique()
+            ->sortByDesc(fn (string $path) => Storage::disk('public')->lastModified($path))
+            ->values();
+
+        return $files
+            ->map(fn (string $path) => [
+                'path' => $path,
+                'url' => $this->publicStorageUrl($path),
+                'name' => basename($path),
+            ])
+            ->all();
+    }
+
+    private function publicStorageUrl(string $path): string
+    {
+        $relativePath = ltrim($path, '/');
+
+        return '/storage/'.$relativePath;
+    }
+
+    private function normalizeImageUrlsList(string $raw): string
+    {
+        return collect(preg_split('/\r?\n/', $raw) ?: [])
+            ->map(fn (string $line) => trim($line))
+            ->filter(fn (string $line) => $line !== '')
+            ->map(function (string $line) {
+                if (preg_match('#^https?://localhost/storage/(.+)$#i', $line, $matches)) {
+                    return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
+                }
+
+                if (str_starts_with($line, 'storage/')) {
+                    return '/'.ltrim($line, '/');
+                }
+
+                return $line;
+            })
+            ->values()
+            ->implode("\n");
+    }
+
+    private function resolveCompanyStorageDocuments(): array
+    {
+        $companyDocument = $this->resolveCompanyStorageDocument();
+        $userDocument = preg_replace('/\D/', '', (string) (Auth::user()?->documento() ?? '')) ?: null;
+
+        return collect([$companyDocument, $userDocument, 'sem-documento'])
+            ->filter(fn ($value) => is_string($value) && $value !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function resolveCompanyStorageDocument(): string
+    {
+        $empresaId = $this->resolveEmpresaId();
+
+        $companyDocument = Empresa::query()
+            ->where('id', $empresaId)
+            ->value('cnpj_cpf');
+
+        return preg_replace('/\D/', '', (string) $companyDocument) ?: 'sem-documento';
     }
 
     private function resolveEmpresaId(): int

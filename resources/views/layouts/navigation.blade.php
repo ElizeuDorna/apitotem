@@ -75,6 +75,9 @@
                         </a>
                     @endif
                     @if (Auth::user()->isDefaultAdmin())
+                        <a href="{{ route('admin.global-image-galleries.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                            {{ __('Galeria Imagem Geral') }}
+                        </a>
                         <a href="{{ route('admin.user-permissions.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                             {{ __('Permissões de Acesso') }}
                         </a>
@@ -194,6 +197,9 @@
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user()->isDefaultAdmin())
+                <x-responsive-nav-link :href="route('admin.global-image-galleries.index')">
+                    {{ __('Galeria Imagem Geral') }}
+                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.user-permissions.index')">
                     {{ __('Permissões de Acesso') }}
                 </x-responsive-nav-link>

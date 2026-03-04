@@ -9,9 +9,11 @@ use App\Models\Configuracao;
 use App\Models\Device;
 use App\Models\DeviceConfiguration;
 use App\Models\DeviceActivation;
+use App\Models\GlobalImageGallery;
 use App\Models\Produto;
 use App\Models\TemplateItem;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -424,6 +426,20 @@ class TvController extends Controller
             ->filter(fn ($item) => $item['url'] !== '')
             ->values();
 
+        $globalGalleryCode = substr(preg_replace('/\D/', '', (string) ($config->rightSidebarGlobalGalleryCode ?? '')) ?? '', 0, 14);
+        $configuredImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
+        $resolvedGlobalGalleryUrls = [];
+
+        if ($globalGalleryCode !== '' && $configuredImageUrls === '') {
+            $resolvedGlobalGalleryUrls = $this->resolveGlobalGalleryImageUrls($globalGalleryCode);
+        }
+
+        $rightSidebarImageUrls = $configuredImageUrls !== ''
+            ? $configuredImageUrls
+            : (! empty($resolvedGlobalGalleryUrls)
+            ? implode("\n", $resolvedGlobalGalleryUrls)
+            : '');
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -439,6 +455,13 @@ class TvController extends Controller
                 'showRightSidebarBorder' => (bool) ($config->showRightSidebarBorder ?? true),
                 'rightSidebarBorderColor' => (string) ($config->rightSidebarBorderColor ?? '#334155'),
                 'rightSidebarBorderWidth' => (int) ($config->rightSidebarBorderWidth ?? 1),
+                'rightSidebarMediaType' => (string) ($config->rightSidebarMediaType ?? 'video'),
+                'rightSidebarGlobalGalleryCode' => $globalGalleryCode,
+                'rightSidebarImageUrls' => $rightSidebarImageUrls,
+                'rightSidebarImageInterval' => (int) ($config->rightSidebarImageInterval ?? 8),
+                'rightSidebarImageFit' => (string) ($config->rightSidebarImageFit ?? 'contain'),
+                'rightSidebarHybridVideoDuration' => (int) ($config->rightSidebarHybridVideoDuration ?? 2),
+                'rightSidebarHybridImageDuration' => (int) ($config->rightSidebarHybridImageDuration ?? 4),
                 'isVideoPanelTransparent' => (bool) ($config->isVideoPanelTransparent ?? false),
                 'rowBackgroundColor' => $config->rowBackgroundColor,
                 'borderColor' => $config->borderColor,
@@ -465,6 +488,61 @@ class TvController extends Controller
                 'paginationInterval' => (int) ($config->paginationInterval ?? 5),
             ],
         ]);
+    }
+
+    private function resolveGlobalGalleryImageUrls(string $code): array
+    {
+        $gallery = GlobalImageGallery::query()
+            ->where('code', $code)
+            ->with('items')
+            ->first();
+
+        if (! $gallery) {
+            return [];
+        }
+
+        return $gallery->items
+            ->sortBy('slot')
+            ->map(function ($item) {
+                if ($item->source_type === 'link') {
+                    return trim((string) ($item->external_url ?? ''));
+                }
+
+                if ($item->source_type === 'upload' && !empty($item->file_path)) {
+                    return $this->publicStorageUrl((string) $item->file_path);
+                }
+
+                return '';
+            })
+            ->filter(fn ($url) => $url !== '')
+            ->values()
+            ->all();
+    }
+
+    private function normalizeImageUrlsList(string $raw): string
+    {
+        $normalized = collect(preg_split('/\r?\n/', $raw) ?: [])
+            ->map(fn (string $line) => trim($line))
+            ->filter(fn (string $line) => $line !== '')
+            ->map(function (string $line) {
+                if (preg_match('#^https?://localhost/storage/(.+)$#i', $line, $matches)) {
+                    return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
+                }
+
+                if (str_starts_with($line, 'storage/')) {
+                    return '/'.ltrim($line, '/');
+                }
+
+                return $line;
+            })
+            ->values();
+
+        return $normalized->implode("\n");
+    }
+
+    private function publicStorageUrl(string $path): string
+    {
+        return '/storage/'.ltrim($path, '/');
     }
 
     private function generateUniqueActivationCode(): string

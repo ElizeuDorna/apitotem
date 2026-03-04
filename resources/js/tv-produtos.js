@@ -7,6 +7,7 @@ const productsGrid = document.getElementById('productsGrid');
 const emptyState = document.getElementById('emptyState');
 const tvVideo = document.getElementById('tvVideo');
 const tvEmbed = document.getElementById('tvEmbed');
+const tvImageSlide = document.getElementById('tvImageSlide');
 const videoHint = document.getElementById('videoHint');
 const tvHeader = document.getElementById('tvHeader');
 const tvProductsPanel = document.getElementById('tvProductsPanel');
@@ -35,6 +36,12 @@ const visualConfig = {
     showRightSidebarBorder: true,
     rightSidebarBorderColor: '#334155',
     rightSidebarBorderWidth: 1,
+    rightSidebarMediaType: 'video',
+    rightSidebarImageUrls: '',
+    rightSidebarImageInterval: 8,
+    rightSidebarImageFit: 'contain',
+    rightSidebarHybridVideoDuration: 120,
+    rightSidebarHybridImageDuration: 120,
     isVideoPanelTransparent: false,
     rowBackgroundColor: '#020617',
     borderColor: '#334155',
@@ -80,6 +87,17 @@ let currentVideoPlaylistSignature = '';
 let lastVideoAdvanceAt = 0;
 let videoFallbackTimer = null;
 let initialVideoAutoplayRetryTimer = null;
+let imageSlideTimer = null;
+let imageSlideUrls = [];
+let currentImageSlideIndex = 0;
+let rightSidebarHybridPhase = 'video';
+let rightSidebarHybridVideoCountInPhase = 0;
+let rightSidebarHybridImageCountInPhase = 0;
+let rightSidebarHybridSwitching = false;
+let rightSidebarHybridLastCompletedAt = 0;
+let rightSidebarHybridConfigSignature = '';
+let forceVideoPlaylistApplyOnce = false;
+let rightSidebarHybridHasShownAnyImage = false;
 let audioAutoplayUnlocked = localStorage.getItem(AUDIO_UNLOCK_STORAGE_KEY) === '1';
 let forceMuteOnFirstPlayback = true;
 
@@ -130,6 +148,317 @@ function clearInitialVideoAutoplayRetryTimer() {
         clearTimeout(initialVideoAutoplayRetryTimer);
         initialVideoAutoplayRetryTimer = null;
     }
+}
+
+function clearImageSlideTimer() {
+    if (imageSlideTimer) {
+        clearInterval(imageSlideTimer);
+        imageSlideTimer = null;
+    }
+}
+
+function parseConfiguredImageSlideUrls() {
+    const raw = String(visualConfig.rightSidebarImageUrls || '').trim();
+
+    if (!raw) {
+        return [];
+    }
+
+    return raw
+        .split(/\r?\n|,|;\s*/)
+        .map((item) => extractVideoUrl(item.trim()))
+        .filter(Boolean);
+}
+
+function stopVideoPlaybackForImageMode() {
+    clearVideoFallbackTimer();
+    clearInitialVideoAutoplayRetryTimer();
+    clearYouTubeStatePoll();
+    clearYouTubePlayKeepAlive();
+    clearYouTubeUnmuteDelay();
+    clearYouTubeStartupTimeout();
+
+    document.body.classList.remove('tv-video-fullscreen');
+
+    if (tvVideo) {
+        tvVideo.pause();
+        tvVideo.classList.add('hidden');
+    }
+
+    if (tvEmbed) {
+        tvEmbed.classList.add('hidden');
+        tvEmbed.removeAttribute('src');
+    }
+}
+
+function showImageSlideAt(index) {
+    if (!tvImageSlide || imageSlideUrls.length === 0) {
+        return;
+    }
+
+    currentImageSlideIndex = (index + imageSlideUrls.length) % imageSlideUrls.length;
+    tvImageSlide.src = imageSlideUrls[currentImageSlideIndex];
+}
+
+function startImageSlideMode() {
+    if (!tvImageSlide) {
+        return;
+    }
+
+    stopVideoPlaybackForImageMode();
+    clearImageSlideTimer();
+
+    const fit = visualConfig.rightSidebarImageFit === 'cover' ? 'cover' : 'contain';
+    tvImageSlide.style.objectFit = fit;
+    tvImageSlide.style.objectPosition = 'center top';
+
+    imageSlideUrls = parseConfiguredImageSlideUrls();
+
+    if (imageSlideUrls.length === 0) {
+        tvImageSlide.classList.add('hidden');
+        tvImageSlide.removeAttribute('src');
+        return;
+    }
+
+    tvImageSlide.classList.remove('hidden');
+    showImageSlideAt(0);
+
+    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
+    if (imageSlideUrls.length > 1) {
+        imageSlideTimer = setInterval(() => {
+            showImageSlideAt(currentImageSlideIndex + 1);
+        }, intervalSeconds * 1000);
+    }
+}
+
+function stopImageSlideMode() {
+    clearImageSlideTimer();
+    imageSlideUrls = [];
+    currentImageSlideIndex = 0;
+
+    if (tvImageSlide) {
+        tvImageSlide.classList.add('hidden');
+        tvImageSlide.removeAttribute('src');
+    }
+}
+
+function getRightSidebarMediaType() {
+    const mode = String(visualConfig.rightSidebarMediaType || 'video').trim().toLowerCase();
+    if (mode === 'image' || mode === 'hybrid') {
+        return mode;
+    }
+
+    return 'video';
+}
+
+function getHybridVideoCountLimit() {
+    return Math.max(1, Number(visualConfig.rightSidebarHybridVideoDuration || 2));
+}
+
+function getHybridImageCountLimit() {
+    return Math.max(1, Number(visualConfig.rightSidebarHybridImageDuration || 4));
+}
+
+function getNextHybridPhase(phase) {
+    return phase === 'image' ? 'video' : 'image';
+}
+
+async function applyRightSidebarModeOnce(token, mode) {
+    if (mode === 'image') {
+        startImageSlideMode();
+        return;
+    }
+
+    stopImageSlideMode();
+    await loadVideoPlaylist(token);
+}
+
+async function switchRightSidebarHybridPhase(token, nextPhase) {
+    if (getRightSidebarMediaType() !== 'hybrid') {
+        return;
+    }
+
+    if (rightSidebarHybridSwitching) {
+        return;
+    }
+
+    rightSidebarHybridSwitching = true;
+    try {
+        rightSidebarHybridPhase = nextPhase === 'image' ? 'image' : 'video';
+
+        if (rightSidebarHybridPhase === 'video') {
+            rightSidebarHybridVideoCountInPhase = 0;
+            forceVideoPlaylistApplyOnce = true;
+            await applyRightSidebarModeOnce(token, 'video');
+        } else {
+            rightSidebarHybridImageCountInPhase = 0;
+            startHybridImagePhase(token);
+        }
+    } finally {
+        rightSidebarHybridSwitching = false;
+    }
+}
+
+function handleHybridVideoItemCompleted(token) {
+    if (getRightSidebarMediaType() !== 'hybrid' || rightSidebarHybridPhase !== 'video') {
+        return;
+    }
+
+    const now = Date.now();
+    if (now - rightSidebarHybridLastCompletedAt < 700) {
+        return;
+    }
+
+    rightSidebarHybridLastCompletedAt = now;
+    rightSidebarHybridVideoCountInPhase += 1;
+
+    if (rightSidebarHybridVideoCountInPhase >= getHybridVideoCountLimit()) {
+        rightSidebarHybridVideoCountInPhase = 0;
+        rightSidebarHybridImageCountInPhase = 0;
+
+        if (Array.isArray(videoPlaylistItems) && videoPlaylistItems.length > 0) {
+            currentVideoIndex = (currentVideoIndex + 1) % videoPlaylistItems.length;
+        }
+
+        switchRightSidebarHybridPhase(token, 'image');
+    }
+}
+
+function startHybridImagePhase(token) {
+    if (!tvImageSlide) {
+        switchRightSidebarHybridPhase(token, 'video');
+        return;
+    }
+
+    stopVideoPlaybackForImageMode();
+    clearImageSlideTimer();
+
+    const fit = visualConfig.rightSidebarImageFit === 'cover' ? 'cover' : 'contain';
+    tvImageSlide.style.objectFit = fit;
+    tvImageSlide.style.objectPosition = 'center top';
+
+    imageSlideUrls = parseConfiguredImageSlideUrls();
+    if (imageSlideUrls.length === 0) {
+        tvImageSlide.classList.add('hidden');
+        tvImageSlide.removeAttribute('src');
+        switchRightSidebarHybridPhase(token, 'video');
+        return;
+    }
+
+    const imageLimit = getHybridImageCountLimit();
+    const intervalMs = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8)) * 1000;
+
+    tvImageSlide.classList.remove('hidden');
+    rightSidebarHybridImageCountInPhase = 0;
+
+    const showNextHybridImage = () => {
+        if (getRightSidebarMediaType() !== 'hybrid' || rightSidebarHybridPhase !== 'image') {
+            return;
+        }
+
+        if (!rightSidebarHybridHasShownAnyImage) {
+            showImageSlideAt(0);
+            rightSidebarHybridHasShownAnyImage = true;
+        } else {
+            showImageSlideAt(currentImageSlideIndex + 1);
+        }
+
+        rightSidebarHybridImageCountInPhase += 1;
+
+        if (rightSidebarHybridImageCountInPhase >= imageLimit) {
+            clearImageSlideTimer();
+            switchRightSidebarHybridPhase(token, 'video');
+        }
+    };
+
+    showNextHybridImage();
+
+    if (imageLimit > 1) {
+        imageSlideTimer = setInterval(showNextHybridImage, intervalMs);
+    }
+}
+
+async function applyRightSidebarMediaMode(token) {
+    const mode = getRightSidebarMediaType();
+
+    if (mode === 'image') {
+        rightSidebarHybridConfigSignature = '';
+        rightSidebarHybridPhase = 'video';
+        rightSidebarHybridVideoCountInPhase = 0;
+        rightSidebarHybridImageCountInPhase = 0;
+        rightSidebarHybridSwitching = false;
+        rightSidebarHybridLastCompletedAt = 0;
+        forceVideoPlaylistApplyOnce = false;
+        rightSidebarHybridHasShownAnyImage = false;
+        startImageSlideMode();
+        return;
+    }
+
+    if (mode === 'hybrid') {
+        const hybridSignature = JSON.stringify({
+            mode,
+            imageUrls: String(visualConfig.rightSidebarImageUrls || ''),
+            imageInterval: Number(visualConfig.rightSidebarImageInterval || 8),
+            imageFit: String(visualConfig.rightSidebarImageFit || 'contain'),
+            videoCount: Number(visualConfig.rightSidebarHybridVideoDuration || 2),
+            imageCount: Number(visualConfig.rightSidebarHybridImageDuration || 4),
+            playlist: JSON.stringify(parseConfiguredVideoUrls().map((item) => String(item?.url || ''))),
+        });
+
+        if (hybridSignature !== rightSidebarHybridConfigSignature) {
+            rightSidebarHybridConfigSignature = hybridSignature;
+            rightSidebarHybridPhase = 'video';
+            rightSidebarHybridVideoCountInPhase = 0;
+            rightSidebarHybridImageCountInPhase = 0;
+            rightSidebarHybridSwitching = false;
+            rightSidebarHybridLastCompletedAt = 0;
+            forceVideoPlaylistApplyOnce = false;
+            rightSidebarHybridHasShownAnyImage = false;
+            await applyRightSidebarModeOnce(token, 'video');
+            return;
+        }
+
+        if (rightSidebarHybridPhase === 'image') {
+            const hasRunningImageTimer = Boolean(imageSlideTimer);
+            const imageLimit = getHybridImageCountLimit();
+
+            if (!hasRunningImageTimer && imageLimit > 1 && rightSidebarHybridImageCountInPhase > 0) {
+                imageSlideTimer = setInterval(() => {
+                    if (getRightSidebarMediaType() !== 'hybrid' || rightSidebarHybridPhase !== 'image') {
+                        return;
+                    }
+
+                    showImageSlideAt(currentImageSlideIndex + 1);
+                    rightSidebarHybridImageCountInPhase += 1;
+
+                    if (rightSidebarHybridImageCountInPhase >= imageLimit) {
+                        clearImageSlideTimer();
+                        switchRightSidebarHybridPhase(token, 'video');
+                    }
+                }, Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8)) * 1000);
+            }
+
+            if (!tvImageSlide || tvImageSlide.classList.contains('hidden')) {
+                startHybridImagePhase(token);
+            }
+
+            return;
+        }
+
+        stopImageSlideMode();
+        await loadVideoPlaylist(token);
+        return;
+    }
+
+    rightSidebarHybridConfigSignature = '';
+    rightSidebarHybridPhase = 'video';
+    rightSidebarHybridVideoCountInPhase = 0;
+    rightSidebarHybridImageCountInPhase = 0;
+    rightSidebarHybridSwitching = false;
+    rightSidebarHybridLastCompletedAt = 0;
+    forceVideoPlaylistApplyOnce = false;
+    rightSidebarHybridHasShownAnyImage = false;
+    await applyRightSidebarModeOnce(token, 'video');
 }
 
 function scheduleInitialVideoAutoplayRetry(videoItem) {
@@ -920,6 +1249,15 @@ function playNextVideoInPlaylist() {
     lastVideoAdvanceAt = now;
     clearVideoFallbackTimer();
 
+    const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+    if (token) {
+        handleHybridVideoItemCompleted(token);
+
+        if (getRightSidebarMediaType() === 'hybrid' && (rightSidebarHybridPhase === 'image' || rightSidebarHybridSwitching)) {
+            return;
+        }
+    }
+
     if (currentVideoIndex < videoPlaylistItems.length - 1) {
         currentVideoIndex += 1;
     } else {
@@ -956,7 +1294,13 @@ function startVideoPlaylist(videoUrls) {
         heightPx: item.heightPx,
     })));
 
-    if (nextSignature === currentVideoPlaylistSignature && videoPlaylistItems.length > 0) {
+    if (nextSignature === currentVideoPlaylistSignature && videoPlaylistItems.length > 0 && !forceVideoPlaylistApplyOnce) {
+        return;
+    }
+
+    if (nextSignature === currentVideoPlaylistSignature && videoPlaylistItems.length > 0 && forceVideoPlaylistApplyOnce) {
+        forceVideoPlaylistApplyOnce = false;
+        applyVideoSource(videoPlaylistItems[currentVideoIndex] || videoPlaylistItems[0]);
         return;
     }
 
@@ -1082,6 +1426,10 @@ function applyVideoBackground() {
 
     if (tvEmbed) {
         tvEmbed.style.backgroundColor = resolvedColor;
+    }
+
+    if (tvImageSlide) {
+        tvImageSlide.style.backgroundColor = resolvedColor;
     }
 }
 
@@ -1262,6 +1610,11 @@ async function loadVisualConfig(token) {
         visualConfig.rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
         visualConfig.listBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.listBorderWidth ?? 1)));
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
+        visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
+        visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
+        visualConfig.rightSidebarImageFit = String(visualConfig.rightSidebarImageFit || 'contain') === 'cover' ? 'cover' : 'contain';
+        visualConfig.rightSidebarHybridVideoDuration = Math.max(1, Number(visualConfig.rightSidebarHybridVideoDuration || 2));
+        visualConfig.rightSidebarHybridImageDuration = Math.max(1, Number(visualConfig.rightSidebarHybridImageDuration || 4));
 
         document.body.style.backgroundColor = visualConfig.appBackgroundColor;
         const imageUrl = String(visualConfig.backgroundImageUrl || '').trim();
@@ -1298,7 +1651,7 @@ async function loadProducts() {
     updateStatus('Carregando produtos...');
 
     await loadVisualConfig(token);
-    await loadVideoPlaylist(token);
+    await applyRightSidebarMediaMode(token);
 
     try {
         const response = await fetch(apiEndpoint, {
@@ -1357,6 +1710,16 @@ if (tvVideo) {
     tvVideo.addEventListener('loadedmetadata', () => ensureVideoAudioEnabled(tvVideo.muted));
     tvVideo.addEventListener('play', () => ensureVideoAudioEnabled(tvVideo.muted));
     tvVideo.addEventListener('ended', () => {
+        const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+
+        if (token) {
+            handleHybridVideoItemCompleted(token);
+
+            if (getRightSidebarMediaType() === 'hybrid' && rightSidebarHybridPhase === 'image') {
+                return;
+            }
+        }
+
         if (videoPlaylistItems.length > 1) {
             playNextVideoInPlaylist();
             return;
@@ -1412,5 +1775,13 @@ window.addEventListener('message', (event) => {
     if (finished && videoPlaylistItems.length > 1) {
         clearVideoFallbackTimer();
         playNextVideoInPlaylist();
+        return;
+    }
+
+    if (finished) {
+        const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+        if (token) {
+            handleHybridVideoItemCompleted(token);
+        }
     }
 });

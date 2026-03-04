@@ -40,6 +40,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'update'])
             ->name('admin.web-screen-config.update')
             ->middleware('menu.access:configuracao');
+        Route::get('/admin/global-image-galleries/lookup/{code}', [\App\Http\Controllers\Admin\GlobalImageGalleryController::class, 'lookupByCode'])
+            ->name('admin.global-image-galleries.lookup')
+            ->middleware('menu.access:configuracao');
+        Route::get('/admin/configuracao-tela-web/produtos/search', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'searchProducts'])
+            ->name('admin.web-screen-config.search-products')
+            ->middleware('menu.access:configuracao');
         Route::get('/admin/organizar-lista', [\App\Http\Controllers\Admin\OrganizarListaController::class, 'edit'])
             ->name('admin.organizar-lista.edit')
             ->middleware('menu.access:configuracao');
@@ -98,6 +104,9 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:departamentos');
         Route::resource('grupos', \App\Http\Controllers\Admin\GrupoController::class, ['as' => 'admin'])
             ->middleware('menu.access:grupos');
+
+        Route::resource('global-image-galleries', \App\Http\Controllers\Admin\GlobalImageGalleryController::class, ['as' => 'admin'])
+            ->except(['show']);
 
         Route::get('permissoes-usuarios', [\App\Http\Controllers\Admin\UserPermissionController::class, 'index'])
             ->name('admin.user-permissions.index');

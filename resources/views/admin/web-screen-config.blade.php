@@ -56,22 +56,22 @@
                             || $errors->has('videoBackgroundColor');
                     @endphp
 
-                    <form method="POST" action="{{ route('admin.web-screen-config.update') }}" class="space-y-5">
+                    <form method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
 
-                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <div>
-                                    <h3 class="text-base font-semibold text-gray-800">Vídeo da Tela Web</h3>
-                                    <p class="text-xs text-gray-500">O formulário de vídeo fica oculto para ocupar menos espaço.</p>
-                                </div>
-                                <button id="toggleVideoConfig" type="button" class="rounded-md border border-indigo-600 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50">
-                                    Configurar vídeos
-                                </button>
-                            </div>
-                        </div>
+                        <div class="grid grid-cols-1 gap-4 items-start">
+                            <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="videoConfigSection">Configuração de Vídeos</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="colorConfigSection">Configuração de Cores</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="displayConfigSection">Exibição da Tela</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="rightSidebarConfigSection">Configuração Tela Lateral Direita</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Galeria Imagem da Empresa</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Tamanho da Imagem do Produto</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="paginationConfigSection">Paginação da Lista</button>
+                            </aside>
 
-                        <div id="videoConfigSection" class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3 {{ $hasVideoValidationErrors ? '' : 'hidden' }}">
+                            <div id="configPanelsStorage" class="space-y-4 hidden">
+                        <div id="videoConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos</h3>
 
                             <label class="inline-flex items-center gap-2">
@@ -195,7 +195,7 @@
                             </div>
                         </div>
 
-                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                        <div id="colorConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Configuração de Cores</h3>
                             <p class="text-sm text-gray-600">Aqui ficam somente as cores da Tela Web 01.</p>
 
@@ -288,7 +288,7 @@
                             </label>
                         </div>
 
-                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                        <div id="displayConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Exibição da Tela</h3>
                             <p class="text-sm text-gray-600">Opções de layout e visibilidade dos elementos.</p>
 
@@ -334,9 +334,46 @@
 
                         </div>
 
-                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                        <div id="rightSidebarConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Configuração Tela Lateral Direita</h3>
                             <p class="text-sm text-gray-600">Configurações genéricas da coluna direita da tela.</p>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Tipo de mídia</h4>
+                                <label class="inline-flex items-center gap-2 mr-6">
+                                    <input type="radio" id="rightSidebarMediaTypeVideo" name="rightSidebarMediaType" value="video" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'video')>
+                                    <span class="text-sm text-gray-700">Vídeo</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" id="rightSidebarMediaTypeImage" name="rightSidebarMediaType" value="image" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'image')>
+                                    <span class="text-sm text-gray-700">Slide de imagens (links)</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2 ml-0 md:ml-6">
+                                    <input type="radio" id="rightSidebarMediaTypeHybrid" name="rightSidebarMediaType" value="hybrid" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'hybrid')>
+                                    <span class="text-sm text-gray-700">Híbrido (vídeo + slide)</span>
+                                </label>
+                                @error('rightSidebarMediaType')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+                            </div>
+
+                            <div id="rightSidebarHybridConfig" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Tempo de alternância no modo híbrido</h4>
+                                <p class="text-xs text-gray-600">Quando em híbrido, alterna por quantidade: N vídeos → M imagens → N vídeos, em loop.</p>
+                                <p class="text-xs text-gray-600">A contagem de vídeos considera apenas os vídeos marcados como ativos em "Configuração de Vídeos".</p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de vídeos antes de ir para slide</label>
+                                        <input type="number" id="rightSidebarHybridVideoDuration" name="rightSidebarHybridVideoDuration" min="1" max="1000" value="{{ old('rightSidebarHybridVideoDuration', $config->rightSidebarHybridVideoDuration ?? 2) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarHybridVideoDuration')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de imagens antes de voltar para vídeo</label>
+                                        <input type="number" id="rightSidebarHybridImageDuration" name="rightSidebarHybridImageDuration" min="1" max="1000" value="{{ old('rightSidebarHybridImageDuration', $config->rightSidebarHybridImageDuration ?? 4) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarHybridImageDuration')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -357,9 +394,153 @@
                                     <span class="text-sm text-gray-700">Ativar borda da lateral direita</span>
                                 </label>
                             </div>
+
                         </div>
 
-                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                        <div id="companyGalleryConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                            <h3 class="text-base font-semibold text-gray-800">Galeria Imagem da Empresa</h3>
+                            <p class="text-sm text-gray-600">Configurações da galeria de imagens da empresa para uso na lateral direita.</p>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Código da Galeria Imagem Geral (opcional)</label>
+                                <input
+                                    type="text"
+                                    id="rightSidebarGlobalGalleryCode"
+                                    name="rightSidebarGlobalGalleryCode"
+                                    inputmode="numeric"
+                                    maxlength="14"
+                                    value="{{ old('rightSidebarGlobalGalleryCode', $config->rightSidebarGlobalGalleryCode ?? '') }}"
+                                    placeholder="Ex.: 78912345678901"
+                                    class="w-full border rounded px-3 py-2"
+                                >
+                                @error('rightSidebarGlobalGalleryCode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <p class="text-xs text-gray-500">Se preencher, a empresa passa a usar as imagens da galeria global deste código.</p>
+
+                                <div id="globalGalleryLookupFeedback" class="text-xs text-gray-500 mt-2">Digite o código para buscar imagens da galeria geral.</div>
+                                <div id="globalGalleryProductStatus" class="text-xs text-gray-500 mt-1"></div>
+                                <div id="globalGalleryLookupResults" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3"></div>
+                                <div id="globalGalleryLookupEmpty" class="text-xs text-amber-700 mt-2 hidden">Nenhuma imagem encontrada para este código.</div>
+
+                                <div class="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+                                    <h4 class="text-sm font-semibold text-gray-800">Cadastro do Produto com mesmo código</h4>
+                                    <p class="text-xs text-gray-600">Escolha qual imagem vai para o produto (somente uma). No slide você pode selecionar uma ou mais.</p>
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="radio" name="suggestedProductImageSource" value="none" class="rounded border-gray-300 text-indigo-600" @checked(old('suggestedProductImageSource', 'none') === 'none')>
+                                        <span>Não alterar imagem do produto</span>
+                                    </label>
+                                    @error('suggestedProductImageSource')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                    <div id="productSearchBlock" class="hidden mt-2 rounded-md border border-gray-200 bg-white p-3 space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Buscar produto (código ou descrição)</label>
+                                        <input type="text" id="productSearchInput" placeholder="Digite código ou descrição" class="w-full border rounded px-3 py-2">
+                                        <input type="hidden" name="selectedProductCode" id="selectedProductCode" value="{{ old('selectedProductCode', old('rightSidebarGlobalGalleryCode', $config->rightSidebarGlobalGalleryCode ?? '')) }}">
+                                        @error('selectedProductCode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <div id="productSearchResults" class="space-y-1"></div>
+                                        <div id="selectedProductBadge" class="text-xs text-green-700"></div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 rounded-md border border-gray-200 bg-white p-3 space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-800">Upload de Imagem Propria</h4>
+                                    <p class="text-xs text-gray-600">Se não quiser usar sugestão da galeria geral, envie uma imagem própria da empresa.</p>
+                                    <input type="file" name="companyGalleryUpload" id="companyGalleryUpload" accept="image/*" class="w-full border rounded px-3 py-2 bg-white">
+                                    @error('companyGalleryUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="mt-4 rounded-md border border-gray-200 bg-white p-3 space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-800">Imagens já enviadas da empresa logada</h4>
+                                    <p class="text-xs text-gray-600">Galeria da empresa (estilo biblioteca). Clique na imagem para abrir ações: usar no produto e/ou no slide.</p>
+
+                                    @if (!empty($companyGalleryImages))
+                                        <div class="max-h-[420px] overflow-y-auto pr-1 border border-gray-200 rounded-md p-2 bg-gray-50">
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            @foreach ($companyGalleryImages as $index => $companyImage)
+                                                @php
+                                                    $sourceKey = 'company_existing_' . $index;
+                                                    $isProductSelected = old('suggestedProductImageSource') === $sourceKey;
+                                                    $isSlideSelected = in_array($sourceKey, (array) old('suggestedSlideImageSources', []), true);
+                                                @endphp
+                                                <div class="company-gallery-card rounded border border-gray-300 bg-gray-50 p-2 space-y-2" data-source-key="{{ $sourceKey }}">
+                                                    <button type="button" class="w-full" data-company-gallery-preview="{{ $sourceKey }}">
+                                                        <div class="w-full h-28 flex items-center justify-center bg-white rounded border border-transparent overflow-hidden">
+                                                            <img src="{{ $companyImage['url'] }}" alt="Imagem da empresa" class="max-w-full max-h-full object-contain block mx-auto">
+                                                        </div>
+                                                    </button>
+                                                    <p class="text-[11px] text-gray-600 truncate" title="{{ $companyImage['name'] }}">{{ $companyImage['name'] }}</p>
+
+                                                    <div class="company-gallery-badge text-[11px] text-gray-500" data-company-gallery-badge="{{ $sourceKey }}">
+                                                        @if($isProductSelected && $isSlideSelected)
+                                                            Selecionada para produto e slide
+                                                        @elseif($isProductSelected)
+                                                            Selecionada para produto
+                                                        @elseif($isSlideSelected)
+                                                            Selecionada para slide
+                                                        @else
+                                                            Sem destino selecionado
+                                                        @endif
+                                                    </div>
+
+                                                    <div class="company-gallery-actions hidden rounded border border-gray-200 bg-white p-2 space-y-2" data-company-gallery-actions="{{ $sourceKey }}">
+                                                        <button type="button" class="w-full text-left text-xs rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" data-company-mark-product="{{ $sourceKey }}">Usar no produto</button>
+                                                        <button type="button" class="w-full text-left text-xs rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" data-company-clear-product="{{ $sourceKey }}">Não usar no produto</button>
+                                                        <label class="inline-flex items-center gap-2 text-xs text-gray-700">
+                                                            <input type="checkbox" name="suggestedSlideImageSources[]" value="{{ $sourceKey }}" class="company-slide-checkbox rounded border-gray-300 text-indigo-600" data-company-slide-checkbox="{{ $sourceKey }}" data-source-url="{{ $companyImage['url'] }}" @checked($isSlideSelected)>
+                                                            <span>Usar no slide</span>
+                                                        </label>
+                                                    </div>
+
+                                                    <input type="radio" name="suggestedProductImageSource" value="{{ $sourceKey }}" class="hidden company-product-radio" data-company-product-radio="{{ $sourceKey }}" @checked($isProductSelected)>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        </div>
+                                    @else
+                                        <p class="text-xs text-gray-500">Nenhuma imagem da empresa encontrada ainda. Faça upload para começar.</p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div id="rightSidebarImageConfig" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Configuração do Slide de Imagens</h4>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Links das imagens (um por linha)</label>
+                                    <textarea
+                                        id="rightSidebarImageUrls"
+                                        name="rightSidebarImageUrls"
+                                        rows="5"
+                                        placeholder="https://.../imagem1.jpg\nhttps://.../imagem2.png"
+                                        class="w-full border rounded px-3 py-2"
+                                    >{{ old('rightSidebarImageUrls', $config->rightSidebarImageUrls ?? '') }}</textarea>
+                                    @error('rightSidebarImageUrls')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pré-visualização das imagens</label>
+                                    <div id="rightSidebarImagePreview" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+                                    <p id="rightSidebarImagePreviewHint" class="mt-2 text-xs text-gray-500">Adicione links válidos para visualizar miniaturas.</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tempo por imagem (segundos)</label>
+                                        <input type="number" id="rightSidebarImageInterval" name="rightSidebarImageInterval" min="1" max="300" value="{{ old('rightSidebarImageInterval', $config->rightSidebarImageInterval ?? 8) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarImageInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Ajuste da imagem</label>
+                                        <select id="rightSidebarImageFit" name="rightSidebarImageFit" class="w-full border rounded px-3 py-2">
+                                            <option value="contain" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'contain') === 'contain')>Mostrar inteira (contain)</option>
+                                            <option value="cover" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'contain') === 'cover')>Preencher área (cover)</option>
+                                        </select>
+                                        @error('rightSidebarImageFit')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Tamanho da Imagem do Produto</h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -395,7 +576,7 @@
                             </div>
                         </div>
 
-                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                        <div id="paginationConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Paginação da Lista</h3>
 
                             <label class="inline-flex items-center gap-2">
@@ -416,6 +597,8 @@
                                     <input type="number" name="paginationInterval" min="1" max="120" value="{{ old('paginationInterval', $config->paginationInterval ?? 5) }}" class="w-full border rounded px-3 py-2">
                                     @error('paginationInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
+                            </div>
+                        </div>
                             </div>
                         </div>
 
@@ -450,8 +633,33 @@
         const showRightSidebarBorder = document.getElementById('showRightSidebarBorder');
         const rightSidebarBorderColor = document.getElementById('rightSidebarBorderColor');
         const rightSidebarBorderWidth = document.getElementById('rightSidebarBorderWidth');
-        const toggleVideoConfig = document.getElementById('toggleVideoConfig');
-        const videoConfigSection = document.getElementById('videoConfigSection');
+        const rightSidebarMediaTypeVideo = document.getElementById('rightSidebarMediaTypeVideo');
+        const rightSidebarMediaTypeImage = document.getElementById('rightSidebarMediaTypeImage');
+        const rightSidebarMediaTypeHybrid = document.getElementById('rightSidebarMediaTypeHybrid');
+        const rightSidebarHybridConfig = document.getElementById('rightSidebarHybridConfig');
+        const rightSidebarImageConfig = document.getElementById('rightSidebarImageConfig');
+        const rightSidebarImageUrls = document.getElementById('rightSidebarImageUrls');
+        const rightSidebarImagePreview = document.getElementById('rightSidebarImagePreview');
+        const rightSidebarImagePreviewHint = document.getElementById('rightSidebarImagePreviewHint');
+        const rightSidebarGlobalGalleryCode = document.getElementById('rightSidebarGlobalGalleryCode');
+        const globalGalleryLookupFeedback = document.getElementById('globalGalleryLookupFeedback');
+        const globalGalleryProductStatus = document.getElementById('globalGalleryProductStatus');
+        const globalGalleryLookupResults = document.getElementById('globalGalleryLookupResults');
+        const globalGalleryLookupEmpty = document.getElementById('globalGalleryLookupEmpty');
+        const productSearchBlock = document.getElementById('productSearchBlock');
+        const productSearchInput = document.getElementById('productSearchInput');
+        const productSearchResults = document.getElementById('productSearchResults');
+        const selectedProductCodeInput = document.getElementById('selectedProductCode');
+        const selectedProductBadge = document.getElementById('selectedProductBadge');
+        const companyGalleryCards = Array.from(document.querySelectorAll('.company-gallery-card'));
+        const configAccordionMenu = document.getElementById('configAccordionMenu');
+        const configPanelsStorage = document.getElementById('configPanelsStorage');
+        const configMenuButtons = Array.from(document.querySelectorAll('.config-menu-btn'));
+        const configPanels = Array.from(document.querySelectorAll('.config-panel'));
+        let openedConfigPanelId = null;
+        let globalGalleryLookupTimer = null;
+        let productSearchTimer = null;
+        let hasUserInteractedWithSlideSelection = false;
 
         function updateGradientVisibility() {
             if (!useGradient || !gradientFields) return;
@@ -561,10 +769,561 @@
             updateRightSidebarBorderState();
         }
 
-        if (toggleVideoConfig && videoConfigSection) {
-            toggleVideoConfig.addEventListener('click', () => {
-                videoConfigSection.classList.toggle('hidden');
+        function updateRightSidebarMediaConfigState() {
+            if (!rightSidebarImageConfig) return;
+            const isImageMode = Boolean(rightSidebarMediaTypeImage && rightSidebarMediaTypeImage.checked);
+            const isHybridMode = Boolean(rightSidebarMediaTypeHybrid && rightSidebarMediaTypeHybrid.checked);
+            rightSidebarImageConfig.style.display = (isImageMode || isHybridMode) ? 'block' : 'none';
+
+            if (rightSidebarHybridConfig) {
+                rightSidebarHybridConfig.style.display = isHybridMode ? 'block' : 'none';
+            }
+        }
+
+        function parseRightSidebarImageUrls() {
+            if (!rightSidebarImageUrls) {
+                return [];
+            }
+
+            return String(rightSidebarImageUrls.value || '')
+                .split(/\r?\n|,|;\s*/)
+                .map((value) => value.trim())
+                .filter((value) => /^https?:\/\//i.test(value) || /^\/storage\//i.test(value) || /^storage\//i.test(value));
+        }
+
+        function renderRightSidebarImagePreview() {
+            if (!rightSidebarImagePreview || !rightSidebarImagePreviewHint) {
+                return;
+            }
+
+            const urls = parseRightSidebarImageUrls();
+            rightSidebarImagePreview.innerHTML = '';
+
+            if (urls.length === 0) {
+                rightSidebarImagePreviewHint.textContent = 'Adicione links válidos para visualizar miniaturas.';
+                return;
+            }
+
+            const maxPreviewItems = 20;
+            const previewUrls = urls.slice(0, maxPreviewItems);
+
+            previewUrls.forEach((url) => {
+                const card = document.createElement('div');
+                card.className = 'rounded border border-gray-300 bg-white overflow-hidden';
+
+                const image = document.createElement('img');
+                image.src = url;
+                image.alt = 'Prévia da imagem';
+                image.className = 'w-full h-24 object-cover';
+                image.loading = 'lazy';
+                image.onerror = () => {
+                    image.classList.add('hidden');
+                    const fallback = document.createElement('div');
+                    fallback.className = 'h-24 flex items-center justify-center text-[11px] text-red-600 px-2 text-center';
+                    fallback.textContent = 'Falha ao carregar imagem';
+                    card.appendChild(fallback);
+                };
+
+                const caption = document.createElement('div');
+                caption.className = 'px-2 py-1 text-[11px] text-gray-600 truncate';
+                caption.textContent = url;
+                caption.title = url;
+
+                card.appendChild(image);
+                card.appendChild(caption);
+                rightSidebarImagePreview.appendChild(card);
             });
+
+            if (urls.length > maxPreviewItems) {
+                rightSidebarImagePreviewHint.textContent = `Mostrando ${maxPreviewItems} de ${urls.length} imagens.`;
+            } else {
+                rightSidebarImagePreviewHint.textContent = `${urls.length} imagem(ns) detectada(s).`;
+            }
+        }
+
+        function normalizeSlideUrlForCompare(url) {
+            const value = String(url || '').trim();
+            if (value === '') {
+                return '';
+            }
+
+            if (/^https?:\/\/localhost\/storage\//i.test(value)) {
+                return value.replace(/^https?:\/\/localhost\/storage\//i, '/storage/');
+            }
+
+            if (/^storage\//i.test(value)) {
+                return `/${value.replace(/^\/+/, '')}`;
+            }
+
+            return value;
+        }
+
+        function syncSelectedSlideUrlsToTextarea() {
+            if (!rightSidebarImageUrls) {
+                return;
+            }
+
+            if (!hasUserInteractedWithSlideSelection) {
+                return;
+            }
+
+            const managedCheckboxes = Array.from(document.querySelectorAll('input[name="suggestedSlideImageSources[]"][data-source-url]'));
+
+            const managedUrls = new Set(
+                managedCheckboxes
+                    .map((input) => normalizeSlideUrlForCompare(input.getAttribute('data-source-url')))
+                    .filter((url) => url !== '')
+            );
+
+            const selectedUrls = managedCheckboxes
+                .filter((input) => input.checked)
+                .map((input) => normalizeSlideUrlForCompare(input.getAttribute('data-source-url')))
+                .filter((url) => url !== '');
+
+            const manualUrls = String(rightSidebarImageUrls.value || '')
+                .split(/\r?\n/)
+                .map((line) => normalizeSlideUrlForCompare(line))
+                .filter((line) => line !== '' && !managedUrls.has(line));
+
+            const finalUrls = Array.from(new Set([...manualUrls, ...selectedUrls]));
+            rightSidebarImageUrls.value = finalUrls.join('\n');
+            renderRightSidebarImagePreview();
+        }
+
+        if (rightSidebarMediaTypeVideo) {
+            rightSidebarMediaTypeVideo.addEventListener('change', updateRightSidebarMediaConfigState);
+        }
+
+        if (rightSidebarMediaTypeImage) {
+            rightSidebarMediaTypeImage.addEventListener('change', updateRightSidebarMediaConfigState);
+        }
+
+        if (rightSidebarMediaTypeHybrid) {
+            rightSidebarMediaTypeHybrid.addEventListener('change', updateRightSidebarMediaConfigState);
+        }
+
+        if (rightSidebarImageUrls) {
+            rightSidebarImageUrls.addEventListener('input', renderRightSidebarImagePreview);
+        }
+
+        updateRightSidebarMediaConfigState();
+        renderRightSidebarImagePreview();
+
+        function getOldSuggestedProductSource() {
+            return @json(old('suggestedProductImageSource', 'none'));
+        }
+
+        function getOldSuggestedSlideSources() {
+            return @json(array_values((array) old('suggestedSlideImageSources', [])));
+        }
+
+        function renderGlobalGalleryLookupResult(payload) {
+            if (!globalGalleryLookupResults || !globalGalleryLookupFeedback || !globalGalleryLookupEmpty) {
+                return;
+            }
+
+            globalGalleryLookupResults.innerHTML = '';
+            globalGalleryLookupEmpty.classList.add('hidden');
+
+            if (!payload?.found) {
+                globalGalleryLookupFeedback.textContent = 'Código não encontrado na galeria geral.';
+                globalGalleryLookupEmpty.classList.remove('hidden');
+
+                if (globalGalleryProductStatus) {
+                    if (payload?.productFound) {
+                        globalGalleryProductStatus.className = 'text-xs text-green-700 mt-1';
+                        globalGalleryProductStatus.textContent = `Produto encontrado na empresa: ${payload?.productName || 'Sem nome'}.`;
+                    } else {
+                        globalGalleryProductStatus.className = 'text-xs text-amber-700 mt-1';
+                        globalGalleryProductStatus.textContent = 'Produto com este código não encontrado na empresa logada.';
+                    }
+                }
+
+                updateProductSearchVisibility();
+                return;
+            }
+
+            const oldProductSource = getOldSuggestedProductSource();
+            const oldSlideSources = new Set(getOldSuggestedSlideSources());
+
+            globalGalleryLookupFeedback.textContent = `Código ${payload.code} encontrado: ${payload.name}.`;
+
+            if (globalGalleryProductStatus) {
+                if (payload?.productFound) {
+                    globalGalleryProductStatus.className = 'text-xs text-green-700 mt-1';
+                    globalGalleryProductStatus.textContent = `Produto encontrado na empresa: ${payload?.productName || 'Sem nome'}.`;
+                } else {
+                    globalGalleryProductStatus.className = 'text-xs text-amber-700 mt-1';
+                    globalGalleryProductStatus.textContent = 'Produto com este código não encontrado na empresa logada.';
+                }
+            }
+
+            (payload.images || []).forEach((item) => {
+                const slot = Number(item.slot || 0);
+                const slotKey = String(item.slotKey || `slot_${slot}`);
+                const url = String(item.url || '');
+
+                if (!url) {
+                    return;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'rounded border border-gray-300 bg-white p-2 space-y-2';
+
+                const image = document.createElement('img');
+                image.src = url;
+                image.alt = `Imagem ${slot}`;
+                image.className = 'w-full h-28 object-cover rounded';
+                card.appendChild(image);
+
+                const legend = document.createElement('p');
+                legend.className = 'text-xs text-gray-600 truncate';
+                legend.textContent = `Slot ${slot}`;
+                legend.title = url;
+                card.appendChild(legend);
+
+                const productLabel = document.createElement('label');
+                productLabel.className = 'inline-flex items-center gap-2 text-xs text-gray-700';
+                productLabel.innerHTML = `<input type="radio" name="suggestedProductImageSource" value="${slotKey}" class="rounded border-gray-300 text-indigo-600" ${oldProductSource === slotKey ? 'checked' : ''}><span>Usar no produto</span>`;
+                card.appendChild(productLabel);
+
+                const slideLabel = document.createElement('label');
+                slideLabel.className = 'inline-flex items-center gap-2 text-xs text-gray-700';
+                slideLabel.innerHTML = `<input type="checkbox" name="suggestedSlideImageSources[]" value="${slotKey}" data-source-url="${url}" class="rounded border-gray-300 text-indigo-600" ${oldSlideSources.has(slotKey) ? 'checked' : ''}><span>Usar no slide</span>`;
+                card.appendChild(slideLabel);
+
+                globalGalleryLookupResults.appendChild(card);
+            });
+
+            if (!globalGalleryLookupResults.children.length) {
+                globalGalleryLookupEmpty.classList.remove('hidden');
+                globalGalleryLookupFeedback.textContent = 'Código encontrado, mas sem imagens válidas.';
+            }
+
+            updateProductSearchVisibility();
+        }
+
+        async function lookupGlobalGalleryByCode() {
+            if (!rightSidebarGlobalGalleryCode) {
+                return;
+            }
+
+            const code = String(rightSidebarGlobalGalleryCode.value || '').replace(/\D/g, '').slice(0, 14);
+
+            if (!globalGalleryLookupFeedback || !globalGalleryLookupResults || !globalGalleryLookupEmpty) {
+                return;
+            }
+
+            if (!code) {
+                globalGalleryLookupResults.innerHTML = '';
+                globalGalleryLookupEmpty.classList.add('hidden');
+                globalGalleryLookupFeedback.textContent = 'Digite o código para buscar imagens da galeria geral.';
+                if (globalGalleryProductStatus) {
+                    globalGalleryProductStatus.className = 'text-xs text-gray-500 mt-1';
+                    globalGalleryProductStatus.textContent = '';
+                }
+                return;
+            }
+
+            globalGalleryLookupFeedback.textContent = 'Buscando imagens...';
+            globalGalleryLookupEmpty.classList.add('hidden');
+
+            try {
+                const response = await fetch(`{{ url('/admin/global-image-galleries/lookup') }}/${code}`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+
+                const payload = await response.json();
+                renderGlobalGalleryLookupResult(payload);
+            } catch (_error) {
+                globalGalleryLookupFeedback.textContent = 'Não foi possível consultar a galeria agora.';
+            }
+        }
+
+        if (rightSidebarGlobalGalleryCode) {
+            rightSidebarGlobalGalleryCode.addEventListener('input', () => {
+                rightSidebarGlobalGalleryCode.value = String(rightSidebarGlobalGalleryCode.value || '').replace(/\D/g, '').slice(0, 14);
+
+                if (globalGalleryLookupTimer) {
+                    clearTimeout(globalGalleryLookupTimer);
+                }
+
+                globalGalleryLookupTimer = setTimeout(() => {
+                    lookupGlobalGalleryByCode();
+                }, 350);
+            });
+
+            lookupGlobalGalleryByCode();
+        }
+
+        function hasSelectedProductImageSource() {
+            const checked = document.querySelector('input[name="suggestedProductImageSource"]:checked');
+            if (!checked) {
+                return false;
+            }
+
+            return String(checked.value || 'none') !== 'none';
+        }
+
+        function updateProductSearchVisibility() {
+            if (!productSearchBlock) {
+                return;
+            }
+
+            productSearchBlock.classList.toggle('hidden', !hasSelectedProductImageSource());
+        }
+
+        function updateCompanyGalleryCardStates() {
+            companyGalleryCards.forEach((card) => {
+                const sourceKey = String(card.getAttribute('data-source-key') || '');
+                if (!sourceKey) {
+                    return;
+                }
+
+                const badge = card.querySelector(`[data-company-gallery-badge="${sourceKey}"]`);
+                const productRadio = card.querySelector(`[data-company-product-radio="${sourceKey}"]`);
+                const slideCheckbox = card.querySelector(`[data-company-slide-checkbox="${sourceKey}"]`);
+                const image = card.querySelector('img');
+
+                const isProductSelected = Boolean(productRadio && productRadio.checked);
+                const isSlideSelected = Boolean(slideCheckbox && slideCheckbox.checked);
+
+                card.classList.toggle('border-indigo-500', isProductSelected || isSlideSelected);
+                card.classList.toggle('bg-indigo-50', isProductSelected || isSlideSelected);
+
+                if (image) {
+                    image.classList.toggle('ring-2', isProductSelected || isSlideSelected);
+                    image.classList.toggle('ring-indigo-500', isProductSelected || isSlideSelected);
+                }
+
+                if (badge) {
+                    if (isProductSelected && isSlideSelected) {
+                        badge.textContent = 'Selecionada para produto e slide';
+                        badge.className = 'company-gallery-badge text-[11px] text-indigo-700';
+                    } else if (isProductSelected) {
+                        badge.textContent = 'Selecionada para produto';
+                        badge.className = 'company-gallery-badge text-[11px] text-indigo-700';
+                    } else if (isSlideSelected) {
+                        badge.textContent = 'Selecionada para slide';
+                        badge.className = 'company-gallery-badge text-[11px] text-indigo-700';
+                    } else {
+                        badge.textContent = 'Sem destino selecionado';
+                        badge.className = 'company-gallery-badge text-[11px] text-gray-500';
+                    }
+                }
+            });
+        }
+
+        function openCompanyGalleryActions(sourceKey) {
+            companyGalleryCards.forEach((card) => {
+                const cardKey = String(card.getAttribute('data-source-key') || '');
+                const actions = card.querySelector(`[data-company-gallery-actions="${cardKey}"]`);
+                if (!actions) {
+                    return;
+                }
+
+                if (cardKey === sourceKey) {
+                    actions.classList.toggle('hidden');
+                } else {
+                    actions.classList.add('hidden');
+                }
+            });
+        }
+
+        function renderProductSearchResults(items) {
+            if (!productSearchResults) {
+                return;
+            }
+
+            productSearchResults.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                productSearchResults.innerHTML = '<p class="text-xs text-gray-500">Nenhum produto encontrado.</p>';
+                return;
+            }
+
+            items.forEach((item) => {
+                const codigo = String(item?.codigo || '');
+                const nome = String(item?.nome || 'Sem nome');
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'w-full text-left rounded border border-gray-200 px-3 py-2 hover:bg-gray-50';
+                button.innerHTML = `<span class="text-xs font-semibold text-gray-700">${codigo}</span> <span class="text-xs text-gray-600">- ${nome}</span>`;
+                button.addEventListener('click', () => {
+                    if (selectedProductCodeInput) {
+                        selectedProductCodeInput.value = codigo;
+                    }
+
+                    if (selectedProductBadge) {
+                        selectedProductBadge.textContent = `Produto selecionado: ${codigo} - ${nome}`;
+                    }
+                });
+
+                productSearchResults.appendChild(button);
+            });
+        }
+
+        async function searchProductsForAssignment() {
+            if (!productSearchInput || !productSearchResults) {
+                return;
+            }
+
+            const query = String(productSearchInput.value || '').trim();
+            if (query.length < 2) {
+                productSearchResults.innerHTML = '<p class="text-xs text-gray-500">Digite ao menos 2 caracteres para buscar.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`{{ route('admin.web-screen-config.search-products') }}?q=${encodeURIComponent(query)}`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+
+                const payload = await response.json();
+                renderProductSearchResults(payload?.items || []);
+            } catch (_error) {
+                productSearchResults.innerHTML = '<p class="text-xs text-red-600">Falha ao buscar produtos.</p>';
+            }
+        }
+
+        document.addEventListener('change', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) {
+                return;
+            }
+
+            if (target.name === 'suggestedProductImageSource') {
+                updateProductSearchVisibility();
+                updateCompanyGalleryCardStates();
+            }
+
+            if (target.name === 'suggestedSlideImageSources[]' && target.hasAttribute('data-company-slide-checkbox')) {
+                updateCompanyGalleryCardStates();
+            }
+
+            if (target.name === 'suggestedSlideImageSources[]') {
+                hasUserInteractedWithSlideSelection = true;
+                syncSelectedSlideUrlsToTextarea();
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            const previewButton = target.closest('[data-company-gallery-preview]');
+            if (previewButton) {
+                const sourceKey = String(previewButton.getAttribute('data-company-gallery-preview') || '');
+                if (sourceKey) {
+                    openCompanyGalleryActions(sourceKey);
+                }
+                return;
+            }
+
+            const markProductButton = target.closest('[data-company-mark-product]');
+            if (markProductButton) {
+                const sourceKey = String(markProductButton.getAttribute('data-company-mark-product') || '');
+                const radio = document.querySelector(`[data-company-product-radio="${sourceKey}"]`);
+                if (radio instanceof HTMLInputElement) {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                return;
+            }
+
+            const clearProductButton = target.closest('[data-company-clear-product]');
+            if (clearProductButton) {
+                const noneRadio = document.querySelector('input[name="suggestedProductImageSource"][value="none"]');
+                if (noneRadio instanceof HTMLInputElement) {
+                    noneRadio.checked = true;
+                    noneRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        });
+
+        if (productSearchInput) {
+            productSearchInput.addEventListener('input', () => {
+                if (productSearchTimer) {
+                    clearTimeout(productSearchTimer);
+                }
+
+                productSearchTimer = setTimeout(() => {
+                    searchProductsForAssignment();
+                }, 300);
+            });
+        }
+
+        if (selectedProductBadge && selectedProductCodeInput && selectedProductCodeInput.value) {
+            selectedProductBadge.textContent = `Produto selecionado: ${selectedProductCodeInput.value}`;
+        }
+
+        updateProductSearchVisibility();
+        updateCompanyGalleryCardStates();
+
+        function setConfigMenuButtonState(button, isActive) {
+            if (!button) return;
+
+            button.classList.toggle('bg-indigo-600', isActive);
+            button.classList.toggle('text-white', isActive);
+            button.classList.toggle('border-indigo-600', isActive);
+            button.classList.toggle('bg-white', !isActive);
+            button.classList.toggle('text-gray-700', !isActive);
+            button.classList.toggle('border-gray-300', !isActive);
+        }
+
+        function closeAllConfigPanels() {
+            configPanels.forEach((panel) => {
+                panel.classList.add('hidden');
+                if (configPanelsStorage && panel.parentElement !== configPanelsStorage) {
+                    configPanelsStorage.appendChild(panel);
+                }
+            });
+
+            configMenuButtons.forEach((button) => setConfigMenuButtonState(button, false));
+        }
+
+        function openConfigPanel(targetId) {
+            const targetPanel = configPanels.find((panel) => panel.id === targetId);
+            const targetButton = configMenuButtons.find((button) => button.getAttribute('data-target') === targetId);
+
+            if (!targetPanel || !targetButton || !configAccordionMenu) {
+                return;
+            }
+
+            const isSamePanelOpen = openedConfigPanelId === targetId && !targetPanel.classList.contains('hidden');
+
+            closeAllConfigPanels();
+
+            if (isSamePanelOpen) {
+                openedConfigPanelId = null;
+                return;
+            }
+
+            targetButton.insertAdjacentElement('afterend', targetPanel);
+            targetPanel.classList.remove('hidden');
+            setConfigMenuButtonState(targetButton, true);
+            openedConfigPanelId = targetId;
+        }
+
+        configMenuButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-target');
+                if (targetId) {
+                    openConfigPanel(targetId);
+                }
+            });
+        });
+
+        configMenuButtons.forEach((button) => setConfigMenuButtonState(button, false));
+
+        const initialTarget = @json($hasVideoValidationErrors ? 'videoConfigSection' : null);
+        if (initialTarget) {
+            openConfigPanel(initialTarget);
         }
     </script>
 </x-app-layout>

@@ -52,7 +52,8 @@
         }
 
         #tvVideo,
-        #tvEmbed {
+        #tvEmbed,
+        #tvImageSlide {
             width: 100%;
             height: auto;
             min-height: 0;
@@ -88,7 +89,8 @@
         }
 
         .tv-video-fullscreen #tvVideo,
-        .tv-video-fullscreen #tvEmbed {
+        .tv-video-fullscreen #tvEmbed,
+        .tv-video-fullscreen #tvImageSlide {
             width: 100vw;
             height: 100vh;
             border-radius: 0;
@@ -126,6 +128,7 @@
                     Seu navegador não suporta vídeo HTML5.
                 </video>
                 <iframe id="tvEmbed" class="hidden w-full rounded-lg bg-black" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                <img id="tvImageSlide" class="hidden w-full rounded-lg bg-black" alt="Slide lateral" loading="eager">
             </aside>
         </main>
     </div>
