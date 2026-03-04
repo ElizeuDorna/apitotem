@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ProdutoResource;
 use App\Http\Resources\Api\TvProdutoResource;
+use App\Models\Configuracao;
 use App\Models\Device;
 use App\Models\DeviceConfiguration;
 use App\Models\DeviceActivation;
@@ -13,11 +14,13 @@ use App\Models\TemplateItem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
 class TvController extends Controller
 {
     private const ACTIVATION_EXPIRES_SECONDS = 300;
+    private const ACTIVATION_CODE_LENGTH = 10;
 
     #[OA\Post(
         path: '/api/tv/activation-code',
@@ -355,10 +358,87 @@ class TvController extends Controller
         ]);
     }
 
+    public function webScreenConfig(Request $request): JsonResponse
+    {
+        $token = $request->bearerToken();
+
+        if (! $token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token não informado.',
+            ], 401);
+        }
+
+        $device = Device::query()
+            ->where('token', $token)
+            ->where('ativo', true)
+            ->first();
+
+        if (! $device) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dispositivo inválido.',
+            ], 401);
+        }
+
+        $config = Configuracao::query()->firstOrCreate([
+            'empresa_id' => $device->empresa_id,
+        ], []);
+
+        $playlist = collect($config->videoPlaylist ?? [])
+            ->map(function ($item) {
+                return [
+                    'url' => (string) ($item['url'] ?? ''),
+                    'muted' => (bool) ($item['muted'] ?? false),
+                    'active' => (bool) ($item['active'] ?? true),
+                    'fullscreen' => (bool) ($item['fullscreen'] ?? false),
+                    'durationSeconds' => (int) ($item['durationSeconds'] ?? 0),
+                    'heightPx' => (int) ($item['heightPx'] ?? 0),
+                ];
+            })
+            ->filter(fn ($item) => $item['url'] !== '')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'videoUrl' => $config->videoUrl,
+                'videoMuted' => (bool) $config->videoMuted,
+                'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
+                'videoPlaylist' => $playlist,
+                'appBackgroundColor' => $config->appBackgroundColor,
+                'productsPanelBackgroundColor' => (string) ($config->productsPanelBackgroundColor ?? '#0f172a'),
+                'listBorderColor' => (string) ($config->listBorderColor ?? '#334155'),
+                'videoBackgroundColor' => (string) ($config->videoBackgroundColor ?? '#000000'),
+                'rowBackgroundColor' => $config->rowBackgroundColor,
+                'borderColor' => $config->borderColor,
+                'isRowBorderTransparent' => (bool) ($config->isRowBorderTransparent ?? false),
+                'priceColor' => $config->priceColor,
+                'showBorder' => (bool) $config->showBorder,
+                'showTitle' => (bool) ($config->showTitle ?? true),
+                'useGradient' => (bool) $config->useGradient,
+                'gradientStartColor' => $config->gradientStartColor,
+                'gradientEndColor' => $config->gradientEndColor,
+                'showBackgroundImage' => (bool) ($config->showBackgroundImage ?? false),
+                'isProductsPanelTransparent' => (bool) ($config->isProductsPanelTransparent ?? false),
+                'isListBorderTransparent' => (bool) ($config->isListBorderTransparent ?? false),
+                'backgroundImageUrl' => (string) ($config->backgroundImageUrl ?? ''),
+                'imageWidth' => (int) ($config->imageWidth ?? 56),
+                'imageHeight' => (int) ($config->imageHeight ?? 56),
+                'listFontSize' => (int) ($config->listFontSize ?? 16),
+                'groupLabelFontSize' => (int) ($config->groupLabelFontSize ?? 14),
+                'groupLabelColor' => (string) ($config->groupLabelColor ?? '#cbd5e1'),
+                'isPaginationEnabled' => (bool) $config->isPaginationEnabled,
+                'pageSize' => (int) ($config->pageSize ?? 10),
+                'paginationInterval' => (int) ($config->paginationInterval ?? 5),
+            ],
+        ]);
+    }
+
     private function generateUniqueActivationCode(): string
     {
         for ($attempt = 1; $attempt <= 50; $attempt++) {
-            $code = str_pad((string) random_int(0, 99999), 5, '0', STR_PAD_LEFT);
+            $code = Str::upper(Str::random(self::ACTIVATION_CODE_LENGTH));
 
             $inUse = DeviceActivation::query()
                 ->where('code', $code)

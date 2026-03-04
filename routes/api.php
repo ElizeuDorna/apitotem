@@ -46,6 +46,7 @@ Route::post('tv/activation-code', [TvController::class, 'activationCode']);
 Route::post('tv/check-activation', [TvController::class, 'checkActivation']);
 Route::post('tv/heartbeat', [TvController::class, 'heartbeat']);
 Route::get('tv/produtos', [TvController::class, 'produtos']);
+Route::get('tv/telaweb01/config', [TvController::class, 'webScreenConfig']);
 
 Route::middleware('device.auth')->prefix('tv')->group(function () {
     Route::get('bootstrap', [TvController::class, 'bootstrap']);

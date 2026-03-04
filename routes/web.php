@@ -15,6 +15,11 @@ Route::get('/contato', function () {
     return view('contato');
 });
 
+Route::view('/tv/telaweb01', 'tv.produtos')->name('tv.telaweb01');
+Route::view('/tv/telaweb01/configuracao', 'tv.configuracao')->name('tv.telaweb01.configuracao');
+Route::redirect('/tv/produtos', '/tv/telaweb01');
+Route::redirect('/tv/configuracao', '/tv/telaweb01/configuracao');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -29,6 +34,12 @@ Route::middleware('auth')->group(function () {
         ->middleware('menu.access:configuracao');
     Route::post('/admin/configuracao', [\App\Http\Controllers\Admin\ConfiguracaoController::class, 'update'])
         ->middleware('menu.access:configuracao');
+        Route::get('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'edit'])
+            ->name('admin.web-screen-config.edit')
+            ->middleware('menu.access:configuracao');
+        Route::post('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'update'])
+            ->name('admin.web-screen-config.update')
+            ->middleware('menu.access:configuracao');
 
     Route::prefix('admin')->group(function () {
         Route::get('devices', [\App\Http\Controllers\Admin\DeviceManagementController::class, 'index'])
@@ -57,6 +68,12 @@ Route::middleware('auth')->group(function () {
         Route::post('activate-device', [\App\Http\Controllers\Admin\DeviceActivationController::class, 'activate'])
             ->name('admin.activate-device')
             ->middleware('menu.access:ativar_tv');
+        Route::put('ativar-tv/devices/{device}', [\App\Http\Controllers\Admin\DeviceActivationController::class, 'updateDevice'])
+            ->name('admin.activate-tv.devices.update')
+            ->middleware('menu.access:ativar_tv');
+        Route::delete('ativar-tv/devices/{device}', [\App\Http\Controllers\Admin\DeviceActivationController::class, 'destroyDevice'])
+            ->name('admin.activate-tv.devices.destroy')
+            ->middleware('menu.access:ativar_tv');
 
         Route::get('api-token', [\App\Http\Controllers\Admin\ApiTokenController::class, 'index'])
             ->name('admin.api-token.index')
@@ -66,6 +83,7 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:token_api');
 
         Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class, ['as' => 'admin'])
+            ->scoped(['produto' => 'id'])
             ->middleware('menu.access:produtos');
         Route::resource('empresas', \App\Http\Controllers\Admin\EmpresaController::class, ['as' => 'admin'])
             ->middleware('menu.access:empresas')

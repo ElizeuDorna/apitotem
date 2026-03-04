@@ -19,7 +19,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.produtos.update', $produto) }}" class="space-y-4">
+    <form method="POST" action="{{ route('admin.produtos.update', ['produto' => $produto->id]) }}" class="space-y-4">
         @csrf
         @method('PUT')
 
@@ -50,7 +50,7 @@
 
             <div>
                 <label class="block font-semibold">OFERTA (opcional)</label>
-                <input type="number" step="0.01" name="OFERTA" value="{{ old('OFERTA', $produto->OFERTA) }}" class="w-full border rounded px-2 py-1" />
+                <input type="number" step="0.01" name="OFERTA" value="{{ old('OFERTA', $produto->OFERTA ?? 0) }}" class="w-full border rounded px-2 py-1" />
                 @error('OFERTA')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -92,25 +92,30 @@
 </div>
 
 <script>
+const gruposDisponiveis = @json($grupos->map(fn($grupo) => ['id' => $grupo->id, 'nome' => $grupo->nome, 'departamento_id' => $grupo->departamento_id])->values());
+
 function updateGrupos() {
     const deptId = document.querySelector('select[name="departamento_id"]').value;
     const grupoSelect = document.getElementById('grupo_id');
+    const selectedGrupoId = "{{ old('grupo_id', $produto->grupo_id) }}";
     
     if (!deptId) {
         grupoSelect.innerHTML = '<option value="">-- Selecione departamento primeiro --</option>';
         return;
     }
 
-    fetch(`/api/grupos?departamento_id=${deptId}`)
-        .then(r => r.json())
-        .then(data => {
-            const grupoId = "{{ $produto->grupo_id }}";
-            grupoSelect.innerHTML = '<option value="">-- Selecione --</option>';
-            data.dados.forEach(g => {
-                const selected = g.id == grupoId ? 'selected' : '';
-                grupoSelect.innerHTML += `<option value="${g.id}" ${selected}>${g.nome}</option>`;
-            });
-        });
+    const gruposFiltrados = gruposDisponiveis.filter((grupo) => String(grupo.departamento_id) === String(deptId));
+
+    grupoSelect.innerHTML = '<option value="">-- Selecione --</option>';
+    gruposFiltrados.forEach((grupo) => {
+        const option = document.createElement('option');
+        option.value = grupo.id;
+        option.textContent = grupo.nome;
+        if (String(selectedGrupoId) === String(grupo.id)) {
+            option.selected = true;
+        }
+        grupoSelect.appendChild(option);
+    });
 }
 
 function formatCpfCnpj(value) {
@@ -136,5 +141,7 @@ document.querySelectorAll('.cnpj-cpf-mask').forEach((input) => {
         event.target.value = formatCpfCnpj(event.target.value);
     });
 });
+
+updateGrupos();
 </script>
 @endsection

@@ -82,7 +82,7 @@ class ProdutoController extends Controller
             'departamento_id' => 'required|integer|exists:departamentos,id',
             'grupo_id' => 'required|integer|exists:grupos,id',
         ], [
-            'CODIGO.unique' => 'Este CÓDIGO já está registrado para esta empresa.',
+            'CODIGO.unique' => 'Este código já existe para esta empresa.',
             'NOME.required' => 'O campo NOME é obrigatório.',
             'PRECO.required' => 'O campo PREÇO é obrigatório.',
         ]);
@@ -107,6 +107,9 @@ class ProdutoController extends Controller
             ], 422);
         }
 
+        $validatedData['OFERTA'] = isset($validatedData['OFERTA']) && $validatedData['OFERTA'] !== ''
+            ? (float) $validatedData['OFERTA']
+            : 0;
         $validatedData['empresa_id'] = $empresa->id;
 
         try {
@@ -218,6 +221,8 @@ class ProdutoController extends Controller
             'IMG' => 'nullable|url|max:500',
             'departamento_id' => 'sometimes|required|integer|exists:departamentos,id',
             'grupo_id' => 'sometimes|required|integer|exists:grupos,id',
+        ], [
+            'CODIGO.unique' => 'Este código já existe para esta empresa.',
         ]);
 
         $departamentoId = $validatedData['departamento_id'] ?? $produtoModel->departamento_id;
@@ -243,6 +248,11 @@ class ProdutoController extends Controller
             ], 422);
         }
 
+        if (array_key_exists('OFERTA', $validatedData)) {
+            $validatedData['OFERTA'] = $validatedData['OFERTA'] !== null && $validatedData['OFERTA'] !== ''
+                ? (float) $validatedData['OFERTA']
+                : 0;
+        }
         $validatedData['empresa_id'] = $empresa->id;
 
         try {

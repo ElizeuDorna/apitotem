@@ -9,7 +9,6 @@ use App\Models\Empresa;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use OpenApi\Attributes as OA;
 
@@ -32,11 +31,23 @@ class DeviceActivationController extends Controller
             ? Empresa::query()->orderBy('NOME')->get(['id', 'NOME', 'CNPJ_CPF'])
             : collect();
 
+        $devicesQuery = Device::query()
+            ->with('empresa')
+            ->where('ativo', true)
+            ->orderByDesc('id');
+
+        if (! $user->isDefaultAdmin()) {
+            $devicesQuery->where('empresa_id', $user->empresa_id);
+        }
+
+        $devices = $devicesQuery->paginate(15, ['*'], 'devices_page');
+
         return view('admin.activate-tv', [
             'empresas' => $empresas,
             'isDefaultAdmin' => $user->isDefaultAdmin(),
             'empresaVinculada' => $user->empresa,
             'activatedToken' => session('activated_token'),
+            'devices' => $devices,
         ]);
     }
 
@@ -63,7 +74,7 @@ class DeviceActivationController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'code' => ['required', 'digits:5'],
+            'code' => ['required', 'alpha_num', 'size:10'],
             'empresa_id' => [
                 $user->isDefaultAdmin() ? 'required' : 'nullable',
                 'integer',
@@ -74,9 +85,10 @@ class DeviceActivationController extends Controller
         ]);
 
         $empresa = $this->resolveEmpresa($validated['empresa_id'] ?? null, $user);
+        $activationCode = strtoupper((string) $validated['code']);
 
         $activation = DeviceActivation::query()
-            ->where('code', $validated['code'])
+            ->where('code', $activationCode)
             ->where('activated', false)
             ->where('expires_at', '>', now())
             ->latest('id')
@@ -111,6 +123,50 @@ class DeviceActivationController extends Controller
             ->with('activated_token', $device->token);
     }
 
+    public function updateDevice(Request $request, Device $device): RedirectResponse
+    {
+        $this->authorizeDeviceAccess($device);
+
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:120'],
+            'local' => ['nullable', 'string', 'max:120'],
+            'ativo' => ['nullable', 'boolean'],
+            'empresa_id' => [
+                $user->isDefaultAdmin() ? 'required' : 'nullable',
+                'integer',
+                'exists:empresa,id',
+            ],
+        ]);
+
+        $empresaId = $user->isDefaultAdmin()
+            ? (int) $validated['empresa_id']
+            : (int) $user->empresa_id;
+
+        $device->update([
+            'nome' => $validated['nome'],
+            'local' => $validated['local'] ?? null,
+            'ativo' => (bool) ($validated['ativo'] ?? false),
+            'empresa_id' => $empresaId,
+        ]);
+
+        return redirect()
+            ->route('admin.activate-tv.index', ['devices_page' => $request->input('devices_page')])
+            ->with('success', 'TV atualizada com sucesso.');
+    }
+
+    public function destroyDevice(Request $request, Device $device): RedirectResponse
+    {
+        $this->authorizeDeviceAccess($device);
+
+        $device->delete();
+
+        return redirect()
+            ->route('admin.activate-tv.index', ['devices_page' => $request->input('devices_page')])
+            ->with('success', 'TV removida com sucesso.');
+    }
+
     private function resolveEmpresa(?int $empresaId, $user): Empresa
     {
         if ($user->isDefaultAdmin()) {
@@ -125,10 +181,27 @@ class DeviceActivationController extends Controller
         return $empresa;
     }
 
+    private function authorizeDeviceAccess(Device $device): void
+    {
+        $user = Auth::user();
+
+        if ($user->isDefaultAdmin()) {
+            return;
+        }
+
+        abort_unless((int) $user->empresa_id === (int) $device->empresa_id, 403);
+    }
+
     private function generateUniqueDeviceToken(): string
     {
+        $alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
         do {
-            $token = Str::random(60);
+            $token = '';
+
+            for ($index = 0; $index < 16; $index++) {
+                $token .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
         } while (Device::query()->where('token', $token)->exists());
 
         return $token;

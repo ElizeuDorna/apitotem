@@ -59,7 +59,11 @@ class ProdutoController extends Controller
     {
         $user = Auth::user();
 
-        $empresaIdForUnique = $user->isDefaultAdmin() ? null : $user->empresa_id;
+        $departamentoId = (int) $request->input('departamento_id');
+        $departamentoForUnique = $departamentoId > 0 ? Departamento::find($departamentoId) : null;
+        $empresaIdForUnique = $user->isDefaultAdmin()
+            ? $departamentoForUnique?->empresa_id
+            : $user->empresa_id;
 
         $validated = $request->validate([
             'CODIGO' => [
@@ -71,15 +75,18 @@ class ProdutoController extends Controller
                         return $query->where('empresa_id', $empresaIdForUnique);
                     }
 
-                    return $query;
+                    return $query->whereRaw('1 = 0');
                 }),
             ],
             'NOME' => 'required|string|max:255',
+            'cnpj_cpf' => 'nullable|string|max:18',
             'PRECO' => 'required|numeric|min:0',
             'OFERTA' => 'nullable|numeric|min:0',
             'IMG' => 'nullable|url|max:500',
             'departamento_id' => 'required|exists:departamentos,id',
             'grupo_id' => 'required|exists:grupos,id',
+        ], [
+            'CODIGO.unique' => 'Este código já existe para esta empresa.',
         ]);
 
         // Validate that grupo belongs to departamento
@@ -101,6 +108,11 @@ class ProdutoController extends Controller
                 abort(403);
             }
         }
+
+        $validated['cnpj_cpf'] = preg_replace('/\D/', '', (string) ($validated['cnpj_cpf'] ?? $user->documento()));
+        $validated['OFERTA'] = isset($validated['OFERTA']) && $validated['OFERTA'] !== ''
+            ? (float) $validated['OFERTA']
+            : 0;
 
         $validated['empresa_id'] = $empresaId;
 
@@ -132,8 +144,10 @@ class ProdutoController extends Controller
 
         $this->authorizeProdutoAccess($produto);
 
+        $departamentoId = (int) $request->input('departamento_id', $produto->departamento_id);
+        $departamentoForUnique = $departamentoId > 0 ? Departamento::find($departamentoId) : null;
         $empresaIdForUnique = $user->isDefaultAdmin()
-            ? ($produto->empresa_id ?? optional(Departamento::find($request->input('departamento_id', $produto->departamento_id)))->empresa_id)
+            ? ($departamentoForUnique?->empresa_id ?? $produto->empresa_id)
             : $user->empresa_id;
 
         $validated = $request->validate([
@@ -147,16 +161,19 @@ class ProdutoController extends Controller
                             return $query->where('empresa_id', $empresaIdForUnique);
                         }
 
-                        return $query;
+                        return $query->whereRaw('1 = 0');
                     })
                     ->ignore($produto->id),
             ],
             'NOME' => 'required|string|max:255',
+            'cnpj_cpf' => 'required|string|max:18',
             'PRECO' => 'required|numeric|min:0',
             'OFERTA' => 'nullable|numeric|min:0',
             'IMG' => 'nullable|url|max:500',
             'departamento_id' => 'required|exists:departamentos,id',
             'grupo_id' => 'required|exists:grupos,id',
+        ], [
+            'CODIGO.unique' => 'Este código já existe para esta empresa.',
         ]);
 
         // Validate that grupo belongs to departamento
@@ -178,6 +195,11 @@ class ProdutoController extends Controller
                 abort(403);
             }
         }
+
+        $validated['cnpj_cpf'] = preg_replace('/\D/', '', (string) $validated['cnpj_cpf']);
+        $validated['OFERTA'] = isset($validated['OFERTA']) && $validated['OFERTA'] !== ''
+            ? (float) $validated['OFERTA']
+            : 0;
 
         $validated['empresa_id'] = $empresaId;
 
@@ -207,15 +229,17 @@ class ProdutoController extends Controller
             return;
         }
 
-        if ($this->usesEmpresaSegregation()) {
-            $produto->loadMissing(['departamento:id,empresa_id', 'grupo:id,empresa_id']);
+        if (! $this->usesEmpresaSegregation()) {
+            return;
+        }
 
-            $empresaId = $produto->empresa_id ?? $produto->departamento?->empresa_id ?? $produto->grupo?->empresa_id;
+        $produto->loadMissing(['departamento:id,empresa_id', 'grupo:id,empresa_id']);
 
-            if ($empresaId !== null) {
-                abort_unless((int) $user->empresa_id === (int) $empresaId, 403);
-                return;
-            }
+        $empresaId = $produto->empresa_id ?? $produto->departamento?->empresa_id ?? $produto->grupo?->empresa_id;
+
+        if ($empresaId !== null) {
+            abort_unless((int) $user->empresa_id === (int) $empresaId, 403);
+            return;
         }
 
         abort(403);

@@ -50,7 +50,7 @@
 
             <div>
                 <label class="block font-semibold">OFERTA (opcional)</label>
-                <input type="number" step="0.01" name="OFERTA" value="{{ old('OFERTA') }}" class="w-full border rounded px-2 py-1" />
+                <input type="number" step="0.01" name="OFERTA" value="{{ old('OFERTA', 0) }}" class="w-full border rounded px-2 py-1" />
                 @error('OFERTA')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
             </div>
         </div>

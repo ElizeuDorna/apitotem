@@ -44,8 +44,8 @@
                         <td class="px-4 py-2">{{ $produto->departamento?->nome ?? '-' }}</td>
                         <td class="px-4 py-2">{{ $produto->grupo?->nome ?? '-' }}</td>
                         <td class="px-4 py-2 text-center space-x-2">
-                            <a href="{{ route('admin.produtos.edit', $produto) }}" class="text-blue-600 hover:text-blue-800 text-sm">Editar</a>
-                            <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline" onsubmit="return confirm('Tem certeza?');">
+                            <a href="{{ route('admin.produtos.edit', ['produto' => $produto->id]) }}" class="text-blue-600 hover:text-blue-800 text-sm">Editar</a>
+                            <form action="{{ route('admin.produtos.destroy', ['produto' => $produto->id]) }}" method="POST" class="inline" onsubmit="return confirm('Tem certeza?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-red-600 hover:text-red-800 text-sm">Deletar</button>
