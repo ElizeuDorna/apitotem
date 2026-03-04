@@ -14,6 +14,7 @@ use App\Models\TemplateItem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
@@ -203,21 +204,34 @@ class TvController extends Controller
 
         $empresaId = (int) $device->empresa_id;
         $configuration = $this->resolveDeviceConfiguration($device->id);
-        $showImage = (bool) (Configuracao::query()
-            ->where('empresa_id', $empresaId)
-            ->value('showImage') ?? true);
+        $screenConfig = Configuracao::query()->firstOrCreate([
+            'empresa_id' => $empresaId,
+        ], []);
+
+        $showImage = (bool) ($screenConfig->showImage ?? true);
+        $orderMode = (string) ($screenConfig->productListOrderMode ?? 'grupo');
+        $alphabeticalDirection = (string) ($screenConfig->productAlphabeticalDirection ?? 'asc');
+        $departmentOrder = collect($screenConfig->productDepartmentOrder ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
+        $groupOrder = collect($screenConfig->productGroupOrder ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
 
         $cacheSeconds = max(5, (int) $configuration->atualizar_produtos_segundos);
+        $orderSignature = md5(json_encode([
+            'mode' => $orderMode,
+            'alpha' => $alphabeticalDirection,
+            'departments' => $departmentOrder,
+            'groups' => $groupOrder,
+        ]));
 
         $produtos = Cache::remember(
-            "tv:produtos:empresa:{$empresaId}",
+            "tv:produtos:empresa:{$empresaId}:ordem:{$orderSignature}",
             now()->addSeconds($cacheSeconds),
-            function () use ($empresaId) {
-                return Produto::query()
+            function () use ($empresaId, $orderMode, $alphabeticalDirection, $departmentOrder, $groupOrder) {
+                $items = Produto::query()
                     ->with(['departamento:id,nome', 'grupo:id,nome,departamento_id'])
                     ->where('empresa_id', $empresaId)
-                    ->orderBy('NOME')
                     ->get();
+
+                return $this->sortProductsForTv($items, $orderMode, $alphabeticalDirection, $departmentOrder, $groupOrder);
             }
         );
 
@@ -482,5 +496,63 @@ class TvController extends Controller
                 'orientacao' => 'landscape',
             ]
         )->load('template');
+    }
+
+    private function sortProductsForTv(Collection $products, string $mode, string $alphabeticalDirection, array $departmentOrder, array $groupOrder): Collection
+    {
+        $departmentRank = array_flip(array_values(array_unique(array_map('intval', $departmentOrder))));
+        $groupRank = array_flip(array_values(array_unique(array_map('intval', $groupOrder))));
+        $direction = $alphabeticalDirection === 'desc' ? 'desc' : 'asc';
+
+        return $products
+            ->sort(function ($left, $right) use ($mode, $direction, $departmentRank, $groupRank) {
+                $leftDepartmentId = (int) ($left->departamento_id ?? 0);
+                $rightDepartmentId = (int) ($right->departamento_id ?? 0);
+                $leftGroupId = (int) ($left->grupo_id ?? 0);
+                $rightGroupId = (int) ($right->grupo_id ?? 0);
+
+                $leftDepartmentPriority = array_key_exists($leftDepartmentId, $departmentRank)
+                    ? (int) $departmentRank[$leftDepartmentId]
+                    : 100000 + $leftDepartmentId;
+                $rightDepartmentPriority = array_key_exists($rightDepartmentId, $departmentRank)
+                    ? (int) $departmentRank[$rightDepartmentId]
+                    : 100000 + $rightDepartmentId;
+
+                $leftGroupPriority = array_key_exists($leftGroupId, $groupRank)
+                    ? (int) $groupRank[$leftGroupId]
+                    : 100000 + $leftGroupId;
+                $rightGroupPriority = array_key_exists($rightGroupId, $groupRank)
+                    ? (int) $groupRank[$rightGroupId]
+                    : 100000 + $rightGroupId;
+
+                if ($mode === 'departamento') {
+                    if ($leftDepartmentPriority !== $rightDepartmentPriority) {
+                        return $leftDepartmentPriority <=> $rightDepartmentPriority;
+                    }
+
+                    if ($leftGroupPriority !== $rightGroupPriority) {
+                        return $leftGroupPriority <=> $rightGroupPriority;
+                    }
+                } else {
+                    if ($leftGroupPriority !== $rightGroupPriority) {
+                        return $leftGroupPriority <=> $rightGroupPriority;
+                    }
+
+                    if ($leftDepartmentPriority !== $rightDepartmentPriority) {
+                        return $leftDepartmentPriority <=> $rightDepartmentPriority;
+                    }
+                }
+
+                $leftName = Str::ascii(mb_strtolower((string) ($left->NOME ?? '')));
+                $rightName = Str::ascii(mb_strtolower((string) ($right->NOME ?? '')));
+                $nameComparison = $leftName <=> $rightName;
+
+                if ($nameComparison !== 0) {
+                    return $direction === 'desc' ? -$nameComparison : $nameComparison;
+                }
+
+                return (int) $left->id <=> (int) $right->id;
+            })
+            ->values();
     }
 }

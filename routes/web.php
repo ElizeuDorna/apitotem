@@ -40,6 +40,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'update'])
             ->name('admin.web-screen-config.update')
             ->middleware('menu.access:configuracao');
+        Route::get('/admin/organizar-lista', [\App\Http\Controllers\Admin\OrganizarListaController::class, 'edit'])
+            ->name('admin.organizar-lista.edit')
+            ->middleware('menu.access:configuracao');
+        Route::post('/admin/organizar-lista', [\App\Http\Controllers\Admin\OrganizarListaController::class, 'update'])
+            ->name('admin.organizar-lista.update')
+            ->middleware('menu.access:configuracao');
 
     Route::prefix('admin')->group(function () {
         Route::get('devices', [\App\Http\Controllers\Admin\DeviceManagementController::class, 'index'])
