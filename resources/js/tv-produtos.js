@@ -31,12 +31,14 @@ const visualConfig = {
     productsPanelBackgroundColor: '#0f172a',
     listBorderColor: '#334155',
     videoBackgroundColor: '#000000',
+    isVideoPanelTransparent: false,
     rowBackgroundColor: '#020617',
     borderColor: '#334155',
     isRowBorderTransparent: false,
     priceColor: '#818cf8',
     showBorder: true,
     showTitle: true,
+    showImage: true,
     showBackgroundImage: false,
     isProductsPanelTransparent: false,
     isListBorderTransparent: false,
@@ -65,6 +67,9 @@ let youTubePlayerReady = false;
 let youTubePlayKeepAliveTimer = null;
 let shouldUnmuteYouTubeAfterStart = false;
 let youTubeUnmuteDelayTimer = null;
+let youTubeStartupTimeoutTimer = null;
+let youTubeRequestedMuted = false;
+let youTubeStartupMuteRetryDone = false;
 let currentYouTubeVideoId = '';
 let currentVideoPlaylistSignature = '';
 let lastVideoAdvanceAt = 0;
@@ -166,6 +171,65 @@ function clearYouTubeUnmuteDelay() {
     }
 }
 
+function clearYouTubeStartupTimeout() {
+    if (youTubeStartupTimeoutTimer) {
+        clearTimeout(youTubeStartupTimeoutTimer);
+        youTubeStartupTimeoutTimer = null;
+    }
+}
+
+function getYouTubeErrorMessage(errorCode) {
+    const code = Number(errorCode);
+
+    if (code === 2) {
+        return 'Erro 2 do YouTube: URL/ID inválido para reprodução.';
+    }
+
+    if (code === 5) {
+        return 'Erro 5 do YouTube: player HTML5 não conseguiu reproduzir este vídeo.';
+    }
+
+    if (code === 100) {
+        return 'Erro 100 do YouTube: vídeo removido, privado ou indisponível.';
+    }
+
+    if (code === 101 || code === 150) {
+        return 'Erro 101/150 do YouTube: incorporação bloqueada pelo proprietário do vídeo.';
+    }
+
+    return `Erro ${Number.isFinite(code) ? code : 'desconhecido'} do YouTube: não foi possível reproduzir este vídeo neste dispositivo.`;
+}
+
+function getYouTubeStateLabel(state) {
+    const parsed = Number(state);
+
+    if (parsed === -1) {
+        return 'não iniciado';
+    }
+
+    if (parsed === 0) {
+        return 'finalizado';
+    }
+
+    if (parsed === 1) {
+        return 'reproduzindo';
+    }
+
+    if (parsed === 2) {
+        return 'pausado';
+    }
+
+    if (parsed === 3) {
+        return 'carregando';
+    }
+
+    if (parsed === 5) {
+        return 'vídeo sugerido em fila';
+    }
+
+    return 'desconhecido';
+}
+
 function loadYouTubeApi(callback) {
     if (youTubeApiReady && typeof callback === 'function') {
         callback();
@@ -200,6 +264,7 @@ function bindYouTubeEndedEvent() {
     clearYouTubeStatePoll();
     clearYouTubePlayKeepAlive();
     clearYouTubeUnmuteDelay();
+    clearYouTubeStartupTimeout();
 
     if (youTubePlayer && typeof youTubePlayer.destroy === 'function') {
         youTubePlayer.destroy();
@@ -247,6 +312,10 @@ function bindYouTubeEndedEvent() {
                 }, 1000);
             },
             onStateChange: (event) => {
+                if (event.data === 1 || event.data === 3) {
+                    clearYouTubeStartupTimeout();
+                }
+
                 if (event.data === 1 && shouldUnmuteYouTubeAfterStart) {
                     clearYouTubeUnmuteDelay();
                     youTubeUnmuteDelayTimer = setTimeout(() => {
@@ -297,7 +366,34 @@ function bindYouTubeEndedEvent() {
 
                 if (event.data === 0 && videoPlaylistItems.length > 1) {
                     clearYouTubeUnmuteDelay();
+                    clearYouTubeStartupTimeout();
                     playNextVideoInPlaylist();
+                }
+            },
+            onError: (event) => {
+                clearYouTubeUnmuteDelay();
+                clearYouTubeStartupTimeout();
+
+                const code = Number(event?.data ?? 0);
+                const reason = getYouTubeErrorMessage(code);
+
+                if (videoHint) {
+                    videoHint.textContent = reason;
+                }
+
+                if (typeof window !== 'undefined') {
+                    window.__tvLastYouTubeError = {
+                        code,
+                        reason,
+                        videoId: currentYouTubeVideoId,
+                        at: new Date().toISOString(),
+                    };
+                }
+
+                if (videoPlaylistItems.length > 1) {
+                    setTimeout(() => {
+                        playNextVideoInPlaylist();
+                    }, 1200);
                 }
             },
         },
@@ -317,6 +413,16 @@ function getYouTubeVideoId(url) {
             const byQuery = parsed.searchParams.get('v');
             if (byQuery) {
                 return byQuery;
+            }
+
+            const embedMatch = parsed.pathname.match(/\/embed\/([^/?]+)/);
+            if (embedMatch?.[1]) {
+                return embedMatch[1];
+            }
+
+            const liveMatch = parsed.pathname.match(/\/live\/([^/?]+)/);
+            if (liveMatch?.[1]) {
+                return liveMatch[1];
             }
 
             const shortsMatch = parsed.pathname.match(/\/shorts\/([^/?]+)/);
@@ -344,7 +450,10 @@ function playYouTubeVideo(videoId, isMuted) {
     }
 
     currentYouTubeVideoId = videoId;
+    youTubeRequestedMuted = Boolean(isMuted);
+    youTubeStartupMuteRetryDone = false;
     clearYouTubeUnmuteDelay();
+    clearYouTubeStartupTimeout();
     shouldUnmuteYouTubeAfterStart = false;
 
     loadYouTubeApi(() => {
@@ -379,6 +488,80 @@ function playYouTubeVideo(videoId, isMuted) {
 
                 if (typeof youTubePlayer.playVideo === 'function') {
                     youTubePlayer.playVideo();
+                }
+
+                if (videoPlaylistItems.length > 1) {
+                    clearYouTubeStartupTimeout();
+                    youTubeStartupTimeoutTimer = setTimeout(() => {
+                        if (!youTubePlayer || typeof youTubePlayer.getPlayerState !== 'function') {
+                            return;
+                        }
+
+                        try {
+                            const state = youTubePlayer.getPlayerState();
+                            const isPlaying = state === 1 || state === 3;
+
+                            if (!isPlaying) {
+                                if (!youTubeStartupMuteRetryDone && !youTubeRequestedMuted) {
+                                    youTubeStartupMuteRetryDone = true;
+
+                                    if (typeof youTubePlayer.mute === 'function') {
+                                        try {
+                                            youTubePlayer.mute();
+                                        } catch (_error) {
+                                        }
+                                    }
+
+                                    if (typeof youTubePlayer.playVideo === 'function') {
+                                        try {
+                                            youTubePlayer.playVideo();
+                                        } catch (_error) {
+                                        }
+                                    }
+
+                                    clearYouTubeStartupTimeout();
+                                    youTubeStartupTimeoutTimer = setTimeout(() => {
+                                        if (!youTubePlayer || typeof youTubePlayer.getPlayerState !== 'function') {
+                                            return;
+                                        }
+
+                                        try {
+                                            const stateAfterRetry = youTubePlayer.getPlayerState();
+                                            const isPlayingAfterRetry = stateAfterRetry === 1 || stateAfterRetry === 3;
+                                            if (!isPlayingAfterRetry) {
+                                                if (videoHint) {
+                                                    videoHint.textContent = `YouTube não iniciou este vídeo (estado: ${getYouTubeStateLabel(stateAfterRetry)}). Motivo provável: bloqueio de incorporação, restrição regional/idade ou limitação do dispositivo.`;
+                                                }
+
+                                                if (typeof window !== 'undefined') {
+                                                    window.__tvLastYouTubeError = {
+                                                        code: null,
+                                                        reason: 'Sem código do YouTube (falha de inicialização sem onError).',
+                                                        state: stateAfterRetry,
+                                                        stateLabel: getYouTubeStateLabel(stateAfterRetry),
+                                                        videoId: currentYouTubeVideoId,
+                                                        at: new Date().toISOString(),
+                                                    };
+                                                }
+
+                                                playNextVideoInPlaylist();
+                                            }
+                                        } catch (_error) {
+                                        }
+                                    }, 6000);
+
+                                    return;
+                                }
+
+                                if (videoHint) {
+                                    videoHint.textContent = `YouTube não iniciou este vídeo (estado: ${getYouTubeStateLabel(state)}). Tentando fallback automático...`;
+                                }
+
+                                playNextVideoInPlaylist();
+                            }
+                        } catch (_error) {
+                        }
+                    }, 8000);
                 }
 
                 clearYouTubePlayKeepAlive();
@@ -467,7 +650,22 @@ function resolveEmbedUrl(url, isMuted = false) {
         const origin = encodeURIComponent(window.location.origin);
 
         if (host.includes('youtube.com')) {
-            const videoId = parsed.searchParams.get('v');
+            let videoId = parsed.searchParams.get('v');
+
+            if (!videoId) {
+                const embedMatch = parsed.pathname.match(/\/embed\/([^/?]+)/);
+                if (embedMatch?.[1]) {
+                    videoId = embedMatch[1];
+                }
+            }
+
+            if (!videoId) {
+                const liveMatch = parsed.pathname.match(/\/live\/([^/?]+)/);
+                if (liveMatch?.[1]) {
+                    videoId = liveMatch[1];
+                }
+            }
+
             if (videoId) {
                 const muteParam = isMuted ? 1 : 0;
                 return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muteParam}&enablejsapi=1&playsinline=1&origin=${origin}`;
@@ -506,7 +704,7 @@ function parseConfiguredVideoUrls() {
     if (Array.isArray(visualConfig.videoPlaylist) && visualConfig.videoPlaylist.length > 0) {
         return visualConfig.videoPlaylist
             .map((item) => ({
-                url: String(item?.url || '').trim(),
+                url: extractVideoUrl(String(item?.url || '').trim()),
                 muted: Boolean(item?.muted),
                 active: Boolean(item?.active ?? true),
                 fullscreen: Boolean(item?.fullscreen ?? false),
@@ -524,9 +722,28 @@ function parseConfiguredVideoUrls() {
 
     return raw
         .split(/\r?\n|,|;\s*/)
-        .map((item) => item.trim())
+        .map((item) => extractVideoUrl(item.trim()))
         .filter(Boolean)
         .map((url) => ({ url, muted: Boolean(visualConfig.videoMuted), active: true, fullscreen: false, durationSeconds: 0, heightPx: 0 }));
+}
+
+function extractVideoUrl(input) {
+    const value = String(input || '').trim();
+    if (!value) {
+        return '';
+    }
+
+    const srcMatch = value.match(/src=["']([^"']+)["']/i);
+    if (srcMatch?.[1]) {
+        return srcMatch[1].trim();
+    }
+
+    const httpMatch = value.match(/https?:\/\/[^\s"'<>]+/i);
+    if (httpMatch?.[0]) {
+        return httpMatch[0].trim();
+    }
+
+    return value;
 }
 
 function applyCurrentVideoHeight(heightPx = 0) {
@@ -812,17 +1029,18 @@ function applyProductsPanelBackground() {
 
 function applyVideoBackground() {
     const color = visualConfig.videoBackgroundColor || '#000000';
+    const resolvedColor = visualConfig.isVideoPanelTransparent ? 'transparent' : color;
 
     if (tvVideoPanel) {
-        tvVideoPanel.style.backgroundColor = color;
+        tvVideoPanel.style.backgroundColor = resolvedColor;
     }
 
     if (tvVideo) {
-        tvVideo.style.backgroundColor = color;
+        tvVideo.style.backgroundColor = resolvedColor;
     }
 
     if (tvEmbed) {
-        tvEmbed.style.backgroundColor = color;
+        tvEmbed.style.backgroundColor = resolvedColor;
     }
 }
 
@@ -901,7 +1119,7 @@ function renderProducts(produtos) {
         const imageUrl = String(item.imagem || '').trim();
         const imageWidth = Math.min(400, Math.max(20, Number(visualConfig.imageWidth || 56)));
         const imageHeight = Math.min(400, Math.max(20, Number(visualConfig.imageHeight || 56)));
-        const imageMarkup = imageUrl
+        const imageMarkup = visualConfig.showImage && imageUrl
             ? `<img src="${imageUrl}" alt="${item.nome ?? 'Produto'}" class="rounded object-cover shrink-0" style="width:${imageWidth}px;height:${imageHeight}px" loading="lazy" onerror="this.style.display='none'">`
             : '';
 
@@ -977,6 +1195,7 @@ async function loadVisualConfig(token) {
         }
 
         Object.assign(visualConfig, payload.data || {});
+        visualConfig.showImage = Boolean(visualConfig.showImage);
 
         document.body.style.backgroundColor = visualConfig.appBackgroundColor;
         const imageUrl = String(visualConfig.backgroundImageUrl || '').trim();

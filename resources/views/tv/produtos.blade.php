@@ -45,6 +45,25 @@
             overflow: hidden;
         }
 
+        #tvVideoPanel {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+        }
+
+        #tvVideo,
+        #tvEmbed {
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        #tvEmbed {
+            aspect-ratio: auto;
+        }
+
         .tv-video-fullscreen #tvHeader,
         .tv-video-fullscreen #tvProductsPanel {
             display: none;
@@ -102,16 +121,11 @@
             </section>
 
             <aside id="tvVideoPanel" class="tv-panel rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <h2 class="mb-3 text-lg font-medium">Vídeo da TV</h2>
-                <p class="mb-3 text-xs text-slate-400">Use a pasta <strong>public/tv/videos</strong> para organizar os vídeos desta tela.</p>
                 <video id="tvVideo" class="w-full rounded-lg bg-black" controls autoplay playsinline>
                     <source src="/tv/videos/demo.mp4" type="video/mp4">
                     Seu navegador não suporta vídeo HTML5.
                 </video>
-                <iframe id="tvEmbed" class="hidden w-full aspect-video rounded-lg bg-black" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                <p id="videoHint" class="mt-3 text-xs text-slate-400">
-                    Se não aparecer vídeo, adicione um arquivo em <strong>public/tv/videos/demo.mp4</strong>.
-                </p>
+                <iframe id="tvEmbed" class="hidden w-full rounded-lg bg-black" allow="autoplay; encrypted-media" allowfullscreen></iframe>
             </aside>
         </main>
     </div>

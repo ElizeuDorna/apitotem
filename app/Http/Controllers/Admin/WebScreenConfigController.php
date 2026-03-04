@@ -7,7 +7,9 @@ use App\Models\Configuracao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
+use Throwable;
 
 class WebScreenConfigController extends Controller
 {
@@ -29,20 +31,20 @@ class WebScreenConfigController extends Controller
         $empresaId = $this->resolveEmpresaId();
 
         $rawVideoUrls = collect($request->input('video_urls', []))
-            ->map(fn ($value) => trim((string) $value))
-            ->values();
+            ->map(fn ($value) => $this->extractVideoUrlFromInput((string) $value))
+            ;
 
         $rawMutedFlags = collect($request->input('video_muted_flags', []))
             ->map(fn ($value) => (string) $value === '1')
-            ->values();
+            ;
 
         $rawActiveFlags = collect($request->input('video_active_flags', []))
             ->map(fn ($value) => (string) $value === '1')
-            ->values();
+            ;
 
         $rawFullscreenFlags = collect($request->input('video_fullscreen_flags', []))
             ->map(fn ($value) => (string) $value === '1')
-            ->values();
+            ;
 
         $rawDurationSeconds = collect($request->input('video_duration_seconds', []))
             ->map(function ($value) {
@@ -52,7 +54,7 @@ class WebScreenConfigController extends Controller
 
                 return max(0, (int) $value);
             })
-            ->values();
+            ;
 
         $rawVideoHeights = collect($request->input('video_heights', []))
             ->map(function ($value) {
@@ -62,7 +64,7 @@ class WebScreenConfigController extends Controller
 
                 return max(0, (int) $value);
             })
-            ->values();
+            ;
 
         $playlist = collect(range(0, 9))
             ->map(function (int $index) use ($rawVideoUrls, $rawMutedFlags, $rawActiveFlags, $rawFullscreenFlags, $rawDurationSeconds, $rawVideoHeights) {
@@ -113,6 +115,7 @@ class WebScreenConfigController extends Controller
             'productsPanelBackgroundColor' => ['required', 'string', 'max:9'],
             'listBorderColor' => ['required', 'string', 'max:9'],
             'videoBackgroundColor' => ['required', 'string', 'max:9'],
+            'isVideoPanelTransparent' => ['nullable', 'boolean'],
             'rowBackgroundColor' => ['required', 'string', 'max:9'],
             'borderColor' => ['required', 'string', 'max:7'],
             'priceColor' => ['required', 'string', 'max:7'],
@@ -124,6 +127,7 @@ class WebScreenConfigController extends Controller
             'isRowBorderTransparent' => ['nullable', 'boolean'],
             'showTitle' => ['nullable', 'boolean'],
             'showBackgroundImage' => ['nullable', 'boolean'],
+            'showImage' => ['nullable', 'boolean'],
             'isProductsPanelTransparent' => ['nullable', 'boolean'],
             'isListBorderTransparent' => ['nullable', 'boolean'],
             'imageWidth' => ['nullable', 'integer', 'min:20', 'max:400'],
@@ -141,8 +145,10 @@ class WebScreenConfigController extends Controller
         $validated['isRowBorderTransparent'] = (bool) ($validated['isRowBorderTransparent'] ?? false);
         $validated['showTitle'] = (bool) ($validated['showTitle'] ?? true);
         $validated['showBackgroundImage'] = (bool) ($validated['showBackgroundImage'] ?? false);
+        $validated['showImage'] = (bool) ($validated['showImage'] ?? true);
         $validated['isProductsPanelTransparent'] = (bool) ($validated['isProductsPanelTransparent'] ?? false);
         $validated['isListBorderTransparent'] = (bool) ($validated['isListBorderTransparent'] ?? false);
+        $validated['isVideoPanelTransparent'] = (bool) ($validated['isVideoPanelTransparent'] ?? false);
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
         $validated['videoMuted'] = (bool) ($validated['videoMuted'] ?? false);
         $validated['isPaginationEnabled'] = (bool) ($validated['isPaginationEnabled'] ?? false);
@@ -168,14 +174,29 @@ class WebScreenConfigController extends Controller
             $validated['backgroundImageUrl'] = null;
         }
 
+        $embedStatuses = $this->buildYouTubeEmbedStatuses($validated['videoPlaylist'] ?? []);
+        $embedWarnings = collect($embedStatuses)
+            ->filter(fn (array $item) => ($item['status'] ?? null) === 'blocked')
+            ->map(fn (array $item) => (string) ($item['message'] ?? 'Bloqueio de incorporação detectado.'))
+            ->values()
+            ->all();
+
         Configuracao::updateOrCreate(
             ['empresa_id' => $empresaId],
             $validated
         );
 
-        return redirect()
+        $redirect = redirect()
             ->back()
             ->with('success', 'Configuração da Tela Web atualizada com sucesso.');
+
+        if (!empty($embedWarnings)) {
+            $redirect->with('embedWarnings', $embedWarnings);
+        }
+
+        $redirect->with('embedStatuses', $embedStatuses);
+
+        return $redirect;
     }
 
     private function resolveEmpresaId(): int
@@ -187,5 +208,151 @@ class WebScreenConfigController extends Controller
         }
 
         return (int) $user->empresa_id;
+    }
+
+    private function buildYouTubeEmbedStatuses(array $playlist): array
+    {
+        $statuses = [];
+
+        foreach ($playlist as $index => $item) {
+            $url = trim((string) ($item['url'] ?? ''));
+
+            if ($url === '') {
+                $statuses[$index] = [
+                    'status' => 'empty',
+                    'message' => null,
+                ];
+                continue;
+            }
+
+            $videoId = $this->extractYouTubeVideoId($url);
+            if ($videoId === null) {
+                $statuses[$index] = [
+                    'status' => 'unknown',
+                    'message' => 'Não foi possível validar automaticamente (link não-YouTube).',
+                ];
+                continue;
+            }
+
+            $result = $this->checkYouTubeEmbeddable($videoId);
+            $statuses[$index] = [
+                'status' => $result['embeddable'] ? 'likely' : 'blocked',
+                'message' => $result['embeddable']
+                    ? 'Vídeo '.($index + 1).': sem bloqueio detectado no servidor (pode variar por dispositivo/região).'
+                    : 'Vídeo '.($index + 1).': '.$result['reason'],
+            ];
+        }
+
+        return $statuses;
+    }
+
+    private function extractYouTubeVideoId(string $url): ?string
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts)) {
+            return null;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $path = (string) ($parts['path'] ?? '');
+
+        if (str_contains($host, 'youtu.be')) {
+            $id = trim($path, '/');
+            return $id !== '' ? $id : null;
+        }
+
+        if (! str_contains($host, 'youtube.com')) {
+            return null;
+        }
+
+        parse_str((string) ($parts['query'] ?? ''), $query);
+        if (! empty($query['v'])) {
+            return (string) $query['v'];
+        }
+
+        if (preg_match('#/(?:embed|shorts|live)/([^/?]+)#', $path, $matches) === 1) {
+            return (string) $matches[1];
+        }
+
+        return null;
+    }
+
+    private function checkYouTubeEmbeddable(string $videoId): array
+    {
+        $watchUrl = 'https://www.youtube.com/watch?v='.$videoId;
+
+        try {
+            $oembed = Http::timeout(8)
+                ->acceptJson()
+                ->get('https://www.youtube.com/oembed', [
+                    'url' => $watchUrl,
+                    'format' => 'json',
+                ]);
+
+            if (! $oembed->successful()) {
+                return [
+                    'embeddable' => false,
+                    'reason' => 'YouTube não confirmou incorporação (oEmbed).',
+                ];
+            }
+
+            $embedHtml = Http::timeout(8)
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0'])
+                ->get('https://www.youtube.com/embed/'.$videoId.'?autoplay=1&mute=1');
+
+            if (! $embedHtml->successful()) {
+                return [
+                    'embeddable' => false,
+                    'reason' => 'Player embed retornou erro HTTP.',
+                ];
+            }
+
+            $html = strtolower($embedHtml->body());
+            $blockedSignals = [
+                'playback on other websites has been disabled',
+                'a reprodução em outros websites foi desativada',
+                'watch on youtube',
+                'assistir no youtube',
+                'video unavailable',
+                'vídeo indisponível',
+            ];
+
+            foreach ($blockedSignals as $signal) {
+                if (str_contains($html, $signal)) {
+                    return [
+                        'embeddable' => false,
+                        'reason' => 'YouTube sinalizou bloqueio de incorporação para este vídeo.',
+                    ];
+                }
+            }
+
+            return [
+                'embeddable' => true,
+                'reason' => null,
+            ];
+        } catch (Throwable) {
+            return [
+                'embeddable' => false,
+                'reason' => 'Não foi possível validar incorporação agora (timeout/rede).',
+            ];
+        }
+    }
+
+    private function extractVideoUrlFromInput(string $input): string
+    {
+        $value = trim($input);
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/src=["\']([^"\']+)["\']/i', $value, $matches) === 1) {
+            return trim((string) $matches[1]);
+        }
+
+        if (preg_match('/https?:\/\/[^\s"\'<>]+/i', $value, $matches) === 1) {
+            return trim((string) $matches[0]);
+        }
+
+        return $value;
     }
 }

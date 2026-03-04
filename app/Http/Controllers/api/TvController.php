@@ -203,6 +203,9 @@ class TvController extends Controller
 
         $empresaId = (int) $device->empresa_id;
         $configuration = $this->resolveDeviceConfiguration($device->id);
+        $showImage = (bool) (Configuracao::query()
+            ->where('empresa_id', $empresaId)
+            ->value('showImage') ?? true);
 
         $cacheSeconds = max(5, (int) $configuration->atualizar_produtos_segundos);
 
@@ -217,6 +220,14 @@ class TvController extends Controller
                     ->get();
             }
         );
+
+        if (! $showImage) {
+            $produtos = $produtos->map(function ($produto) {
+                $produto->setAttribute('IMG', null);
+
+                return $produto;
+            });
+        }
 
         return response()->json([
             'success' => true,
@@ -410,12 +421,14 @@ class TvController extends Controller
                 'productsPanelBackgroundColor' => (string) ($config->productsPanelBackgroundColor ?? '#0f172a'),
                 'listBorderColor' => (string) ($config->listBorderColor ?? '#334155'),
                 'videoBackgroundColor' => (string) ($config->videoBackgroundColor ?? '#000000'),
+                'isVideoPanelTransparent' => (bool) ($config->isVideoPanelTransparent ?? false),
                 'rowBackgroundColor' => $config->rowBackgroundColor,
                 'borderColor' => $config->borderColor,
                 'isRowBorderTransparent' => (bool) ($config->isRowBorderTransparent ?? false),
                 'priceColor' => $config->priceColor,
                 'showBorder' => (bool) $config->showBorder,
                 'showTitle' => (bool) ($config->showTitle ?? true),
+                'showImage' => (bool) ($config->showImage ?? true),
                 'useGradient' => (bool) $config->useGradient,
                 'gradientStartColor' => $config->gradientStartColor,
                 'gradientEndColor' => $config->gradientEndColor,

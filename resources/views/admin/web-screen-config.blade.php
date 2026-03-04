@@ -13,7 +13,21 @@
                         <div class="rounded-md bg-green-50 p-3 text-sm text-green-800 mb-4">{{ session('success') }}</div>
                     @endif
 
+                    @if (session('embedWarnings'))
+                        <div class="rounded-md bg-amber-50 p-3 text-sm text-amber-900 mb-4 border border-amber-200">
+                            <p class="font-semibold mb-1">Aviso de incorporação de vídeo (YouTube)</p>
+                            <ul class="list-disc ml-5 space-y-1">
+                                @foreach ((array) session('embedWarnings') as $warning)
+                                    <li>{{ $warning }}</li>
+                                @endforeach
+                            </ul>
+                            <p class="mt-2 text-xs text-amber-800">Dica: se aparecer “vídeo indisponível” na TV, troque por outro link do YouTube com incorporação permitida.</p>
+                        </div>
+                    @endif
+
                     @php
+                        $embedStatuses = session('embedStatuses', []);
+
                         $savedPlaylist = collect($config->videoPlaylist ?? []);
                         if ($savedPlaylist->isEmpty()) {
                             $savedPlaylist = collect(preg_split('/\r?\n|,|;\s*/', (string) ($config->videoUrl ?? '')))
@@ -68,21 +82,49 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo dos vídeos</label>
-                                <input type="color" name="videoBackgroundColor" value="{{ old('videoBackgroundColor', $config->videoBackgroundColor ?? '#000000') }}" class="w-full h-10 border rounded">
+                                <input type="color" id="videoBackgroundColor" name="videoBackgroundColor" value="{{ old('videoBackgroundColor', $config->videoBackgroundColor ?? '#000000') }}" class="w-full h-10 border rounded">
                                 @error('videoBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                <label class="mt-2 inline-flex items-center gap-2">
+                                    <input type="hidden" name="isVideoPanelTransparent" value="0">
+                                    <input type="checkbox" id="isVideoPanelTransparent" name="isVideoPanelTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isVideoPanelTransparent', $config->isVideoPanelTransparent ?? false))>
+                                    <span class="text-sm text-gray-700">Deixar fundo do vídeo transparente</span>
+                                </label>
                             </div>
                             <div class="grid grid-cols-1 gap-3">
                                 @for ($index = 0; $index < 10; $index++)
                                     <div class="rounded-md border border-gray-300 bg-white p-3">
+                                        @php
+                                            $embedStatus = $embedStatuses[$index]['status'] ?? null;
+                                            $embedMessage = $embedStatuses[$index]['message'] ?? null;
+                                            $urlInputClass = 'w-full border rounded px-3 py-2';
+
+                                            if ($embedStatus === 'ok') {
+                                                $urlInputClass .= ' bg-green-50 border-green-300';
+                                            } elseif ($embedStatus === 'likely') {
+                                                $urlInputClass .= ' bg-amber-50 border-amber-300';
+                                            } elseif ($embedStatus === 'blocked') {
+                                                $urlInputClass .= ' bg-red-50 border-red-300';
+                                            }
+                                        @endphp
+
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Vídeo {{ $index + 1 }}</label>
                                         <input
-                                            type="url"
-                                            name="video_urls[]"
+                                            type="text"
+                                            name="video_urls[{{ $index }}]"
                                             value="{{ old('video_urls.' . $index, $savedPlaylist[$index]['url'] ?? '') }}"
-                                            placeholder="https://..."
-                                            class="w-full border rounded px-3 py-2"
+                                            placeholder="https://... ou <iframe ...>"
+                                            class="{{ $urlInputClass }}"
                                         >
                                         @error('video_urls.' . $index)<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <p class="text-[11px] text-gray-500 mt-1">Aceita link direto ou código de incorporação (iframe). O sistema extrai automaticamente o <code>src</code>.</p>
+                                        @if ($embedStatus === 'ok')
+                                            <p class="text-xs text-green-700 mt-1">Link validado para incorporação.</p>
+                                        @elseif ($embedStatus === 'likely')
+                                            <p class="text-xs text-amber-700 mt-1">Sem bloqueio detectado no servidor, mas pode falhar em alguns dispositivos/regiões.</p>
+                                        @elseif ($embedStatus === 'blocked')
+                                            <p class="text-xs text-red-700 mt-1">{{ $embedMessage }}</p>
+                                        @endif
 
                                         <label class="mt-2 inline-flex items-center gap-2">
                                             <input type="hidden" name="video_active_flags[{{ $index }}]" value="0">
@@ -124,7 +166,7 @@
                                             <label class="block text-xs font-medium text-gray-700 mb-1">Tempo fallback (segundos)</label>
                                             <input
                                                 type="number"
-                                                name="video_duration_seconds[]"
+                                                name="video_duration_seconds[{{ $index }}]"
                                                 min="0"
                                                 max="86400"
                                                 value="{{ old('video_duration_seconds.' . $index, $savedPlaylist[$index]['durationSeconds'] ?? 0) }}"
@@ -138,7 +180,7 @@
                                             <label class="block text-xs font-medium text-gray-700 mb-1">Altura do vídeo (px)</label>
                                             <input
                                                 type="number"
-                                                name="video_heights[]"
+                                                name="video_heights[{{ $index }}]"
                                                 min="0"
                                                 max="2000"
                                                 value="{{ old('video_heights.' . $index, $savedPlaylist[$index]['heightPx'] ?? 0) }}"
@@ -250,6 +292,12 @@
                                 <input type="checkbox" name="showTitle" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showTitle', $config->showTitle ?? true))>
                                 <span class="text-sm text-gray-700">Mostrar título no topo da tela</span>
                             </label>
+
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="showImage" value="0">
+                                <input type="checkbox" name="showImage" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showImage', $config->showImage ?? true))>
+                                <span class="text-sm text-gray-700">Mostrar imagem do produto na lista</span>
+                            </label>
                             </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
@@ -356,6 +404,8 @@
         const backgroundImageUrlField = document.getElementById('backgroundImageUrlField');
         const isProductsPanelTransparent = document.getElementById('isProductsPanelTransparent');
         const productsPanelBackgroundColor = document.getElementById('productsPanelBackgroundColor');
+        const isVideoPanelTransparent = document.getElementById('isVideoPanelTransparent');
+        const videoBackgroundColor = document.getElementById('videoBackgroundColor');
         const isListBorderTransparent = document.getElementById('isListBorderTransparent');
         const listBorderColor = document.getElementById('listBorderColor');
         const toggleVideoConfig = document.getElementById('toggleVideoConfig');
@@ -405,6 +455,17 @@
         if (isProductsPanelTransparent) {
             isProductsPanelTransparent.addEventListener('change', updateProductsPanelBackgroundColorState);
             updateProductsPanelBackgroundColorState();
+        }
+
+        function updateVideoBackgroundColorState() {
+            if (!isVideoPanelTransparent || !videoBackgroundColor) return;
+            videoBackgroundColor.style.opacity = isVideoPanelTransparent.checked ? '0.5' : '1';
+            videoBackgroundColor.style.pointerEvents = isVideoPanelTransparent.checked ? 'none' : 'auto';
+        }
+
+        if (isVideoPanelTransparent) {
+            isVideoPanelTransparent.addEventListener('change', updateVideoBackgroundColorState);
+            updateVideoBackgroundColorState();
         }
 
         function updateBorderColorState() {
