@@ -223,6 +223,12 @@
                                     <input type="color" id="listBorderColor" name="listBorderColor" value="{{ old('listBorderColor', $config->listBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
                                     @error('listBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
 
+                                    <div class="mt-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da lista (px)</label>
+                                        <input type="number" id="listBorderWidth" name="listBorderWidth" min="0" max="20" value="{{ old('listBorderWidth', $config->listBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                        @error('listBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
                                     <label class="mt-2 inline-flex items-center gap-2">
                                         <input type="hidden" name="isListBorderTransparent" value="0">
                                         <input type="checkbox" id="isListBorderTransparent" name="isListBorderTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isListBorderTransparent', $config->isListBorderTransparent ?? false))>
@@ -240,6 +246,12 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da linha</label>
                                     <input type="color" id="borderColor" name="borderColor" value="{{ old('borderColor', $config->borderColor ?? '#334155') }}" class="w-full h-10 border rounded">
                                     @error('borderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                    <div class="mt-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da linha (px)</label>
+                                        <input type="number" id="rowBorderWidth" name="rowBorderWidth" min="0" max="20" value="{{ old('rowBorderWidth', $config->rowBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rowBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
 
                                     <label class="mt-2 inline-flex items-center gap-2">
                                         <input type="hidden" name="isRowBorderTransparent" value="0">
@@ -323,6 +335,31 @@
                         </div>
 
                         <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                            <h3 class="text-base font-semibold text-gray-800">Configuração Tela Lateral Direita</h3>
+                            <p class="text-sm text-gray-600">Configurações genéricas da coluna direita da tela.</p>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda</label>
+                                    <input type="color" id="rightSidebarBorderColor" name="rightSidebarBorderColor" value="{{ old('rightSidebarBorderColor', $config->rightSidebarBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
+                                    @error('rightSidebarBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                    <div class="mt-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda (px)</label>
+                                        <input type="number" id="rightSidebarBorderWidth" name="rightSidebarBorderWidth" min="0" max="20" value="{{ old('rightSidebarBorderWidth', $config->rightSidebarBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showRightSidebarBorder" value="0">
+                                    <input type="checkbox" id="showRightSidebarBorder" name="showRightSidebarBorder" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showRightSidebarBorder', $config->showRightSidebarBorder ?? true))>
+                                    <span class="text-sm text-gray-700">Ativar borda da lateral direita</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <h3 class="text-base font-semibold text-gray-800">Tamanho da Imagem do Produto</h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -397,6 +434,7 @@
         const gradientFields = document.getElementById('gradientFields');
         const rowBackgroundColor = document.getElementById('rowBackgroundColor');
         const borderColor = document.getElementById('borderColor');
+        const rowBorderWidth = document.getElementById('rowBorderWidth');
         const isRowBorderTransparent = document.getElementById('isRowBorderTransparent');
         const isPaginationEnabled = document.getElementById('isPaginationEnabled');
         const paginationFields = document.getElementById('paginationFields');
@@ -408,6 +446,10 @@
         const videoBackgroundColor = document.getElementById('videoBackgroundColor');
         const isListBorderTransparent = document.getElementById('isListBorderTransparent');
         const listBorderColor = document.getElementById('listBorderColor');
+        const listBorderWidth = document.getElementById('listBorderWidth');
+        const showRightSidebarBorder = document.getElementById('showRightSidebarBorder');
+        const rightSidebarBorderColor = document.getElementById('rightSidebarBorderColor');
+        const rightSidebarBorderWidth = document.getElementById('rightSidebarBorderWidth');
         const toggleVideoConfig = document.getElementById('toggleVideoConfig');
         const videoConfigSection = document.getElementById('videoConfigSection');
 
@@ -469,9 +511,15 @@
         }
 
         function updateBorderColorState() {
-            if (!isRowBorderTransparent || !borderColor) return;
-            borderColor.style.opacity = isRowBorderTransparent.checked ? '0.5' : '1';
-            borderColor.style.pointerEvents = isRowBorderTransparent.checked ? 'none' : 'auto';
+            if (!isRowBorderTransparent) return;
+            if (borderColor) {
+                borderColor.style.opacity = isRowBorderTransparent.checked ? '0.5' : '1';
+                borderColor.style.pointerEvents = isRowBorderTransparent.checked ? 'none' : 'auto';
+            }
+            if (rowBorderWidth) {
+                rowBorderWidth.style.opacity = isRowBorderTransparent.checked ? '0.5' : '1';
+                rowBorderWidth.style.pointerEvents = isRowBorderTransparent.checked ? 'none' : 'auto';
+            }
         }
 
         if (isRowBorderTransparent) {
@@ -480,14 +528,37 @@
         }
 
         function updateListBorderColorState() {
-            if (!isListBorderTransparent || !listBorderColor) return;
-            listBorderColor.style.opacity = isListBorderTransparent.checked ? '0.5' : '1';
-            listBorderColor.style.pointerEvents = isListBorderTransparent.checked ? 'none' : 'auto';
+            if (!isListBorderTransparent) return;
+            if (listBorderColor) {
+                listBorderColor.style.opacity = isListBorderTransparent.checked ? '0.5' : '1';
+                listBorderColor.style.pointerEvents = isListBorderTransparent.checked ? 'none' : 'auto';
+            }
+            if (listBorderWidth) {
+                listBorderWidth.style.opacity = isListBorderTransparent.checked ? '0.5' : '1';
+                listBorderWidth.style.pointerEvents = isListBorderTransparent.checked ? 'none' : 'auto';
+            }
         }
 
         if (isListBorderTransparent) {
             isListBorderTransparent.addEventListener('change', updateListBorderColorState);
             updateListBorderColorState();
+        }
+
+        function updateRightSidebarBorderState() {
+            if (!showRightSidebarBorder) return;
+            if (rightSidebarBorderColor) {
+                rightSidebarBorderColor.style.opacity = showRightSidebarBorder.checked ? '1' : '0.5';
+                rightSidebarBorderColor.style.pointerEvents = showRightSidebarBorder.checked ? 'auto' : 'none';
+            }
+            if (rightSidebarBorderWidth) {
+                rightSidebarBorderWidth.style.opacity = showRightSidebarBorder.checked ? '1' : '0.5';
+                rightSidebarBorderWidth.style.pointerEvents = showRightSidebarBorder.checked ? 'auto' : 'none';
+            }
+        }
+
+        if (showRightSidebarBorder) {
+            showRightSidebarBorder.addEventListener('change', updateRightSidebarBorderState);
+            updateRightSidebarBorderState();
         }
 
         if (toggleVideoConfig && videoConfigSection) {

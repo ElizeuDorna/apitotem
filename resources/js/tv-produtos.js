@@ -30,10 +30,15 @@ const visualConfig = {
     appBackgroundColor: '#020617',
     productsPanelBackgroundColor: '#0f172a',
     listBorderColor: '#334155',
+    listBorderWidth: 1,
     videoBackgroundColor: '#000000',
+    showRightSidebarBorder: true,
+    rightSidebarBorderColor: '#334155',
+    rightSidebarBorderWidth: 1,
     isVideoPanelTransparent: false,
     rowBackgroundColor: '#020617',
     borderColor: '#334155',
+    rowBorderWidth: 1,
     isRowBorderTransparent: false,
     priceColor: '#818cf8',
     showBorder: true,
@@ -1008,14 +1013,16 @@ function applyProductsPanelBackground() {
         tvProductsPanel.classList.remove('bg-slate-900');
         tvProductsPanel.style.backgroundColor = 'transparent';
         tvProductsPanel.style.backgroundImage = 'none';
-        return;
+    } else {
+        tvProductsPanel.classList.remove('bg-slate-900');
+        tvProductsPanel.style.backgroundColor = visualConfig.productsPanelBackgroundColor || '#0f172a';
+        tvProductsPanel.style.backgroundImage = 'none';
     }
 
-    tvProductsPanel.classList.remove('bg-slate-900');
-    tvProductsPanel.style.backgroundColor = visualConfig.productsPanelBackgroundColor || '#0f172a';
-    tvProductsPanel.style.backgroundImage = 'none';
+    const listBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.listBorderWidth ?? 1)));
+    const shouldShowListBorder = !visualConfig.isListBorderTransparent && listBorderWidth > 0;
 
-    if (visualConfig.isListBorderTransparent) {
+    if (!shouldShowListBorder) {
         tvProductsPanel.style.setProperty('border-width', '0', 'important');
         tvProductsPanel.style.setProperty('border-style', 'none', 'important');
         tvProductsPanel.style.setProperty('border-color', 'transparent', 'important');
@@ -1023,7 +1030,7 @@ function applyProductsPanelBackground() {
     }
 
     tvProductsPanel.style.setProperty('border-style', 'solid', 'important');
-    tvProductsPanel.style.setProperty('border-width', '1px', 'important');
+    tvProductsPanel.style.setProperty('border-width', `${listBorderWidth}px`, 'important');
     tvProductsPanel.style.setProperty('border-color', visualConfig.listBorderColor || '#334155', 'important');
 }
 
@@ -1042,6 +1049,26 @@ function applyVideoBackground() {
     if (tvEmbed) {
         tvEmbed.style.backgroundColor = resolvedColor;
     }
+}
+
+function applyRightSidebarBorder() {
+    if (!tvVideoPanel) {
+        return;
+    }
+
+    const rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
+    const shouldShowRightSidebarBorder = Boolean(visualConfig.showRightSidebarBorder) && rightSidebarBorderWidth > 0;
+
+    if (!shouldShowRightSidebarBorder) {
+        tvVideoPanel.style.setProperty('border-width', '0', 'important');
+        tvVideoPanel.style.setProperty('border-style', 'none', 'important');
+        tvVideoPanel.style.setProperty('border-color', 'transparent', 'important');
+        return;
+    }
+
+    tvVideoPanel.style.setProperty('border-style', 'solid', 'important');
+    tvVideoPanel.style.setProperty('border-width', `${rightSidebarBorderWidth}px`, 'important');
+    tvVideoPanel.style.setProperty('border-color', visualConfig.rightSidebarBorderColor || '#334155', 'important');
 }
 
 function applyVideoPanelVisibility() {
@@ -1100,11 +1127,13 @@ function renderProducts(produtos) {
 
     for (const item of produtos) {
         const row = document.createElement('article');
-        row.className = 'rounded-lg border border-slate-700 bg-slate-950 px-4 py-3';
+        row.className = 'rounded-lg bg-slate-950 px-4 py-3';
 
-        row.style.borderColor = (visualConfig.showBorder && !visualConfig.isRowBorderTransparent)
-            ? visualConfig.borderColor
-            : 'transparent';
+        const rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
+        const shouldShowRowBorder = Boolean(visualConfig.showBorder) && !visualConfig.isRowBorderTransparent && rowBorderWidth > 0;
+        row.style.borderStyle = shouldShowRowBorder ? 'solid' : 'none';
+        row.style.borderWidth = shouldShowRowBorder ? `${rowBorderWidth}px` : '0';
+        row.style.borderColor = shouldShowRowBorder ? (visualConfig.borderColor || '#334155') : 'transparent';
         row.style.backgroundColor = visualConfig.rowBackgroundColor;
         if (visualConfig.useGradient) {
             row.style.backgroundImage = `linear-gradient(to bottom, ${visualConfig.gradientStartColor}, ${visualConfig.gradientEndColor})`;
@@ -1196,6 +1225,9 @@ async function loadVisualConfig(token) {
 
         Object.assign(visualConfig, payload.data || {});
         visualConfig.showImage = Boolean(visualConfig.showImage);
+        visualConfig.rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
+        visualConfig.listBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.listBorderWidth ?? 1)));
+        visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
 
         document.body.style.backgroundColor = visualConfig.appBackgroundColor;
         const imageUrl = String(visualConfig.backgroundImageUrl || '').trim();
@@ -1213,6 +1245,7 @@ async function loadVisualConfig(token) {
 
         applyProductsPanelBackground();
         applyVideoBackground();
+        applyRightSidebarBorder();
         applyVideoPanelVisibility();
         applyTitleVisibility();
     } catch (_error) {
