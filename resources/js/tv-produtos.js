@@ -83,6 +83,32 @@ let initialVideoAutoplayRetryTimer = null;
 let audioAutoplayUnlocked = localStorage.getItem(AUDIO_UNLOCK_STORAGE_KEY) === '1';
 let forceMuteOnFirstPlayback = true;
 
+function toBoolean(value, fallback = false) {
+    if (value === null || value === undefined) {
+        return fallback;
+    }
+
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'number') {
+        return value !== 0;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+
+    if (['1', 'true', 'on', 'yes', 'sim'].includes(normalized)) {
+        return true;
+    }
+
+    if (['0', 'false', 'off', 'no', 'não', 'nao', ''].includes(normalized)) {
+        return false;
+    }
+
+    return fallback;
+}
+
 function markAudioAutoplayUnlocked() {
     if (audioAutoplayUnlocked) {
         return;
@@ -459,7 +485,7 @@ function playYouTubeVideo(videoId, isMuted) {
     youTubeStartupMuteRetryDone = false;
     clearYouTubeUnmuteDelay();
     clearYouTubeStartupTimeout();
-    shouldUnmuteYouTubeAfterStart = false;
+    shouldUnmuteYouTubeAfterStart = !youTubeRequestedMuted;
 
     loadYouTubeApi(() => {
         if (!youTubePlayer || !youTubePlayerReady) {
@@ -477,16 +503,9 @@ function playYouTubeVideo(videoId, isMuted) {
                     youTubePlayer.loadVideoById(videoId);
                 }
 
-                if (isMuted && typeof youTubePlayer.mute === 'function') {
+                if (typeof youTubePlayer.mute === 'function') {
                     try {
                         youTubePlayer.mute();
-                    } catch (_error) {
-                    }
-                }
-
-                if (!isMuted && typeof youTubePlayer.unMute === 'function') {
-                    try {
-                        youTubePlayer.unMute();
                     } catch (_error) {
                     }
                 }
@@ -710,9 +729,9 @@ function parseConfiguredVideoUrls() {
         return visualConfig.videoPlaylist
             .map((item) => ({
                 url: extractVideoUrl(String(item?.url || '').trim()),
-                muted: Boolean(item?.muted),
-                active: Boolean(item?.active ?? true),
-                fullscreen: Boolean(item?.fullscreen ?? false),
+                muted: toBoolean(item?.muted, false),
+                active: toBoolean(item?.active, true),
+                fullscreen: toBoolean(item?.fullscreen, false),
                 durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
                 heightPx: Math.max(0, Number(item?.heightPx || 0)),
             }))
@@ -766,10 +785,10 @@ function applyCurrentVideoHeight(heightPx = 0) {
 
 function applyVideoSource(videoItem) {
     const videoUrl = (typeof videoItem === 'string' ? videoItem : videoItem?.url) || '';
-    const itemMuted = Boolean(typeof videoItem === 'object' ? videoItem?.muted : visualConfig.videoMuted);
+    const itemMuted = toBoolean(typeof videoItem === 'object' ? videoItem?.muted : visualConfig.videoMuted, false);
     const shouldForceFirstPlaybackMuted = forceMuteOnFirstPlayback && Boolean(videoUrl);
     const effectiveMuted = shouldForceFirstPlaybackMuted ? true : itemMuted;
-    const itemFullscreen = Boolean(typeof videoItem === 'object' ? videoItem?.fullscreen : false);
+    const itemFullscreen = toBoolean(typeof videoItem === 'object' ? videoItem?.fullscreen : false, false);
     const itemDurationSeconds = Math.max(0, Number(typeof videoItem === 'object' ? videoItem?.durationSeconds : 0) || 0);
     const itemHeightPx = Math.max(0, Number(typeof videoItem === 'object' ? videoItem?.heightPx : 0) || 0);
     const youTubeVideoId = getYouTubeVideoId(videoUrl);
@@ -781,7 +800,22 @@ function applyVideoSource(videoItem) {
 
     clearVideoFallbackTimer();
     document.body.classList.toggle('tv-video-fullscreen', itemFullscreen);
-    applyCurrentVideoHeight(itemHeightPx);
+    applyCurrentVideoHeight(itemFullscreen ? 0 : itemHeightPx);
+
+    if (itemFullscreen) {
+        setTimeout(() => {
+            if (tvVideo && !tvVideo.classList.contains('hidden') && tvVideo.paused) {
+                playHtmlVideoWithAutoplayFallback(effectiveMuted);
+            }
+
+            if (tvEmbed && !tvEmbed.classList.contains('hidden') && youTubePlayer && typeof youTubePlayer.playVideo === 'function') {
+                try {
+                    youTubePlayer.playVideo();
+                } catch (_error) {
+                }
+            }
+        }, 250);
+    }
 
     if (!videoUrl) {
         if (tvVideo) {
@@ -899,14 +933,14 @@ function startVideoPlaylist(videoUrls) {
     const list = (videoUrls || [])
         .map((item) => {
             if (typeof item === 'string') {
-                return { url: item, muted: Boolean(visualConfig.videoMuted) };
+                return { url: item, muted: toBoolean(visualConfig.videoMuted, false) };
             }
 
             return {
                 url: String(item?.url || '').trim(),
-                muted: Boolean(item?.muted),
-                active: Boolean(item?.active ?? true),
-                fullscreen: Boolean(item?.fullscreen ?? false),
+                muted: toBoolean(item?.muted, false),
+                active: toBoolean(item?.active, true),
+                fullscreen: toBoolean(item?.fullscreen, false),
                 durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
                 heightPx: Math.max(0, Number(item?.heightPx || 0)),
             };
