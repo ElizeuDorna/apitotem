@@ -65,7 +65,38 @@
             aspect-ratio: auto;
         }
 
+        .tv-title-container {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .tv-title-text {
+            display: inline-block;
+            white-space: nowrap;
+            max-width: 100%;
+            vertical-align: middle;
+        }
+
+        .tv-title-text.is-dynamic {
+            max-width: none;
+            padding-left: 100%;
+            animation-name: tv-title-marquee;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+
+        @keyframes tv-title-marquee {
+            from {
+                transform: translateX(0%);
+            }
+
+            to {
+                transform: translateX(-100%);
+            }
+        }
+
         .tv-video-fullscreen #tvHeader,
+        .tv-video-fullscreen #tvFooter,
         .tv-video-fullscreen #tvProductsPanel {
             display: none;
         }
@@ -104,10 +135,10 @@
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
-    <div class="tv-shell">
+    <div id="tvShell" class="tv-shell">
         <header id="tvHeader" class="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">Lista de Produtos (TV)</h1>
+            <div id="tvHeaderTitleContainer" class="tv-title-container">
+                <h1 id="tvHeaderTitle" class="tv-title-text text-2xl md:text-3xl font-semibold tracking-tight">Lista de Produtos (TV)</h1>
             </div>
         </header>
 
@@ -131,6 +162,12 @@
                 <img id="tvImageSlide" class="hidden w-full rounded-lg bg-black" alt="Slide lateral" loading="eager">
             </aside>
         </main>
+
+        <footer id="tvFooter" class="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4 hidden">
+            <div id="tvFooterTitleContainer" class="tv-title-container">
+                <h1 id="tvFooterTitle" class="tv-title-text text-2xl md:text-3xl font-semibold tracking-tight">Lista de Produtos (TV)</h1>
+            </div>
+        </footer>
     </div>
 
 </body>

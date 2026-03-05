@@ -10,9 +10,13 @@ const tvEmbed = document.getElementById('tvEmbed');
 const tvImageSlide = document.getElementById('tvImageSlide');
 const videoHint = document.getElementById('videoHint');
 const tvHeader = document.getElementById('tvHeader');
+const tvHeaderTitle = document.getElementById('tvHeaderTitle');
+const tvFooter = document.getElementById('tvFooter');
+const tvFooterTitle = document.getElementById('tvFooterTitle');
 const tvProductsPanel = document.getElementById('tvProductsPanel');
 const tvVideoPanel = document.getElementById('tvVideoPanel');
 const tvMain = document.getElementById('tvMain');
+const tvShell = document.getElementById('tvShell');
 
 const queryParams = new URLSearchParams(window.location.search);
 const initialToken = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
@@ -29,6 +33,11 @@ const visualConfig = {
     videoPlaylist: [],
     showVideoPanel: true,
     showRightSidebarPanel: true,
+    isMainBorderEnabled: false,
+    isRoundedCornersEnabled: true,
+    isRowRoundedEnabled: false,
+    mainBorderColor: '#000000',
+    mainBorderWidth: 1,
     appBackgroundColor: '#020617',
     productsPanelBackgroundColor: '#0f172a',
     listBorderColor: '#334155',
@@ -43,6 +52,9 @@ const visualConfig = {
     rightSidebarImageFit: 'scale-down',
     rightSidebarHybridVideoDuration: 120,
     rightSidebarHybridImageDuration: 120,
+    productListType: '1',
+    productListLeftGroupIds: [],
+    productListRightGroupIds: [],
     isVideoPanelTransparent: false,
     rowBackgroundColor: '#020617',
     borderColor: '#334155',
@@ -51,6 +63,14 @@ const visualConfig = {
     priceColor: '#818cf8',
     showBorder: true,
     showTitle: true,
+    titleText: 'Lista de Produtos (TV)',
+    isTitleDynamic: false,
+    titlePosition: 'top',
+    titleFontSize: 32,
+    titleFontFamily: 'arial',
+    titleTextColor: '#f8fafc',
+    titleBackgroundColor: '#0f172a',
+    isTitleBackgroundTransparent: false,
     showImage: true,
     showBackgroundImage: false,
     isProductsPanelTransparent: false,
@@ -64,7 +84,10 @@ const visualConfig = {
     rowVerticalPadding: 9,
     listFontSize: 16,
     groupLabelFontSize: 14,
+    groupLabelFontFamily: 'arial',
     groupLabelColor: '#cbd5e1',
+    showGroupLabelBadge: false,
+    groupLabelBadgeColor: '#0f172a',
     isPaginationEnabled: false,
     pageSize: 10,
     paginationInterval: 5,
@@ -1425,7 +1448,135 @@ function applyTitleVisibility() {
         return;
     }
 
-    tvHeader.style.display = visualConfig.showTitle ? '' : 'none';
+    const showTitle = toBoolean(visualConfig.showTitle, true);
+    const resolvedTitle = String(visualConfig.titleText || '').trim() || 'Lista de Produtos (TV)';
+    const titlePosition = String(visualConfig.titlePosition || 'top').toLowerCase() === 'footer' ? 'footer' : 'top';
+    const dynamic = showTitle && toBoolean(visualConfig.isTitleDynamic, false);
+    const titleFontSize = Math.min(96, Math.max(10, Number(visualConfig.titleFontSize || 32)));
+    const titleFontFamily = resolveTitleFontFamily(String(visualConfig.titleFontFamily || 'arial'));
+    const titleTextColor = String(visualConfig.titleTextColor || '#f8fafc');
+    const titleBackgroundColor = toBoolean(visualConfig.isTitleBackgroundTransparent, false)
+        ? 'transparent'
+        : (visualConfig.titleBackgroundColor || '#0f172a');
+
+    const applyTitleElement = (element, isVisible) => {
+        if (!element) {
+            return;
+        }
+
+        element.textContent = resolvedTitle;
+        element.style.fontSize = `${titleFontSize}px`;
+        element.style.fontFamily = titleFontFamily;
+        element.style.color = titleTextColor;
+
+        if (dynamic && isVisible) {
+            element.classList.add('is-dynamic');
+            const durationSeconds = Math.min(45, Math.max(8, Math.ceil(resolvedTitle.length * 0.45)));
+            element.style.animationDuration = `${durationSeconds}s`;
+        } else {
+            element.classList.remove('is-dynamic');
+            element.style.animationDuration = '';
+        }
+    };
+
+    const showOnTop = showTitle && titlePosition === 'top';
+    const showOnFooter = showTitle && titlePosition === 'footer';
+
+    tvHeader.style.display = showOnTop ? 'block' : 'none';
+    tvHeader.style.backgroundColor = titleBackgroundColor;
+    if (tvFooter) {
+        tvFooter.classList.toggle('hidden', !showOnFooter);
+        tvFooter.style.display = showOnFooter ? 'block' : 'none';
+        tvFooter.style.backgroundColor = titleBackgroundColor;
+    }
+
+    if (!tvHeaderTitle && !tvFooterTitle) {
+        return;
+    }
+
+    applyTitleElement(tvHeaderTitle, showOnTop);
+    applyTitleElement(tvFooterTitle, showOnFooter);
+}
+
+function applyGeneralBorder() {
+    if (!tvShell) {
+        return;
+    }
+
+    const width = Math.min(40, Math.max(0, Number(visualConfig.mainBorderWidth ?? 1)));
+    const enabled = toBoolean(visualConfig.isMainBorderEnabled, false) && width > 0;
+    const hasRoundedCorners = toBoolean(visualConfig.isRoundedCornersEnabled, true);
+
+    tvShell.style.boxSizing = 'border-box';
+    tvShell.style.borderRadius = hasRoundedCorners ? '0.75rem' : '0';
+
+    if (!enabled) {
+        tvShell.style.borderStyle = 'none';
+        tvShell.style.borderWidth = '0';
+        tvShell.style.borderColor = 'transparent';
+        return;
+    }
+
+    tvShell.style.borderStyle = 'solid';
+    tvShell.style.borderWidth = `${width}px`;
+    tvShell.style.borderColor = visualConfig.mainBorderColor || '#000000';
+}
+
+function getRowCornerRadius() {
+    return toBoolean(visualConfig.isRowRoundedEnabled, false) ? '0.75rem' : '0';
+}
+
+function resolveGroupLabelFontFamily() {
+    const families = {
+        arial: 'Arial, sans-serif',
+        verdana: 'Verdana, sans-serif',
+        tahoma: 'Tahoma, sans-serif',
+        trebuchet: 'Trebuchet MS, sans-serif',
+        georgia: 'Georgia, serif',
+        courier: 'Courier New, monospace',
+        system: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+    };
+
+    const key = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
+    return families[key] || families.arial;
+}
+
+function resolveTitleFontFamily(fontKey) {
+    const families = {
+        arial: 'Arial, sans-serif',
+        verdana: 'Verdana, sans-serif',
+        tahoma: 'Tahoma, sans-serif',
+        trebuchet: 'Trebuchet MS, sans-serif',
+        georgia: 'Georgia, serif',
+        courier: 'Courier New, monospace',
+        system: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+    };
+
+    const key = String(fontKey || 'arial').toLowerCase();
+    return families[key] || families.arial;
+}
+
+function applyGroupLabelStyles(element) {
+    if (!element) {
+        return;
+    }
+
+    const groupLabelFontSize = Math.min(60, Math.max(10, Number(visualConfig.groupLabelFontSize || 14)));
+    element.style.fontSize = `${groupLabelFontSize}px`;
+    element.style.color = visualConfig.groupLabelColor || '#cbd5e1';
+    element.style.fontFamily = resolveGroupLabelFontFamily();
+
+    if (toBoolean(visualConfig.showGroupLabelBadge, false)) {
+        element.style.display = 'inline-block';
+        element.style.backgroundColor = visualConfig.groupLabelBadgeColor || '#0f172a';
+        element.style.padding = '4px 10px';
+        element.style.borderRadius = '6px';
+    } else {
+        element.style.display = '';
+        element.style.backgroundColor = 'transparent';
+        element.style.padding = '0';
+        element.style.borderRadius = '0';
+    }
 }
 
 function applyProductsPanelBackground() {
@@ -1530,24 +1681,27 @@ function renderProducts(produtos) {
         return;
     }
 
-    if (productsGroupLabel) {
-        const groupLabelFontSize = Math.min(60, Math.max(10, Number(visualConfig.groupLabelFontSize || 14)));
-        productsGroupLabel.style.fontSize = `${groupLabelFontSize}px`;
-        productsGroupLabel.style.color = visualConfig.groupLabelColor || '#cbd5e1';
-
+    const buildGroupLabelFromItems = (items) => {
         const groupNames = Array.from(new Set(
-            produtos
+            (Array.isArray(items) ? items : [])
                 .map((item) => String(item?.grupo?.nome || '').trim())
                 .filter(Boolean)
         ));
 
         if (groupNames.length === 1) {
-            productsGroupLabel.textContent = `${groupNames[0]}`;
-        } else if (groupNames.length > 1) {
-            productsGroupLabel.textContent = `${groupNames.join(' • ')}`;
-        } else {
-            productsGroupLabel.textContent = 'Grupo não informado';
+            return groupNames[0];
         }
+
+        if (groupNames.length > 1) {
+            return groupNames.join(' • ');
+        }
+
+        return 'Grupo não informado';
+    };
+
+    if (productsGroupLabel) {
+        applyGroupLabelStyles(productsGroupLabel);
+        productsGroupLabel.textContent = buildGroupLabelFromItems(produtos);
     }
 
     emptyState.classList.add('hidden');
@@ -1555,9 +1709,10 @@ function renderProducts(produtos) {
         totalProducts.textContent = `${produtos.length} produtos`;
     }
 
-    for (const item of produtos) {
+    const createProductRow = (item) => {
         const row = document.createElement('article');
         row.className = 'rounded-lg bg-slate-950';
+        row.style.borderRadius = getRowCornerRadius();
 
         const rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
         const shouldShowRowBorder = Boolean(visualConfig.showBorder) && !visualConfig.isRowBorderTransparent && rowBorderWidth > 0;
@@ -1592,8 +1747,49 @@ function renderProducts(produtos) {
             </div>
         `;
 
-        productsGrid.appendChild(row);
+        return row;
+    };
+
+    const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
+
+    if (isTwoListMode) {
+        productsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+        if (productsGroupLabel) {
+            productsGroupLabel.textContent = '';
+        }
+
+        const leftColumn = document.createElement('div');
+        leftColumn.className = 'space-y-3';
+
+        const rightColumn = document.createElement('div');
+        rightColumn.className = 'space-y-3';
+
+        const { leftItems, rightItems } = splitTwoListItemsBySide(produtos);
+
+        const leftTitle = document.createElement('p');
+        leftTitle.className = 'text-sm font-medium';
+        applyGroupLabelStyles(leftTitle);
+        leftTitle.textContent = buildGroupLabelFromItems(leftItems);
+
+        const rightTitle = document.createElement('p');
+        rightTitle.className = 'text-sm font-medium';
+        applyGroupLabelStyles(rightTitle);
+        rightTitle.textContent = buildGroupLabelFromItems(rightItems);
+
+        leftColumn.appendChild(leftTitle);
+        rightColumn.appendChild(rightTitle);
+
+        leftItems.forEach((item) => leftColumn.appendChild(createProductRow(item)));
+        rightItems.forEach((item) => rightColumn.appendChild(createProductRow(item)));
+
+        productsGrid.appendChild(leftColumn);
+        productsGrid.appendChild(rightColumn);
+        return;
     }
+
+    productsGrid.className = 'grid grid-cols-1 gap-3';
+    produtos.forEach((item) => productsGrid.appendChild(createProductRow(item)));
 }
 
 function clearPaginationTimer() {
@@ -1603,10 +1799,182 @@ function clearPaginationTimer() {
     }
 }
 
+function splitTwoListItemsBySide(items) {
+    const list = Array.isArray(items) ? items : [];
+    const leftGroupSet = new Set((visualConfig.productListLeftGroupIds || []).map((id) => Number(id)).filter((id) => id > 0));
+    const rightGroupSet = new Set((visualConfig.productListRightGroupIds || []).map((id) => Number(id)).filter((id) => id > 0));
+
+    let leftItems = [];
+    let rightItems = [];
+
+    if (leftGroupSet.size > 0 || rightGroupSet.size > 0) {
+        list.forEach((item) => {
+            const groupId = Number(item?.grupo?.id || 0);
+
+            if (leftGroupSet.has(groupId)) {
+                leftItems.push(item);
+            }
+
+            if (rightGroupSet.has(groupId)) {
+                rightItems.push(item);
+            }
+        });
+    } else {
+        const middle = Math.ceil(list.length / 2);
+        leftItems = list.slice(0, middle);
+        rightItems = list.slice(middle);
+    }
+
+    return { leftItems, rightItems };
+}
+
 function renderProductsWithPagination(produtos) {
     clearPaginationTimer();
 
     const list = Array.isArray(produtos) ? produtos : [];
+    const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
+
+    if (isTwoListMode) {
+        if (list.length === 0) {
+            renderProducts(list);
+            return;
+        }
+
+        const { leftItems, rightItems } = splitTwoListItemsBySide(list);
+
+        const buildGroupLabelFromItems = (items) => {
+            const groupNames = Array.from(new Set(
+                (Array.isArray(items) ? items : [])
+                    .map((item) => String(item?.grupo?.nome || '').trim())
+                    .filter(Boolean)
+            ));
+
+            if (groupNames.length === 1) {
+                return groupNames[0];
+            }
+
+            if (groupNames.length > 1) {
+                return groupNames.join(' • ');
+            }
+
+            return 'Grupo não informado';
+        };
+
+        const createProductRow = (item) => {
+            const row = document.createElement('article');
+            row.className = 'rounded-lg bg-slate-950';
+            row.style.borderRadius = getRowCornerRadius();
+
+            const rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
+            const shouldShowRowBorder = Boolean(visualConfig.showBorder) && !visualConfig.isRowBorderTransparent && rowBorderWidth > 0;
+            row.style.borderStyle = shouldShowRowBorder ? 'solid' : 'none';
+            row.style.borderWidth = shouldShowRowBorder ? `${rowBorderWidth}px` : '0';
+            row.style.borderColor = shouldShowRowBorder ? (visualConfig.borderColor || '#334155') : 'transparent';
+            row.style.backgroundColor = visualConfig.rowBackgroundColor;
+            const rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
+            row.style.padding = `${rowVerticalPadding}px 16px`;
+            if (visualConfig.useGradient) {
+                row.style.backgroundImage = `linear-gradient(to bottom, ${visualConfig.gradientStartColor}, ${visualConfig.gradientEndColor})`;
+            } else {
+                row.style.backgroundImage = 'none';
+            }
+
+            const ofertaValue = Number(item.oferta);
+            const hasOferta = Number.isFinite(ofertaValue) && ofertaValue >= 1;
+            const price = hasOferta ? ofertaValue : item.preco;
+            const baseFontSize = Math.min(60, Math.max(10, Number(visualConfig.listFontSize || 16)));
+            const imageUrl = String(item.imagem || '').trim();
+            const imageWidth = Math.min(400, Math.max(20, Number(visualConfig.imageWidth || 56)));
+            const imageHeight = Math.min(400, Math.max(20, Number(visualConfig.imageHeight || 56)));
+            const imageMarkup = visualConfig.showImage && imageUrl
+                ? `<img src="${imageUrl}" alt="${item.nome ?? 'Produto'}" class="rounded object-cover shrink-0" style="width:${imageWidth}px;height:${imageHeight}px" loading="lazy" onerror="this.style.display='none'">`
+                : '';
+
+            row.innerHTML = `
+                <div class="flex items-center gap-3">
+                    ${imageMarkup}
+                    <h3 class="font-semibold flex-1" style="color:${visualConfig.priceColor};font-size:${baseFontSize}px">${item.nome ?? 'Sem nome'}</h3>
+                    <p class="font-semibold" style="color:${visualConfig.priceColor};font-size:${baseFontSize}px">${formatPrice(price)}</p>
+                </div>
+            `;
+
+            return row;
+        };
+
+        const renderTwoListColumns = (pageLeftItems, pageRightItems) => {
+            productsGrid.innerHTML = '';
+            productsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+            if (productsGroupLabel) {
+                productsGroupLabel.textContent = '';
+            }
+
+            const leftColumn = document.createElement('div');
+            leftColumn.className = 'space-y-3';
+            const leftTitle = document.createElement('p');
+            leftTitle.className = 'text-sm font-medium';
+            applyGroupLabelStyles(leftTitle);
+            leftTitle.textContent = buildGroupLabelFromItems(pageLeftItems);
+            leftColumn.appendChild(leftTitle);
+            pageLeftItems.forEach((item) => leftColumn.appendChild(createProductRow(item)));
+
+            const rightColumn = document.createElement('div');
+            rightColumn.className = 'space-y-3';
+            const rightTitle = document.createElement('p');
+            rightTitle.className = 'text-sm font-medium';
+            applyGroupLabelStyles(rightTitle);
+            rightTitle.textContent = buildGroupLabelFromItems(pageRightItems);
+            rightColumn.appendChild(rightTitle);
+            pageRightItems.forEach((item) => rightColumn.appendChild(createProductRow(item)));
+
+            productsGrid.appendChild(leftColumn);
+            productsGrid.appendChild(rightColumn);
+            emptyState.classList.add('hidden');
+
+            if (totalProducts) {
+                totalProducts.textContent = `${pageLeftItems.length + pageRightItems.length} produtos`;
+            }
+        };
+
+        if (!visualConfig.isPaginationEnabled) {
+            renderTwoListColumns(leftItems, rightItems);
+            return;
+        }
+
+        const pageSize = Math.max(1, Number(visualConfig.pageSize) || 10);
+        const intervalSeconds = Math.max(1, Number(visualConfig.paginationInterval) || 5);
+        const totalPagesLeft = Math.max(1, Math.ceil(leftItems.length / pageSize));
+        const totalPagesRight = Math.max(1, Math.ceil(rightItems.length / pageSize));
+
+        if (totalPagesLeft <= 1 && totalPagesRight <= 1) {
+            renderTwoListColumns(leftItems, rightItems);
+            return;
+        }
+
+        let currentPageLeft = 0;
+        let currentPageRight = 0;
+        const renderPage = () => {
+            const startLeft = totalPagesLeft > 1 ? currentPageLeft * pageSize : 0;
+            const endLeft = startLeft + pageSize;
+            const startRight = totalPagesRight > 1 ? currentPageRight * pageSize : 0;
+            const endRight = startRight + pageSize;
+            const pageLeftItems = leftItems.slice(startLeft, endLeft);
+            const pageRightItems = rightItems.slice(startRight, endRight);
+            renderTwoListColumns(pageLeftItems, pageRightItems);
+
+            if (totalPagesLeft > 1) {
+                currentPageLeft = (currentPageLeft + 1) % totalPagesLeft;
+            }
+
+            if (totalPagesRight > 1) {
+                currentPageRight = (currentPageRight + 1) % totalPagesRight;
+            }
+        };
+
+        renderPage();
+        paginationTimer = setInterval(renderPage, intervalSeconds * 1000);
+        return;
+    }
 
     if (!visualConfig.isPaginationEnabled || list.length === 0) {
         renderProducts(list);
@@ -1659,12 +2027,39 @@ async function loadVisualConfig(token) {
         visualConfig.showImage = Boolean(visualConfig.showImage);
         visualConfig.showVideoPanel = toBoolean(visualConfig.showVideoPanel, true);
         visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
+        visualConfig.showTitle = toBoolean(visualConfig.showTitle, true);
+        visualConfig.titleText = String(visualConfig.titleText || 'Lista de Produtos (TV)');
+        visualConfig.isTitleDynamic = toBoolean(visualConfig.isTitleDynamic, false);
+        visualConfig.titlePosition = String(visualConfig.titlePosition || 'top').toLowerCase() === 'footer' ? 'footer' : 'top';
+        visualConfig.titleFontSize = Math.min(96, Math.max(10, Number(visualConfig.titleFontSize || 32)));
+        visualConfig.titleFontFamily = String(visualConfig.titleFontFamily || 'arial').toLowerCase();
+        visualConfig.titleTextColor = String(visualConfig.titleTextColor || '#f8fafc');
+        visualConfig.titleBackgroundColor = String(visualConfig.titleBackgroundColor || '#0f172a');
+        visualConfig.isTitleBackgroundTransparent = toBoolean(visualConfig.isTitleBackgroundTransparent, false);
+        visualConfig.isMainBorderEnabled = toBoolean(visualConfig.isMainBorderEnabled, false);
+        visualConfig.isRoundedCornersEnabled = toBoolean(visualConfig.isRoundedCornersEnabled, true);
+        visualConfig.isRowRoundedEnabled = toBoolean(visualConfig.isRowRoundedEnabled, false);
+        visualConfig.mainBorderColor = String(visualConfig.mainBorderColor || '#000000');
+        visualConfig.mainBorderWidth = Math.min(40, Math.max(0, Number(visualConfig.mainBorderWidth ?? 1)));
+        visualConfig.productListType = String(visualConfig.productListType || '1') === '2' ? '2' : '1';
+        visualConfig.productListLeftGroupIds = Array.isArray(visualConfig.productListLeftGroupIds)
+            ? visualConfig.productListLeftGroupIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
+            : [];
+        visualConfig.productListRightGroupIds = Array.isArray(visualConfig.productListRightGroupIds)
+            ? visualConfig.productListRightGroupIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
+            : [];
+        if (visualConfig.showRightSidebarPanel && visualConfig.productListType === '2') {
+            visualConfig.productListType = '1';
+        }
         visualConfig.rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
         visualConfig.listBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.listBorderWidth ?? 1)));
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
         visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
         visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
         visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
+        visualConfig.groupLabelFontFamily = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
+        visualConfig.showGroupLabelBadge = toBoolean(visualConfig.showGroupLabelBadge, false);
+        visualConfig.groupLabelBadgeColor = String(visualConfig.groupLabelBadgeColor || '#0f172a');
         const normalizedRightSidebarFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
         visualConfig.rightSidebarImageFit = normalizedRightSidebarFit === 'cover'
             ? 'cover'
@@ -1689,6 +2084,7 @@ async function loadVisualConfig(token) {
         applyProductsPanelBackground();
         applyVideoBackground();
         applyRightSidebarBorder();
+        applyGeneralBorder();
         applyRightSidebarPanelVisibility();
         applyTitleVisibility();
     } catch (_error) {

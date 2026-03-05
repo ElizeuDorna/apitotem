@@ -54,6 +54,31 @@
                             || $errors->has('videoUrl')
                             || $errors->has('videoPlaylist')
                             || $errors->has('videoBackgroundColor');
+
+                        $normalizeSlideUrl = function ($value) {
+                            $url = trim((string) $value);
+                            if ($url === '') {
+                                return '';
+                            }
+
+                            if (preg_match('#^https?://localhost/storage/(.+)$#i', $url, $matches) === 1) {
+                                return '/storage/' . ltrim((string) ($matches[1] ?? ''), '/');
+                            }
+
+                            if (str_starts_with($url, 'storage/')) {
+                                return '/' . ltrim($url, '/');
+                            }
+
+                            return $url;
+                        };
+
+                        $savedSlideUrls = collect(preg_split('/\r?\n/', (string) ($config->rightSidebarImageUrls ?? '')) ?: [])
+                            ->map(fn ($line) => $normalizeSlideUrl($line))
+                            ->filter(fn ($line) => $line !== '')
+                            ->values();
+
+                        $oldSlideSources = old('suggestedSlideImageSources');
+                        $hasOldSlideSources = is_array($oldSlideSources);
                     @endphp
 
                     <form method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
@@ -61,16 +86,151 @@
 
                         <div class="grid grid-cols-1 gap-4 items-start">
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="generalConfigSection">Configuração geral</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="videoConfigSection">Configuração de Vídeos</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="colorConfigSection">Configuração de Cores</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="displayConfigSection">Exibição da Tela</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="rightSidebarConfigSection">Configuração Tela Lateral Direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Galeria Imagem da Empresa</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Fonte do produto</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Configuracao da lista produto</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="paginationConfigSection">Paginação da Lista</button>
                             </aside>
 
                             <div id="configPanelsStorage" class="space-y-4 hidden">
+                        <div id="generalConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                            <h3 class="text-base font-semibold text-gray-800">Configuração geral</h3>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Borda geral</h4>
+                                <p class="text-xs text-gray-600">Aplica uma borda em toda a tela <code>/tv/telaweb01</code>.</p>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="isMainBorderEnabled" value="0">
+                                    <input type="checkbox" id="isMainBorderEnabled" name="isMainBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isMainBorderEnabled', $config->isMainBorderEnabled ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar borda geral</span>
+                                </label>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="isRoundedCornersEnabled" value="0">
+                                    <input type="checkbox" id="isRoundedCornersEnabled" name="isRoundedCornersEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isRoundedCornersEnabled', $config->isRoundedCornersEnabled ?? true))>
+                                    <span class="text-sm text-gray-700">Ativar cantos arredondados</span>
+                                </label>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda geral</label>
+                                        <input type="color" id="mainBorderColor" name="mainBorderColor" value="{{ old('mainBorderColor', $config->mainBorderColor ?? '#000000') }}" class="w-full h-10 border rounded">
+                                        @error('mainBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda geral (px)</label>
+                                        <input type="number" id="mainBorderWidth" name="mainBorderWidth" min="0" max="40" value="{{ old('mainBorderWidth', $config->mainBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                        @error('mainBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Título</h4>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showTitle" value="0">
+                                    <input type="checkbox" name="showTitle" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showTitle', $config->showTitle ?? true))>
+                                    <span class="text-sm text-gray-700">Mostrar título</span>
+                                </label>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Texto do título</label>
+                                    <input
+                                        type="text"
+                                        id="titleText"
+                                        name="titleText"
+                                        maxlength="120"
+                                        value="{{ old('titleText', $config->titleText ?? 'Lista de Produtos (TV)') }}"
+                                        placeholder="Digite o texto do título"
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    @error('titleText')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="isTitleDynamic" value="0">
+                                    <input type="checkbox" id="isTitleDynamic" name="isTitleDynamic" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isTitleDynamic', $config->isTitleDynamic ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar título dinâmico (direita para esquerda)</span>
+                                </label>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Posição do título</label>
+                                    <select id="titlePosition" name="titlePosition" class="w-full border rounded px-3 py-2">
+                                        <option value="top" @selected(old('titlePosition', $config->titlePosition ?? 'top') === 'top')>Mostrar no topo</option>
+                                        <option value="footer" @selected(old('titlePosition', $config->titlePosition ?? 'top') === 'footer')>Mostrar no rodapé</option>
+                                    </select>
+                                    @error('titlePosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do título (px)</label>
+                                    <input type="number" id="titleFontSize" name="titleFontSize" min="10" max="96" value="{{ old('titleFontSize', $config->titleFontSize ?? 32) }}" class="w-full border rounded px-3 py-2">
+                                    @error('titleFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Família da fonte do título</label>
+                                    <select id="titleFontFamily" name="titleFontFamily" class="w-full border rounded px-3 py-2">
+                                        <option value="arial" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                        <option value="verdana" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                        <option value="tahoma" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                        <option value="trebuchet" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                        <option value="georgia" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                        <option value="courier" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                        <option value="system" @selected(old('titleFontFamily', $config->titleFontFamily ?? 'arial') === 'system')>System UI</option>
+                                    </select>
+                                    @error('titleFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor do texto do título</label>
+                                    <input type="color" id="titleTextColor" name="titleTextColor" value="{{ old('titleTextColor', $config->titleTextColor ?? '#f8fafc') }}" class="w-full h-10 border rounded">
+                                    @error('titleTextColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="isTitleBackgroundTransparent" value="0">
+                                    <input type="checkbox" id="isTitleBackgroundTransparent" name="isTitleBackgroundTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isTitleBackgroundTransparent', $config->isTitleBackgroundTransparent ?? false))>
+                                    <span class="text-sm text-gray-700">Deixar tarja do título transparente</span>
+                                </label>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja do título</label>
+                                    <input type="color" id="titleBackgroundColor" name="titleBackgroundColor" value="{{ old('titleBackgroundColor', $config->titleBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
+                                    @error('titleBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Imagem de fundo</h4>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showBackgroundImage" value="0">
+                                    <input type="checkbox" id="showBackgroundImage" name="showBackgroundImage" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showBackgroundImage', $config->showBackgroundImage ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar imagem de fundo da tela</span>
+                                </label>
+
+                                <div id="backgroundImageUrlField">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Caminho/URL da imagem de fundo</label>
+                                    <input
+                                        type="url"
+                                        name="backgroundImageUrl"
+                                        value="{{ old('backgroundImageUrl', $config->backgroundImageUrl ?? '') }}"
+                                        placeholder="https://..."
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    @error('backgroundImageUrl')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="videoConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos</h3>
 
@@ -222,18 +382,6 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da lista</label>
                                     <input type="color" id="listBorderColor" name="listBorderColor" value="{{ old('listBorderColor', $config->listBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
                                     @error('listBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-
-                                    <div class="mt-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da lista (px)</label>
-                                        <input type="number" id="listBorderWidth" name="listBorderWidth" min="0" max="20" value="{{ old('listBorderWidth', $config->listBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
-                                        @error('listBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                    </div>
-
-                                    <label class="mt-2 inline-flex items-center gap-2">
-                                        <input type="hidden" name="isListBorderTransparent" value="0">
-                                        <input type="checkbox" id="isListBorderTransparent" name="isListBorderTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isListBorderTransparent', $config->isListBorderTransparent ?? false))>
-                                        <span class="text-sm text-gray-700">Desativar borda da lista</span>
-                                    </label>
                                 </div>
 
                                 <div>
@@ -246,12 +394,6 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da linha</label>
                                     <input type="color" id="borderColor" name="borderColor" value="{{ old('borderColor', $config->borderColor ?? '#334155') }}" class="w-full h-10 border rounded">
                                     @error('borderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-
-                                    <div class="mt-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da linha (px)</label>
-                                        <input type="number" id="rowBorderWidth" name="rowBorderWidth" min="0" max="20" value="{{ old('rowBorderWidth', $config->rowBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
-                                        @error('rowBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                    </div>
 
                                     <label class="mt-2 inline-flex items-center gap-2">
                                         <input type="hidden" name="isRowBorderTransparent" value="0">
@@ -286,52 +428,6 @@
                                 <input type="checkbox" id="useGradient" name="useGradient" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('useGradient', $config->useGradient))>
                                 <span class="text-sm text-gray-700">Usar degradê na linha</span>
                             </label>
-                        </div>
-
-                        <div id="displayConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Exibição da Tela</h3>
-                            <p class="text-sm text-gray-600">Opções de layout e visibilidade dos elementos.</p>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label class="inline-flex items-center gap-2">
-                                <input type="hidden" name="showBorder" value="0">
-                                <input type="checkbox" name="showBorder" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showBorder', $config->showBorder))>
-                                <span class="text-sm text-gray-700">Mostrar borda da linha</span>
-                            </label>
-
-                            <label class="inline-flex items-center gap-2">
-                                <input type="hidden" name="showTitle" value="0">
-                                <input type="checkbox" name="showTitle" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showTitle', $config->showTitle ?? true))>
-                                <span class="text-sm text-gray-700">Mostrar título no topo da tela</span>
-                            </label>
-
-                            <label class="inline-flex items-center gap-2">
-                                <input type="hidden" name="showImage" value="0">
-                                <input type="checkbox" name="showImage" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showImage', $config->showImage ?? true))>
-                                <span class="text-sm text-gray-700">Mostrar imagem do produto na lista</span>
-                            </label>
-                            </div>
-
-                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
-                                <label class="inline-flex items-center gap-2">
-                                    <input type="hidden" name="showBackgroundImage" value="0">
-                                    <input type="checkbox" id="showBackgroundImage" name="showBackgroundImage" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showBackgroundImage', $config->showBackgroundImage ?? false))>
-                                    <span class="text-sm text-gray-700">Ativar imagem de fundo da tela</span>
-                                </label>
-
-                                <div id="backgroundImageUrlField">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Caminho/URL da imagem de fundo</label>
-                                    <input
-                                        type="url"
-                                        name="backgroundImageUrl"
-                                        value="{{ old('backgroundImageUrl', $config->backgroundImageUrl ?? '') }}"
-                                        placeholder="https://..."
-                                        class="w-full border rounded px-3 py-2"
-                                    >
-                                    @error('backgroundImageUrl')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-                            </div>
-
                         </div>
 
                         <div id="rightSidebarConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
@@ -484,7 +580,10 @@
                                                 @php
                                                     $sourceKey = 'company_existing_' . $index;
                                                     $isProductSelected = old('suggestedProductImageSource') === $sourceKey;
-                                                    $isSlideSelected = in_array($sourceKey, (array) old('suggestedSlideImageSources', []), true);
+                                                    $normalizedCompanyImageUrl = $normalizeSlideUrl((string) ($companyImage['url'] ?? ''));
+                                                    $isSlideSelected = $hasOldSlideSources
+                                                        ? in_array($sourceKey, (array) $oldSlideSources, true)
+                                                        : $savedSlideUrls->contains($normalizedCompanyImageUrl);
                                                 @endphp
                                                 <div class="company-gallery-card rounded border border-gray-300 bg-gray-50 p-2 space-y-2" data-source-key="{{ $sourceKey }}">
                                                     <button type="button" class="w-full" data-company-gallery-preview="{{ $sourceKey }}">
@@ -570,7 +669,106 @@
                         <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <h3 class="text-base font-semibold text-gray-800">Fonte do produto</h3>
 
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Tipo de lista</h4>
+                                <label class="inline-flex items-center gap-2 mr-6">
+                                    <input type="radio" id="productListType1" name="productListType" value="1" class="text-indigo-600 border-gray-300" @checked(old('productListType', $config->productListType ?? '1') === '1')>
+                                    <span class="text-sm text-gray-700">1 lista</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" id="productListType2" name="productListType" value="2" class="text-indigo-600 border-gray-300" @checked(old('productListType', $config->productListType ?? '1') === '2')>
+                                    <span class="text-sm text-gray-700">2 lista</span>
+                                </label>
+                                @error('productListType')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <p id="productListTypeWarning" class="text-xs text-amber-700 hidden">Para usar 2 lista, desative primeiro "Ativar lateral direita completa" em Configuração Tela Lateral Direita.</p>
+
+                                <div id="productListGroupAssignment" class="hidden mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                    <p class="text-xs text-gray-600">Escolha os grupos que devem aparecer em cada lado quando "2 lista" estiver ativo.</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <h5 class="text-sm font-semibold text-gray-800 mb-2">Lado esquerdo</h5>
+                                            <div class="max-h-44 overflow-y-auto rounded border border-gray-200 bg-white p-2 space-y-1">
+                                                @foreach ($availableGroups as $group)
+                                                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                                                        <input
+                                                            type="checkbox"
+                                                            name="productListLeftGroupIds[]"
+                                                            value="{{ $group->id }}"
+                                                            class="rounded border-gray-300 text-indigo-600 product-list-group-left"
+                                                            data-group-id="{{ $group->id }}"
+                                                            @checked(in_array((int) $group->id, array_map('intval', (array) old('productListLeftGroupIds', $config->productListLeftGroupIds ?? [])), true))
+                                                        >
+                                                        <span>{{ $group->nome }}</span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                            @error('productListLeftGroupIds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            @error('productListLeftGroupIds.*')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <h5 class="text-sm font-semibold text-gray-800 mb-2">Lado direito</h5>
+                                            <div class="max-h-44 overflow-y-auto rounded border border-gray-200 bg-white p-2 space-y-1">
+                                                @foreach ($availableGroups as $group)
+                                                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                                                        <input
+                                                            type="checkbox"
+                                                            name="productListRightGroupIds[]"
+                                                            value="{{ $group->id }}"
+                                                            class="rounded border-gray-300 text-indigo-600 product-list-group-right"
+                                                            data-group-id="{{ $group->id }}"
+                                                            @checked(in_array((int) $group->id, array_map('intval', (array) old('productListRightGroupIds', $config->productListRightGroupIds ?? [])), true))
+                                                        >
+                                                        <span>{{ $group->nome }}</span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                            @error('productListRightGroupIds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            @error('productListRightGroupIds.*')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="showBorder" value="0">
+                                        <input type="checkbox" name="showBorder" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showBorder', $config->showBorder))>
+                                        <span class="text-sm text-gray-700">Mostrar borda da linha</span>
+                                    </label>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="showImage" value="0">
+                                        <input type="checkbox" name="showImage" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showImage', $config->showImage ?? true))>
+                                        <span class="text-sm text-gray-700">Mostrar imagem do produto na lista</span>
+                                    </label>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="isRowRoundedEnabled" value="0">
+                                        <input type="checkbox" id="isRowRoundedEnabled" name="isRowRoundedEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isRowRoundedEnabled', $config->isRowRoundedEnabled ?? false))>
+                                        <span class="text-sm text-gray-700">Ativar borda arredondada da linha</span>
+                                    </label>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="isListBorderTransparent" value="0">
+                                        <input type="checkbox" id="isListBorderTransparent" name="isListBorderTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isListBorderTransparent', $config->isListBorderTransparent ?? false))>
+                                        <span class="text-sm text-gray-700">Desativar borda da lista</span>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da lista (px)</label>
+                                    <input type="number" id="listBorderWidth" name="listBorderWidth" min="0" max="20" value="{{ old('listBorderWidth', $config->listBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                    @error('listBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem do produto (px)</label>
                                     <input type="number" name="imageWidth" min="20" max="400" value="{{ old('imageWidth', $config->imageWidth ?? 56) }}" class="w-full border rounded px-3 py-2">
@@ -590,6 +788,12 @@
                                 </div>
 
                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da linha (px)</label>
+                                    <input type="number" id="rowBorderWidth" name="rowBorderWidth" min="0" max="20" value="{{ old('rowBorderWidth', $config->rowBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                    @error('rowBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte da lista (px)</label>
                                     <input type="number" name="listFontSize" min="10" max="60" value="{{ old('listFontSize', $config->listFontSize ?? 16) }}" class="w-full border rounded px-3 py-2">
                                     @error('listFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
@@ -602,9 +806,37 @@
                                 </div>
 
                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de fonte da descrição do grupo</label>
+                                    <select name="groupLabelFontFamily" class="w-full border rounded px-3 py-2">
+                                        <option value="arial" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                        <option value="verdana" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                        <option value="tahoma" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                        <option value="trebuchet" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                        <option value="georgia" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                        <option value="courier" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                        <option value="system" @selected(old('groupLabelFontFamily', $config->groupLabelFontFamily ?? 'arial') === 'system')>System UI</option>
+                                    </select>
+                                    @error('groupLabelFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor do grupo (topo)</label>
                                     <input type="color" name="groupLabelColor" value="{{ old('groupLabelColor', $config->groupLabelColor ?? '#cbd5e1') }}" class="w-full h-10 border rounded">
                                     @error('groupLabelColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="showGroupLabelBadge" value="0">
+                                        <input type="checkbox" id="showGroupLabelBadge" name="showGroupLabelBadge" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showGroupLabelBadge', $config->showGroupLabelBadge ?? false))>
+                                        <span class="text-sm text-gray-700">Ativar tarja de destaque atrás da descrição</span>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja da descrição</label>
+                                    <input type="color" id="groupLabelBadgeColor" name="groupLabelBadgeColor" value="{{ old('groupLabelBadgeColor', $config->groupLabelBadgeColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
+                                    @error('groupLabelBadgeColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
                             </div>
                         </div>
@@ -654,8 +886,18 @@
         const isRowBorderTransparent = document.getElementById('isRowBorderTransparent');
         const isPaginationEnabled = document.getElementById('isPaginationEnabled');
         const paginationFields = document.getElementById('paginationFields');
+        const showGroupLabelBadge = document.getElementById('showGroupLabelBadge');
+        const groupLabelBadgeColor = document.getElementById('groupLabelBadgeColor');
         const showBackgroundImage = document.getElementById('showBackgroundImage');
         const backgroundImageUrlField = document.getElementById('backgroundImageUrlField');
+        const titleTextInput = document.getElementById('titleText');
+        const isTitleDynamic = document.getElementById('isTitleDynamic');
+        const titlePosition = document.getElementById('titlePosition');
+        const titleFontSize = document.getElementById('titleFontSize');
+        const titleFontFamily = document.getElementById('titleFontFamily');
+        const titleTextColor = document.getElementById('titleTextColor');
+        const isTitleBackgroundTransparent = document.getElementById('isTitleBackgroundTransparent');
+        const titleBackgroundColor = document.getElementById('titleBackgroundColor');
         const isProductsPanelTransparent = document.getElementById('isProductsPanelTransparent');
         const productsPanelBackgroundColor = document.getElementById('productsPanelBackgroundColor');
         const isVideoPanelTransparent = document.getElementById('isVideoPanelTransparent');
@@ -666,6 +908,10 @@
         const showRightSidebarBorder = document.getElementById('showRightSidebarBorder');
         const rightSidebarBorderColor = document.getElementById('rightSidebarBorderColor');
         const rightSidebarBorderWidth = document.getElementById('rightSidebarBorderWidth');
+        const isMainBorderEnabled = document.getElementById('isMainBorderEnabled');
+        const mainBorderColor = document.getElementById('mainBorderColor');
+        const mainBorderWidth = document.getElementById('mainBorderWidth');
+        const showRightSidebarPanel = document.getElementById('showRightSidebarPanel');
         const rightSidebarMediaTypeVideo = document.getElementById('rightSidebarMediaTypeVideo');
         const rightSidebarMediaTypeImage = document.getElementById('rightSidebarMediaTypeImage');
         const rightSidebarMediaTypeHybrid = document.getElementById('rightSidebarMediaTypeHybrid');
@@ -689,10 +935,18 @@
         const configPanelsStorage = document.getElementById('configPanelsStorage');
         const configMenuButtons = Array.from(document.querySelectorAll('.config-menu-btn'));
         const configPanels = Array.from(document.querySelectorAll('.config-panel'));
+        const productListType1 = document.getElementById('productListType1');
+        const productListType2 = document.getElementById('productListType2');
+        const productListTypeWarning = document.getElementById('productListTypeWarning');
+        const productListGroupAssignment = document.getElementById('productListGroupAssignment');
+        const productListGroupLeftInputs = Array.from(document.querySelectorAll('.product-list-group-left'));
+        const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
         let openedConfigPanelId = null;
         let globalGalleryLookupTimer = null;
         let productSearchTimer = null;
         let hasUserInteractedWithSlideSelection = false;
+        const hasOldSlideSources = @json($hasOldSlideSources);
+        const savedSlideUrls = @json($savedSlideUrls->all());
 
         function updateGradientVisibility() {
             if (!useGradient || !gradientFields) return;
@@ -719,6 +973,17 @@
             updatePaginationVisibility();
         }
 
+        function updateGroupLabelBadgeColorState() {
+            if (!showGroupLabelBadge || !groupLabelBadgeColor) return;
+            groupLabelBadgeColor.style.opacity = showGroupLabelBadge.checked ? '1' : '0.5';
+            groupLabelBadgeColor.style.pointerEvents = showGroupLabelBadge.checked ? 'auto' : 'none';
+        }
+
+        if (showGroupLabelBadge) {
+            showGroupLabelBadge.addEventListener('change', updateGroupLabelBadgeColorState);
+            updateGroupLabelBadgeColorState();
+        }
+
         function updateBackgroundImageVisibility() {
             if (!showBackgroundImage || !backgroundImageUrlField) return;
             backgroundImageUrlField.style.display = showBackgroundImage.checked ? 'block' : 'none';
@@ -727,6 +992,76 @@
         if (showBackgroundImage) {
             showBackgroundImage.addEventListener('change', updateBackgroundImageVisibility);
             updateBackgroundImageVisibility();
+        }
+
+        function updateTitleConfigState() {
+            const showTitleInput = document.querySelector('input[name="showTitle"][value="1"]');
+            if (!(showTitleInput instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const enabled = showTitleInput.checked;
+
+            if (titleTextInput) {
+                titleTextInput.style.opacity = enabled ? '1' : '0.5';
+                titleTextInput.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+
+            if (isTitleDynamic) {
+                isTitleDynamic.disabled = !enabled;
+            }
+
+            if (titlePosition) {
+                titlePosition.disabled = !enabled;
+            }
+
+            if (titleFontSize) {
+                titleFontSize.disabled = !enabled;
+                titleFontSize.style.opacity = enabled ? '1' : '0.5';
+                titleFontSize.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+
+            if (titleFontFamily) {
+                titleFontFamily.disabled = !enabled;
+                titleFontFamily.style.opacity = enabled ? '1' : '0.5';
+                titleFontFamily.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+
+            if (titleTextColor) {
+                titleTextColor.disabled = !enabled;
+                titleTextColor.style.opacity = enabled ? '1' : '0.5';
+                titleTextColor.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+
+            if (isTitleBackgroundTransparent) {
+                isTitleBackgroundTransparent.disabled = !enabled;
+            }
+
+            updateTitleBackgroundColorState();
+        }
+
+        function updateTitleBackgroundColorState() {
+            if (!titleBackgroundColor || !isTitleBackgroundTransparent) {
+                return;
+            }
+
+            const showTitleInput = document.querySelector('input[name="showTitle"][value="1"]');
+            const titleEnabled = showTitleInput instanceof HTMLInputElement ? showTitleInput.checked : true;
+            const canUseColor = titleEnabled && !isTitleBackgroundTransparent.checked;
+
+            titleBackgroundColor.style.opacity = canUseColor ? '1' : '0.5';
+            titleBackgroundColor.style.pointerEvents = canUseColor ? 'auto' : 'none';
+        }
+
+        const showTitleInputForState = document.querySelector('input[name="showTitle"][value="1"]');
+        if (showTitleInputForState instanceof HTMLInputElement) {
+            showTitleInputForState.addEventListener('change', updateTitleConfigState);
+            updateTitleConfigState();
+        }
+
+        if (isTitleBackgroundTransparent) {
+            isTitleBackgroundTransparent.addEventListener('change', updateTitleBackgroundColorState);
+            updateTitleBackgroundColorState();
         }
 
         function updateProductsPanelBackgroundColorState() {
@@ -801,6 +1136,81 @@
             showRightSidebarBorder.addEventListener('change', updateRightSidebarBorderState);
             updateRightSidebarBorderState();
         }
+
+        function updateMainBorderState() {
+            if (!isMainBorderEnabled) return;
+            if (mainBorderColor) {
+                mainBorderColor.style.opacity = isMainBorderEnabled.checked ? '1' : '0.5';
+                mainBorderColor.style.pointerEvents = isMainBorderEnabled.checked ? 'auto' : 'none';
+            }
+            if (mainBorderWidth) {
+                mainBorderWidth.style.opacity = isMainBorderEnabled.checked ? '1' : '0.5';
+                mainBorderWidth.style.pointerEvents = isMainBorderEnabled.checked ? 'auto' : 'none';
+            }
+        }
+
+        if (isMainBorderEnabled) {
+            isMainBorderEnabled.addEventListener('change', updateMainBorderState);
+            updateMainBorderState();
+        }
+
+        function updateProductListTypeAvailability() {
+            if (!productListType2) return;
+
+            const isRightSidebarActive = showRightSidebarPanel ? showRightSidebarPanel.checked : true;
+
+            productListType2.disabled = isRightSidebarActive;
+            if (productListTypeWarning) {
+                productListTypeWarning.classList.toggle('hidden', !isRightSidebarActive);
+            }
+
+            if (isRightSidebarActive && productListType2.checked && productListType1) {
+                productListType1.checked = true;
+            }
+
+            const canUseTwoLists = !isRightSidebarActive && Boolean(productListType2.checked);
+            if (productListGroupAssignment) {
+                productListGroupAssignment.classList.toggle('hidden', !canUseTwoLists);
+            }
+            [...productListGroupLeftInputs, ...productListGroupRightInputs].forEach((input) => {
+                input.disabled = !canUseTwoLists;
+            });
+        }
+
+        function syncProductListGroupExclusivity(changedInput, oppositeInputs) {
+            if (!(changedInput instanceof HTMLInputElement) || !changedInput.checked) {
+                return;
+            }
+
+            const groupId = String(changedInput.getAttribute('data-group-id') || '');
+            if (!groupId) {
+                return;
+            }
+
+            oppositeInputs.forEach((input) => {
+                if (String(input.getAttribute('data-group-id') || '') === groupId) {
+                    input.checked = false;
+                }
+            });
+        }
+
+        productListGroupLeftInputs.forEach((input) => {
+            input.addEventListener('change', () => syncProductListGroupExclusivity(input, productListGroupRightInputs));
+        });
+
+        productListGroupRightInputs.forEach((input) => {
+            input.addEventListener('change', () => syncProductListGroupExclusivity(input, productListGroupLeftInputs));
+        });
+
+        if (showRightSidebarPanel) {
+            showRightSidebarPanel.addEventListener('change', updateProductListTypeAvailability);
+        }
+
+        if (productListType2) {
+            productListType2.addEventListener('change', updateProductListTypeAvailability);
+        }
+
+        updateProductListTypeAvailability();
 
         function updateRightSidebarMediaConfigState() {
             if (!rightSidebarImageConfig) return;
@@ -889,6 +1299,15 @@
             }
 
             return value;
+        }
+
+        function isSavedSlideUrl(url) {
+            const normalized = normalizeSlideUrlForCompare(url);
+            if (!normalized) {
+                return false;
+            }
+
+            return savedSlideUrls.some((item) => normalizeSlideUrlForCompare(item) === normalized);
         }
 
         function syncSelectedSlideUrlsToTextarea() {
@@ -1022,7 +1441,8 @@
 
                 const slideLabel = document.createElement('label');
                 slideLabel.className = 'inline-flex items-center gap-2 text-xs text-gray-700';
-                slideLabel.innerHTML = `<input type="checkbox" name="suggestedSlideImageSources[]" value="${slotKey}" data-source-url="${url}" class="rounded border-gray-300 text-indigo-600" ${oldSlideSources.has(slotKey) ? 'checked' : ''}><span>Usar no slide</span>`;
+                const isChecked = hasOldSlideSources ? oldSlideSources.has(slotKey) : isSavedSlideUrl(url);
+                slideLabel.innerHTML = `<input type="checkbox" name="suggestedSlideImageSources[]" value="${slotKey}" data-source-url="${url}" class="rounded border-gray-300 text-indigo-600" ${isChecked ? 'checked' : ''}><span>Usar no slide</span>`;
                 card.appendChild(slideLabel);
 
                 globalGalleryLookupResults.appendChild(card);
@@ -1309,9 +1729,19 @@
             button.classList.toggle('border-gray-300', !isActive);
         }
 
+        function setConfigPanelState(panel, isActive) {
+            if (!panel) return;
+
+            panel.classList.toggle('bg-indigo-50', isActive);
+            panel.classList.toggle('border-indigo-200', isActive);
+            panel.classList.toggle('bg-gray-50', !isActive);
+            panel.classList.toggle('border-gray-200', !isActive);
+        }
+
         function closeAllConfigPanels() {
             configPanels.forEach((panel) => {
                 panel.classList.add('hidden');
+                setConfigPanelState(panel, false);
                 if (configPanelsStorage && panel.parentElement !== configPanelsStorage) {
                     configPanelsStorage.appendChild(panel);
                 }
@@ -1339,6 +1769,7 @@
 
             targetButton.insertAdjacentElement('afterend', targetPanel);
             targetPanel.classList.remove('hidden');
+            setConfigPanelState(targetPanel, true);
             setConfigMenuButtonState(targetButton, true);
             openedConfigPanelId = targetId;
         }

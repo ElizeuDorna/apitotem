@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
+use App\Models\Grupo;
 use App\Models\Produto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,6 +33,10 @@ class WebScreenConfigController extends Controller
         return view('admin.web-screen-config', [
             'config' => $config,
             'companyGalleryImages' => $this->listCompanyGalleryImages(),
+            'availableGroups' => Grupo::query()
+                ->where('empresa_id', $empresaId)
+                ->orderBy('nome')
+                ->get(['id', 'nome']),
         ]);
     }
 
@@ -151,6 +156,10 @@ class WebScreenConfigController extends Controller
             'videoMuted' => ['nullable', 'boolean'],
             'showVideoPanel' => ['nullable', 'boolean'],
             'showRightSidebarPanel' => ['nullable', 'boolean'],
+            'isMainBorderEnabled' => ['nullable', 'boolean'],
+            'isRoundedCornersEnabled' => ['nullable', 'boolean'],
+            'mainBorderColor' => ['required', 'string', 'max:9'],
+            'mainBorderWidth' => ['nullable', 'integer', 'min:0', 'max:40'],
             'appBackgroundColor' => ['required', 'string', 'max:9'],
             'productsPanelBackgroundColor' => ['required', 'string', 'max:9'],
             'listBorderColor' => ['required', 'string', 'max:9'],
@@ -171,6 +180,11 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageFit' => ['required', 'in:contain,cover,scale-down'],
             'rightSidebarHybridVideoDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'rightSidebarHybridImageDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'productListType' => ['nullable', 'in:1,2'],
+            'productListLeftGroupIds' => ['nullable', 'array'],
+            'productListLeftGroupIds.*' => ['integer'],
+            'productListRightGroupIds' => ['nullable', 'array'],
+            'productListRightGroupIds.*' => ['integer'],
             'isVideoPanelTransparent' => ['nullable', 'boolean'],
             'rowBackgroundColor' => ['required', 'string', 'max:9'],
             'borderColor' => ['required', 'string', 'max:7'],
@@ -183,8 +197,17 @@ class WebScreenConfigController extends Controller
             'showBorder' => ['nullable', 'boolean'],
             'isRowBorderTransparent' => ['nullable', 'boolean'],
             'showTitle' => ['nullable', 'boolean'],
+            'titleText' => ['nullable', 'string', 'max:120'],
+            'isTitleDynamic' => ['nullable', 'boolean'],
+            'titlePosition' => ['nullable', 'in:top,footer'],
+            'titleFontSize' => ['nullable', 'integer', 'min:10', 'max:96'],
+            'titleFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
+            'titleTextColor' => ['required', 'string', 'max:9'],
+            'titleBackgroundColor' => ['required', 'string', 'max:9'],
+            'isTitleBackgroundTransparent' => ['nullable', 'boolean'],
             'showBackgroundImage' => ['nullable', 'boolean'],
             'showImage' => ['nullable', 'boolean'],
+            'isRowRoundedEnabled' => ['nullable', 'boolean'],
             'isProductsPanelTransparent' => ['nullable', 'boolean'],
             'isListBorderTransparent' => ['nullable', 'boolean'],
             'imageWidth' => ['nullable', 'integer', 'min:20', 'max:400'],
@@ -192,7 +215,10 @@ class WebScreenConfigController extends Controller
             'rowVerticalPadding' => ['nullable', 'integer', 'min:0', 'max:40'],
             'listFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
             'groupLabelFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
+            'groupLabelFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
             'groupLabelColor' => ['required', 'string', 'max:9'],
+            'showGroupLabelBadge' => ['nullable', 'boolean'],
+            'groupLabelBadgeColor' => ['required', 'string', 'max:9'],
             'isPaginationEnabled' => ['nullable', 'boolean'],
             'pageSize' => ['nullable', 'integer', 'min:1', 'max:100'],
             'paginationInterval' => ['nullable', 'integer', 'min:1', 'max:120'],
@@ -202,16 +228,29 @@ class WebScreenConfigController extends Controller
         $validated['showBorder'] = (bool) ($validated['showBorder'] ?? false);
         $validated['isRowBorderTransparent'] = (bool) ($validated['isRowBorderTransparent'] ?? false);
         $validated['showTitle'] = (bool) ($validated['showTitle'] ?? true);
+        $validated['titleText'] = trim((string) ($validated['titleText'] ?? ''));
+        $validated['isTitleDynamic'] = (bool) ($validated['isTitleDynamic'] ?? false);
+        $validated['titlePosition'] = (string) ($validated['titlePosition'] ?? 'top');
+        $validated['titleFontSize'] = (int) ($validated['titleFontSize'] ?? 32);
+        $validated['titleFontFamily'] = (string) ($validated['titleFontFamily'] ?? 'arial');
+        $validated['titleTextColor'] = (string) ($validated['titleTextColor'] ?? '#f8fafc');
+        $validated['titleBackgroundColor'] = (string) ($validated['titleBackgroundColor'] ?? '#0f172a');
+        $validated['isTitleBackgroundTransparent'] = (bool) ($validated['isTitleBackgroundTransparent'] ?? false);
         $validated['showBackgroundImage'] = (bool) ($validated['showBackgroundImage'] ?? false);
         $validated['showImage'] = (bool) ($validated['showImage'] ?? true);
+        $validated['isRowRoundedEnabled'] = (bool) ($validated['isRowRoundedEnabled'] ?? false);
         $validated['isProductsPanelTransparent'] = (bool) ($validated['isProductsPanelTransparent'] ?? false);
         $validated['isListBorderTransparent'] = (bool) ($validated['isListBorderTransparent'] ?? false);
         $validated['isVideoPanelTransparent'] = (bool) ($validated['isVideoPanelTransparent'] ?? false);
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
         $validated['showRightSidebarPanel'] = (bool) ($validated['showRightSidebarPanel'] ?? true);
+        $validated['isMainBorderEnabled'] = (bool) ($validated['isMainBorderEnabled'] ?? false);
+        $validated['isRoundedCornersEnabled'] = (bool) ($validated['isRoundedCornersEnabled'] ?? true);
         $validated['showRightSidebarBorder'] = (bool) ($validated['showRightSidebarBorder'] ?? true);
         $validated['videoMuted'] = (bool) ($validated['videoMuted'] ?? false);
         $validated['isPaginationEnabled'] = (bool) ($validated['isPaginationEnabled'] ?? false);
+        $validated['mainBorderColor'] = (string) ($validated['mainBorderColor'] ?? '#000000');
+        $validated['mainBorderWidth'] = (int) ($validated['mainBorderWidth'] ?? 1);
         $validated['productsPanelBackgroundColor'] = (string) ($validated['productsPanelBackgroundColor'] ?? '#0f172a');
         $validated['listBorderColor'] = (string) ($validated['listBorderColor'] ?? '#334155');
         $validated['listBorderWidth'] = (int) ($validated['listBorderWidth'] ?? 1);
@@ -228,14 +267,41 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarImageFit'] = (string) ($validated['rightSidebarImageFit'] ?? 'scale-down');
         $validated['rightSidebarHybridVideoDuration'] = (int) ($validated['rightSidebarHybridVideoDuration'] ?? 2);
         $validated['rightSidebarHybridImageDuration'] = (int) ($validated['rightSidebarHybridImageDuration'] ?? 4);
+        $validated['productListType'] = (string) ($validated['productListType'] ?? '1');
+        $validGroupIds = Grupo::query()
+            ->where('empresa_id', $empresaId)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $validated['productListLeftGroupIds'] = collect((array) ($validated['productListLeftGroupIds'] ?? []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => in_array($id, $validGroupIds, true))
+            ->unique()
+            ->values()
+            ->all();
+        $validated['productListRightGroupIds'] = collect((array) ($validated['productListRightGroupIds'] ?? []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => in_array($id, $validGroupIds, true))
+            ->reject(fn ($id) => in_array($id, $validated['productListLeftGroupIds'], true))
+            ->unique()
+            ->values()
+            ->all();
         $validated['rowBorderWidth'] = (int) ($validated['rowBorderWidth'] ?? 1);
         $validated['rightSidebarImageHeight'] = (int) ($validated['rightSidebarImageHeight'] ?? 96);
         $validated['rightSidebarImageWidth'] = (int) ($validated['rightSidebarImageWidth'] ?? 0);
         $validated['rowVerticalPadding'] = (int) ($validated['rowVerticalPadding'] ?? 9);
         $validated['listFontSize'] = (int) ($validated['listFontSize'] ?? 16);
         $validated['groupLabelFontSize'] = (int) ($validated['groupLabelFontSize'] ?? 14);
+        $validated['groupLabelFontFamily'] = (string) ($validated['groupLabelFontFamily'] ?? 'arial');
         $validated['pageSize'] = (int) ($validated['pageSize'] ?? 10);
         $validated['paginationInterval'] = (int) ($validated['paginationInterval'] ?? 5);
+        $validated['showGroupLabelBadge'] = (bool) ($validated['showGroupLabelBadge'] ?? false);
+        $validated['groupLabelBadgeColor'] = (string) ($validated['groupLabelBadgeColor'] ?? '#0f172a');
+
+        if ($validated['titleText'] === '') {
+            $validated['titleText'] = 'Lista de Produtos (TV)';
+        }
+
         unset($validated['video_urls']);
         unset($validated['video_duration_seconds']);
         unset($validated['video_heights']);
@@ -247,6 +313,10 @@ class WebScreenConfigController extends Controller
 
         if (! $validated['showBackgroundImage']) {
             $validated['backgroundImageUrl'] = null;
+        }
+
+        if ($validated['showRightSidebarPanel'] && $validated['productListType'] === '2') {
+            $validated['productListType'] = '1';
         }
 
         $manualSlideUrls = collect(preg_split('/\r?\n/', (string) ($validated['rightSidebarImageUrls'] ?? '')) ?: [])
