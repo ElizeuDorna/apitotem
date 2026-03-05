@@ -132,6 +132,8 @@ class WebScreenConfigController extends Controller
         ]);
 
         $validated = $request->validate([
+                        'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
+                        'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'videoUrl' => ['nullable', 'string', 'max:10000'],
             'videoPlaylist' => ['nullable', 'array', 'max:10'],
             'videoPlaylist.*.url' => ['nullable', 'url', 'max:1000'],
@@ -165,7 +167,7 @@ class WebScreenConfigController extends Controller
             'selectedProductCode' => ['nullable', 'string', 'max:14'],
             'companyGalleryUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'rightSidebarImageInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
-            'rightSidebarImageFit' => ['required', 'in:contain,cover'],
+            'rightSidebarImageFit' => ['required', 'in:contain,cover,scale-down'],
             'rightSidebarHybridVideoDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'rightSidebarHybridImageDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'isVideoPanelTransparent' => ['nullable', 'boolean'],
@@ -220,12 +222,12 @@ class WebScreenConfigController extends Controller
         $validated['suggestedSlideImageSources'] = array_values(array_unique((array) ($validated['suggestedSlideImageSources'] ?? [])));
         $validated['selectedProductCode'] = substr(preg_replace('/\D/', '', (string) ($validated['selectedProductCode'] ?? '')) ?? '', 0, 14);
         $validated['rightSidebarImageInterval'] = (int) ($validated['rightSidebarImageInterval'] ?? 8);
-        $validated['rightSidebarImageFit'] = (string) ($validated['rightSidebarImageFit'] ?? 'contain');
+        $validated['rightSidebarImageFit'] = (string) ($validated['rightSidebarImageFit'] ?? 'scale-down');
         $validated['rightSidebarHybridVideoDuration'] = (int) ($validated['rightSidebarHybridVideoDuration'] ?? 2);
         $validated['rightSidebarHybridImageDuration'] = (int) ($validated['rightSidebarHybridImageDuration'] ?? 4);
         $validated['rowBorderWidth'] = (int) ($validated['rowBorderWidth'] ?? 1);
-        $validated['imageWidth'] = (int) ($validated['imageWidth'] ?? 56);
-        $validated['imageHeight'] = (int) ($validated['imageHeight'] ?? 56);
+        $validated['rightSidebarImageHeight'] = (int) ($validated['rightSidebarImageHeight'] ?? 96);
+        $validated['rightSidebarImageWidth'] = (int) ($validated['rightSidebarImageWidth'] ?? 0);
         $validated['listFontSize'] = (int) ($validated['listFontSize'] ?? 16);
         $validated['groupLabelFontSize'] = (int) ($validated['groupLabelFontSize'] ?? 14);
         $validated['pageSize'] = (int) ($validated['pageSize'] ?? 10);

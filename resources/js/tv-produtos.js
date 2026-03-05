@@ -39,7 +39,7 @@ const visualConfig = {
     rightSidebarMediaType: 'video',
     rightSidebarImageUrls: '',
     rightSidebarImageInterval: 8,
-    rightSidebarImageFit: 'contain',
+    rightSidebarImageFit: 'scale-down',
     rightSidebarHybridVideoDuration: 120,
     rightSidebarHybridImageDuration: 120,
     isVideoPanelTransparent: false,
@@ -208,9 +208,38 @@ function startImageSlideMode() {
     stopVideoPlaybackForImageMode();
     clearImageSlideTimer();
 
-    const fit = visualConfig.rightSidebarImageFit === 'cover' ? 'cover' : 'contain';
+    const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
+    const fit = configuredFit === 'cover'
+        ? 'cover'
+        : (configuredFit === 'contain' ? 'contain' : 'scale-down');
     tvImageSlide.style.objectFit = fit;
-    tvImageSlide.style.objectPosition = 'center top';
+    tvImageSlide.style.objectPosition = 'center center';
+    tvImageSlide.style.maxWidth = '100%';
+    tvImageSlide.style.maxHeight = '100%';
+
+    // Aplica altura e largura configuráveis
+    const parsedHeight = Number(visualConfig.rightSidebarImageHeight);
+    const imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 96;
+    const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
+    const imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
+
+    // Auto mode: keep natural image size and only downscale when needed.
+    if (imgHeight === 0 && imgWidth === 0) {
+        tvImageSlide.style.width = 'auto';
+        tvImageSlide.style.height = 'auto';
+        tvImageSlide.style.objectFit = 'scale-down';
+    } else {
+        if (imgHeight > 0) {
+            tvImageSlide.style.height = imgHeight + 'px';
+        } else {
+            tvImageSlide.style.height = '';
+        }
+        if (imgWidth > 0) {
+            tvImageSlide.style.width = imgWidth + 'px';
+        } else {
+            tvImageSlide.style.width = '';
+        }
+    }
 
     imageSlideUrls = parseConfiguredImageSlideUrls();
 
@@ -333,9 +362,12 @@ function startHybridImagePhase(token) {
     stopVideoPlaybackForImageMode();
     clearImageSlideTimer();
 
-    const fit = visualConfig.rightSidebarImageFit === 'cover' ? 'cover' : 'contain';
+    const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
+    const fit = configuredFit === 'cover'
+        ? 'cover'
+        : (configuredFit === 'contain' ? 'contain' : 'scale-down');
     tvImageSlide.style.objectFit = fit;
-    tvImageSlide.style.objectPosition = 'center top';
+    tvImageSlide.style.objectPosition = 'center center';
 
     imageSlideUrls = parseConfiguredImageSlideUrls();
     if (imageSlideUrls.length === 0) {
@@ -399,7 +431,7 @@ async function applyRightSidebarMediaMode(token) {
             mode,
             imageUrls: String(visualConfig.rightSidebarImageUrls || ''),
             imageInterval: Number(visualConfig.rightSidebarImageInterval || 8),
-            imageFit: String(visualConfig.rightSidebarImageFit || 'contain'),
+            imageFit: String(visualConfig.rightSidebarImageFit || 'scale-down'),
             videoCount: Number(visualConfig.rightSidebarHybridVideoDuration || 2),
             imageCount: Number(visualConfig.rightSidebarHybridImageDuration || 4),
             playlist: JSON.stringify(parseConfiguredVideoUrls().map((item) => String(item?.url || ''))),
@@ -1612,7 +1644,10 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
         visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
         visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
-        visualConfig.rightSidebarImageFit = String(visualConfig.rightSidebarImageFit || 'contain') === 'cover' ? 'cover' : 'contain';
+        const normalizedRightSidebarFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
+        visualConfig.rightSidebarImageFit = normalizedRightSidebarFit === 'cover'
+            ? 'cover'
+            : (normalizedRightSidebarFit === 'contain' ? 'contain' : 'scale-down');
         visualConfig.rightSidebarHybridVideoDuration = Math.max(1, Number(visualConfig.rightSidebarHybridVideoDuration || 2));
         visualConfig.rightSidebarHybridImageDuration = Math.max(1, Number(visualConfig.rightSidebarHybridImageDuration || 4));
 

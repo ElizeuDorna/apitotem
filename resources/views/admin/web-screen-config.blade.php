@@ -376,17 +376,36 @@
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda</label>
-                                    <input type="color" id="rightSidebarBorderColor" name="rightSidebarBorderColor" value="{{ old('rightSidebarBorderColor', $config->rightSidebarBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
-                                    @error('rightSidebarBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda</label>
+                                        <input type="color" id="rightSidebarBorderColor" name="rightSidebarBorderColor" value="{{ old('rightSidebarBorderColor', $config->rightSidebarBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
+                                        @error('rightSidebarBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
 
-                                    <div class="mt-2">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda (px)</label>
-                                        <input type="number" id="rightSidebarBorderWidth" name="rightSidebarBorderWidth" min="0" max="20" value="{{ old('rightSidebarBorderWidth', $config->rightSidebarBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
-                                        @error('rightSidebarBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <div class="mt-2">
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda (px)</label>
+                                            <input type="number" id="rightSidebarBorderWidth" name="rightSidebarBorderWidth" min="0" max="20" value="{{ old('rightSidebarBorderWidth', $config->rightSidebarBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                            @error('rightSidebarBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
                                     </div>
-                                </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da imagem do slide (TV)</label>
+                                        <p class="text-xs text-gray-600">Define o redimensionamento da imagem exibida no retangulo lateral direito da tela <code>/tv/telaweb01</code>.</p>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Altura (px)</label>
+                                                <input type="number" id="rightSidebarImageHeight" name="rightSidebarImageHeight" min="0" max="1000" value="{{ old('rightSidebarImageHeight', $config->rightSidebarImageHeight ?? 96) }}" class="w-full border rounded px-3 py-2">
+                                                @error('rightSidebarImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Largura (px)</label>
+                                                <input type="number" id="rightSidebarImageWidth" name="rightSidebarImageWidth" min="0" max="1000" value="{{ old('rightSidebarImageWidth', $config->rightSidebarImageWidth ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                                @error('rightSidebarImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                                <p class="text-xs text-gray-500 mt-1">Use 0 para altura/largura automatica.</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                 <label class="inline-flex items-center gap-2">
                                     <input type="hidden" name="showRightSidebarBorder" value="0">
@@ -531,8 +550,9 @@
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Ajuste da imagem</label>
                                         <select id="rightSidebarImageFit" name="rightSidebarImageFit" class="w-full border rounded px-3 py-2">
-                                            <option value="contain" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'contain') === 'contain')>Mostrar inteira (contain)</option>
-                                            <option value="cover" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'contain') === 'cover')>Preencher área (cover)</option>
+                                            <option value="contain" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'scale-down') === 'contain')>Mostrar inteira (contain)</option>
+                                            <option value="scale-down" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'scale-down') === 'scale-down')>Mostrar inteira sem ampliar (recomendado)</option>
+                                            <option value="cover" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'scale-down') === 'cover')>Preencher área (cover)</option>
                                         </select>
                                         @error('rightSidebarImageFit')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
