@@ -35,7 +35,7 @@
                 <div class="flex items-center gap-2 pt-2">
                     <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">Salvar</button>
                     <button id="clearTvConfig" type="button" class="rounded-md border border-red-700 px-4 py-2 text-sm text-red-300 hover:bg-red-900/30">Limpar configurações</button>
-                    <a href="{{ route('tv.telaweb01') }}" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Voltar para TV</a>
+                    <a href="{{ route('tv.totemweb') }}" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Voltar para TV</a>
                 </div>
 
                 <p id="configStatus" class="text-xs text-slate-400">Ajuste as configurações e clique em Salvar.</p>

@@ -15,10 +15,12 @@ Route::get('/contato', function () {
     return view('contato');
 });
 
-Route::view('/tv/telaweb01', 'tv.produtos')->name('tv.telaweb01');
-Route::view('/tv/telaweb01/configuracao', 'tv.configuracao')->name('tv.telaweb01.configuracao');
-Route::redirect('/tv/produtos', '/tv/telaweb01');
-Route::redirect('/tv/configuracao', '/tv/telaweb01/configuracao');
+Route::view('/tv/totemweb', 'tv.produtos')->name('tv.totemweb');
+Route::view('/tv/totemweb/configuracao', 'tv.configuracao')->name('tv.totemweb.configuracao');
+Route::redirect('/tv/telaweb01', '/tv/totemweb');
+Route::redirect('/tv/telaweb01/configuracao', '/tv/totemweb/configuracao');
+Route::redirect('/tv/produtos', '/tv/totemweb');
+Route::redirect('/tv/configuracao', '/tv/totemweb/configuracao');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

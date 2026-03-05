@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Configuração da Tela Web 01
+            Configuração da Totem Web
         </h2>
     </x-slot>
 
@@ -81,8 +81,9 @@
                         $hasOldSlideSources = is_array($oldSlideSources);
                     @endphp
 
-                    <form method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
+                    <form id="webConfigForm" method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
+                        <input type="hidden" id="saveSection" name="saveSection" value="">
 
                         <div class="grid grid-cols-1 gap-4 items-start">
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
@@ -97,11 +98,14 @@
 
                             <div id="configPanelsStorage" class="space-y-4 hidden">
                         <div id="generalConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Configuração geral</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Configuração geral</h3>
+                                <button type="button" data-save-section="generalConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Borda geral</h4>
-                                <p class="text-xs text-gray-600">Aplica uma borda em toda a tela <code>/tv/telaweb01</code>.</p>
+                                <p class="text-xs text-gray-600">Aplica uma borda em toda a tela <code>/tv/totemweb</code>.</p>
 
                                 <label class="inline-flex items-center gap-2">
                                     <input type="hidden" name="isMainBorderEnabled" value="0">
@@ -200,6 +204,12 @@
                                     <span class="text-sm text-gray-700">Deixar tarja do título transparente</span>
                                 </label>
 
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showTitleBorder" value="0">
+                                    <input type="checkbox" id="showTitleBorder" name="showTitleBorder" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showTitleBorder', $config->showTitleBorder ?? true))>
+                                    <span class="text-sm text-gray-700">Mostrar borda da tarja do título</span>
+                                </label>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja do título</label>
                                     <input type="color" id="titleBackgroundColor" name="titleBackgroundColor" value="{{ old('titleBackgroundColor', $config->titleBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
@@ -232,7 +242,10 @@
                         </div>
 
                         <div id="videoConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos</h3>
+                                <button type="button" data-save-section="videoConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
 
                             <label class="inline-flex items-center gap-2">
                                 <input type="hidden" name="showVideoPanel" value="0">
@@ -240,17 +253,6 @@
                                 <span class="text-sm text-gray-700">Ativar vídeos da lateral direita</span>
                             </label>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo dos vídeos</label>
-                                <input type="color" id="videoBackgroundColor" name="videoBackgroundColor" value="{{ old('videoBackgroundColor', $config->videoBackgroundColor ?? '#000000') }}" class="w-full h-10 border rounded">
-                                @error('videoBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-
-                                <label class="mt-2 inline-flex items-center gap-2">
-                                    <input type="hidden" name="isVideoPanelTransparent" value="0">
-                                    <input type="checkbox" id="isVideoPanelTransparent" name="isVideoPanelTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isVideoPanelTransparent', $config->isVideoPanelTransparent ?? false))>
-                                    <span class="text-sm text-gray-700">Deixar fundo do vídeo transparente</span>
-                                </label>
-                            </div>
                             <div class="grid grid-cols-1 gap-3">
                                 @for ($index = 0; $index < 10; $index++)
                                     <div class="rounded-md border border-gray-300 bg-white p-3">
@@ -356,8 +358,11 @@
                         </div>
 
                         <div id="colorConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Configuração de Cores</h3>
-                            <p class="text-sm text-gray-600">Aqui ficam somente as cores da Tela Web 01.</p>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Configuração de Cores</h3>
+                                <button type="button" data-save-section="colorConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
+                            <p class="text-sm text-gray-600">Aqui ficam somente as cores da Totem Web.</p>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -431,7 +436,10 @@
                         </div>
 
                         <div id="rightSidebarConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Configuração Tela Lateral Direita</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Configuração Tela Lateral Direita</h3>
+                                <button type="button" data-save-section="rightSidebarConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
                             <p class="text-sm text-gray-600">Configurações genéricas da coluna direita da tela.</p>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
@@ -441,6 +449,18 @@
                                     <input type="checkbox" id="showRightSidebarPanel" name="showRightSidebarPanel" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showRightSidebarPanel', $config->showRightSidebarPanel ?? true))>
                                     <span class="text-sm text-gray-700">Ativar lateral direita completa</span>
                                 </label>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="isVideoPanelTransparent" value="0">
+                                    <input type="checkbox" id="isVideoPanelTransparent" name="isVideoPanelTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isVideoPanelTransparent', $config->isVideoPanelTransparent ?? false))>
+                                    <span class="text-sm text-gray-700">Deixar fundo da lateral transparente</span>
+                                </label>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo da lateral</label>
+                                    <input type="color" id="videoBackgroundColor" name="videoBackgroundColor" value="{{ old('videoBackgroundColor', $config->videoBackgroundColor ?? '#000000') }}" class="w-full h-10 border rounded">
+                                    @error('videoBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
                                 <p class="text-xs text-gray-600">Quando desativado, a lateral direita e ocultada e a lista de produtos ocupa toda a largura da tela.</p>
 
                                 <label class="inline-flex items-center gap-2 mr-6">
@@ -493,7 +513,7 @@
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da imagem do slide (TV)</label>
-                                        <p class="text-xs text-gray-600">Define o redimensionamento da imagem exibida no retangulo lateral direito da tela <code>/tv/telaweb01</code>.</p>
+                                        <p class="text-xs text-gray-600">Define o redimensionamento da imagem exibida no retangulo lateral direito da tela <code>/tv/totemweb</code>.</p>
 
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                             <div>
@@ -508,6 +528,11 @@
                                                 <p class="text-xs text-gray-500 mt-1">Use 0 para altura/largura automatica.</p>
                                             </div>
                                         </div>
+
+                                        <div class="mt-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-900">
+                                            Tamanho recomendado para arte da lateral (TV Full HD 1920x1080): <strong>600x920 px</strong>.
+                                            <span class="block">Proporcao sugerida: <strong>9:14</strong> (largura x altura).</span>
+                                        </div>
                                     </div>
 
                                 <label class="inline-flex items-center gap-2">
@@ -520,7 +545,10 @@
                         </div>
 
                         <div id="companyGalleryConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Galeria Imagem da Empresa</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Galeria Imagem da Empresa</h3>
+                                <button type="button" data-save-section="companyGalleryConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
                             <p class="text-sm text-gray-600">Configurações da galeria de imagens da empresa para uso na lateral direita.</p>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-2">
@@ -646,6 +674,13 @@
                                     <p id="rightSidebarImagePreviewHint" class="mt-2 text-xs text-gray-500">Adicione links válidos para visualizar miniaturas.</p>
                                 </div>
 
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Periodo de exibicao por imagem</label>
+                                    <p class="text-xs text-gray-600 mb-2">A imagem so aparece na TV dentro do intervalo definido. Se deixar inicio/fim em branco, ela pode aparecer a qualquer momento.</p>
+                                    <div id="rightSidebarImageScheduleEditor" class="space-y-2"></div>
+                                    <p id="rightSidebarImageScheduleHint" class="mt-2 text-xs text-gray-500">Adicione imagens para configurar datas de exibicao.</p>
+                                </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Tempo por imagem (segundos)</label>
@@ -667,7 +702,10 @@
                         </div>
 
                         <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Fonte do produto</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Fonte do produto</h3>
+                                <button type="button" data-save-section="imageSizeConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Tipo de lista</h4>
@@ -675,7 +713,7 @@
                                     <input type="radio" id="productListType1" name="productListType" value="1" class="text-indigo-600 border-gray-300" @checked(old('productListType', $config->productListType ?? '1') === '1')>
                                     <span class="text-sm text-gray-700">1 lista</span>
                                 </label>
-                                <label class="inline-flex items-center gap-2">
+                                <label id="productListType2Label" class="inline-flex items-center gap-2">
                                     <input type="radio" id="productListType2" name="productListType" value="2" class="text-indigo-600 border-gray-300" @checked(old('productListType', $config->productListType ?? '1') === '2')>
                                     <span class="text-sm text-gray-700">2 lista</span>
                                 </label>
@@ -799,6 +837,11 @@
                                     @error('listFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-800">Descricao grupo</h4>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do grupo (topo) (px)</label>
                                     <input type="number" name="groupLabelFontSize" min="10" max="60" value="{{ old('groupLabelFontSize', $config->groupLabelFontSize ?? 14) }}" class="w-full border rounded px-3 py-2">
@@ -825,13 +868,11 @@
                                     @error('groupLabelColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
-                                <div class="md:col-span-2">
-                                    <label class="inline-flex items-center gap-2">
-                                        <input type="hidden" name="showGroupLabelBadge" value="0">
-                                        <input type="checkbox" id="showGroupLabelBadge" name="showGroupLabelBadge" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showGroupLabelBadge', $config->showGroupLabelBadge ?? false))>
-                                        <span class="text-sm text-gray-700">Ativar tarja de destaque atrás da descrição</span>
-                                    </label>
-                                </div>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showGroupLabelBadge" value="0">
+                                    <input type="checkbox" id="showGroupLabelBadge" name="showGroupLabelBadge" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showGroupLabelBadge', $config->showGroupLabelBadge ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar tarja de destaque atrás da descrição</span>
+                                </label>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja da descrição</label>
@@ -842,7 +883,10 @@
                         </div>
 
                         <div id="paginationConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Paginação da Lista</h3>
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Paginação da Lista</h3>
+                                <button type="button" data-save-section="paginationConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
 
                             <label class="inline-flex items-center gap-2">
                                 <input type="hidden" name="isPaginationEnabled" value="0">
@@ -868,8 +912,7 @@
                         </div>
 
                         <div class="flex items-center gap-3">
-                            <x-primary-button>Salvar Configuração</x-primary-button>
-                            <a href="{{ route('tv.telaweb01') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Abrir Tela Web 01</a>
+                            <a href="{{ route('tv.totemweb') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Abrir Totem Web</a>
                         </div>
                     </form>
                 </div>
@@ -897,6 +940,7 @@
         const titleFontFamily = document.getElementById('titleFontFamily');
         const titleTextColor = document.getElementById('titleTextColor');
         const isTitleBackgroundTransparent = document.getElementById('isTitleBackgroundTransparent');
+        const showTitleBorder = document.getElementById('showTitleBorder');
         const titleBackgroundColor = document.getElementById('titleBackgroundColor');
         const isProductsPanelTransparent = document.getElementById('isProductsPanelTransparent');
         const productsPanelBackgroundColor = document.getElementById('productsPanelBackgroundColor');
@@ -920,6 +964,8 @@
         const rightSidebarImageUrls = document.getElementById('rightSidebarImageUrls');
         const rightSidebarImagePreview = document.getElementById('rightSidebarImagePreview');
         const rightSidebarImagePreviewHint = document.getElementById('rightSidebarImagePreviewHint');
+        const rightSidebarImageScheduleEditor = document.getElementById('rightSidebarImageScheduleEditor');
+        const rightSidebarImageScheduleHint = document.getElementById('rightSidebarImageScheduleHint');
         const rightSidebarGlobalGalleryCode = document.getElementById('rightSidebarGlobalGalleryCode');
         const globalGalleryLookupFeedback = document.getElementById('globalGalleryLookupFeedback');
         const globalGalleryProductStatus = document.getElementById('globalGalleryProductStatus');
@@ -937,16 +983,44 @@
         const configPanels = Array.from(document.querySelectorAll('.config-panel'));
         const productListType1 = document.getElementById('productListType1');
         const productListType2 = document.getElementById('productListType2');
+        const productListType2Label = document.getElementById('productListType2Label');
         const productListTypeWarning = document.getElementById('productListTypeWarning');
         const productListGroupAssignment = document.getElementById('productListGroupAssignment');
         const productListGroupLeftInputs = Array.from(document.querySelectorAll('.product-list-group-left'));
         const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
+        const webConfigForm = document.getElementById('webConfigForm');
+        const saveSectionInput = document.getElementById('saveSection');
         let openedConfigPanelId = null;
         let globalGalleryLookupTimer = null;
         let productSearchTimer = null;
         let hasUserInteractedWithSlideSelection = false;
         const hasOldSlideSources = @json($hasOldSlideSources);
         const savedSlideUrls = @json($savedSlideUrls->all());
+        let rightSidebarImageScheduleState = {};
+
+        function getNormalizedScheduleStateFromInitialData() {
+            const map = {};
+
+            if (!Array.isArray(initialRightSidebarImageSchedules)) {
+                return map;
+            }
+
+            initialRightSidebarImageSchedules.forEach((entry) => {
+                const rawUrl = String(entry?.url || '').trim();
+                const url = normalizeSlideUrlForCompare(rawUrl);
+                if (!url) {
+                    return;
+                }
+
+                map[url] = {
+                    startDate: String(entry?.startDate || '').trim(),
+                    endDate: String(entry?.endDate || '').trim(),
+                };
+            });
+
+            return map;
+        }
+        const initialRightSidebarImageSchedules = @json(old('rightSidebarImageSchedules', $config->rightSidebarImageSchedules ?? []));
 
         function updateGradientVisibility() {
             if (!useGradient || !gradientFields) return;
@@ -1035,6 +1109,10 @@
 
             if (isTitleBackgroundTransparent) {
                 isTitleBackgroundTransparent.disabled = !enabled;
+            }
+
+            if (showTitleBorder) {
+                showTitleBorder.disabled = !enabled;
             }
 
             updateTitleBackgroundColorState();
@@ -1177,6 +1255,18 @@
             });
         }
 
+        function notifyProductListTypeBlocked() {
+            if (productListTypeWarning) {
+                productListTypeWarning.classList.remove('hidden');
+            }
+
+            window.alert('Para usar 2 lista, desative antes "Ativar lateral direita completa" em Configuração Tela Lateral Direita.');
+        }
+
+        function notifyRightSidebarBlockedByTwoList() {
+            window.alert('Para ativar "Ativar lateral direita completa", desative antes a opção "2 lista" em Configuracao da lista produto.');
+        }
+
         function syncProductListGroupExclusivity(changedInput, oppositeInputs) {
             if (!(changedInput instanceof HTMLInputElement) || !changedInput.checked) {
                 return;
@@ -1203,11 +1293,53 @@
         });
 
         if (showRightSidebarPanel) {
+            showRightSidebarPanel.addEventListener('click', (event) => {
+                const willActivate = !showRightSidebarPanel.checked;
+                if (!willActivate) {
+                    return;
+                }
+
+                if (!(productListType2 instanceof HTMLInputElement) || !productListType2.checked) {
+                    return;
+                }
+
+                event.preventDefault();
+                notifyRightSidebarBlockedByTwoList();
+            });
+
             showRightSidebarPanel.addEventListener('change', updateProductListTypeAvailability);
         }
 
         if (productListType2) {
             productListType2.addEventListener('change', updateProductListTypeAvailability);
+
+            productListType2.addEventListener('click', (event) => {
+                const isRightSidebarActive = showRightSidebarPanel ? showRightSidebarPanel.checked : true;
+                if (!isRightSidebarActive) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (productListType1) {
+                    productListType1.checked = true;
+                }
+                notifyProductListTypeBlocked();
+            });
+        }
+
+        if (productListType2Label) {
+            productListType2Label.addEventListener('click', (event) => {
+                const isRightSidebarActive = showRightSidebarPanel ? showRightSidebarPanel.checked : true;
+                if (!isRightSidebarActive) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (productListType1) {
+                    productListType1.checked = true;
+                }
+                notifyProductListTypeBlocked();
+            });
         }
 
         updateProductListTypeAvailability();
@@ -1284,6 +1416,120 @@
             }
         }
 
+        function collectScheduleStateFromEditor() {
+            if (!rightSidebarImageScheduleEditor) {
+                return;
+            }
+
+            const rows = Array.from(rightSidebarImageScheduleEditor.querySelectorAll('[data-schedule-row-url]'));
+            rows.forEach((row) => {
+                const url = normalizeSlideUrlForCompare(row.getAttribute('data-schedule-row-url'));
+                if (!url) {
+                    return;
+                }
+
+                const startInput = row.querySelector('input[data-schedule-start]');
+                const endInput = row.querySelector('input[data-schedule-end]');
+                rightSidebarImageScheduleState[url] = {
+                    startDate: startInput instanceof HTMLInputElement ? String(startInput.value || '').trim() : '',
+                    endDate: endInput instanceof HTMLInputElement ? String(endInput.value || '').trim() : '',
+                };
+            });
+        }
+
+        function createScheduleInput(name, value, dataAttr) {
+            const input = document.createElement('input');
+            input.type = 'date';
+            input.name = name;
+            input.value = value;
+            input.setAttribute(dataAttr, '1');
+            input.className = 'w-full border rounded px-2 py-1 text-xs';
+            return input;
+        }
+
+        function renderRightSidebarImageScheduleEditor() {
+            if (!rightSidebarImageScheduleEditor || !rightSidebarImageScheduleHint) {
+                return;
+            }
+
+            collectScheduleStateFromEditor();
+
+            const urls = Array.from(new Set(parseRightSidebarImageUrls().map((url) => normalizeSlideUrlForCompare(url)).filter((url) => url !== '')));
+            rightSidebarImageScheduleEditor.innerHTML = '';
+
+            if (urls.length === 0) {
+                rightSidebarImageScheduleHint.textContent = 'Adicione imagens para configurar datas de exibicao.';
+                return;
+            }
+
+            const preservedState = {};
+
+            urls.forEach((url, index) => {
+                const state = rightSidebarImageScheduleState[url] || { startDate: '', endDate: '' };
+                preservedState[url] = state;
+
+                const row = document.createElement('div');
+                row.className = 'rounded border border-gray-200 bg-gray-50 p-2 space-y-2';
+                row.setAttribute('data-schedule-row-url', url);
+
+                const urlText = document.createElement('p');
+                urlText.className = 'text-[11px] text-gray-700 truncate';
+                urlText.textContent = url;
+                urlText.title = url;
+                row.appendChild(urlText);
+
+                const hiddenUrl = document.createElement('input');
+                hiddenUrl.type = 'hidden';
+                hiddenUrl.name = `rightSidebarImageSchedules[${index}][url]`;
+                hiddenUrl.value = url;
+                row.appendChild(hiddenUrl);
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
+
+                const startWrap = document.createElement('label');
+                startWrap.className = 'block text-[11px] text-gray-600';
+                startWrap.textContent = 'Data inicio';
+                const startInput = createScheduleInput(`rightSidebarImageSchedules[${index}][startDate]`, state.startDate, 'data-schedule-start');
+                startWrap.appendChild(startInput);
+
+                const endWrap = document.createElement('label');
+                endWrap.className = 'block text-[11px] text-gray-600';
+                endWrap.textContent = 'Data fim';
+                const endInput = createScheduleInput(`rightSidebarImageSchedules[${index}][endDate]`, state.endDate, 'data-schedule-end');
+                endWrap.appendChild(endInput);
+
+                const syncEndMin = () => {
+                    endInput.min = startInput.value || '';
+                };
+
+                startInput.addEventListener('change', () => {
+                    syncEndMin();
+                    rightSidebarImageScheduleState[url] = {
+                        startDate: String(startInput.value || '').trim(),
+                        endDate: String(endInput.value || '').trim(),
+                    };
+                });
+
+                endInput.addEventListener('change', () => {
+                    rightSidebarImageScheduleState[url] = {
+                        startDate: String(startInput.value || '').trim(),
+                        endDate: String(endInput.value || '').trim(),
+                    };
+                });
+
+                syncEndMin();
+                grid.appendChild(startWrap);
+                grid.appendChild(endWrap);
+                row.appendChild(grid);
+
+                rightSidebarImageScheduleEditor.appendChild(row);
+            });
+
+            rightSidebarImageScheduleState = preservedState;
+            rightSidebarImageScheduleHint.textContent = `${urls.length} imagem(ns) com periodo configuravel.`;
+        }
+
         function normalizeSlideUrlForCompare(url) {
             const value = String(url || '').trim();
             if (value === '') {
@@ -1340,6 +1586,7 @@
             const finalUrls = Array.from(new Set([...manualUrls, ...selectedUrls]));
             rightSidebarImageUrls.value = finalUrls.join('\n');
             renderRightSidebarImagePreview();
+            renderRightSidebarImageScheduleEditor();
         }
 
         if (rightSidebarMediaTypeVideo) {
@@ -1355,11 +1602,16 @@
         }
 
         if (rightSidebarImageUrls) {
-            rightSidebarImageUrls.addEventListener('input', renderRightSidebarImagePreview);
+            rightSidebarImageUrls.addEventListener('input', () => {
+                renderRightSidebarImagePreview();
+                renderRightSidebarImageScheduleEditor();
+            });
         }
 
         updateRightSidebarMediaConfigState();
+        rightSidebarImageScheduleState = getNormalizedScheduleStateFromInitialData();
         renderRightSidebarImagePreview();
+        renderRightSidebarImageScheduleEditor();
 
         function getOldSuggestedProductSource() {
             return @json(old('suggestedProductImageSource', 'none'));
@@ -1781,6 +2033,56 @@
                     openConfigPanel(targetId);
                 }
             });
+        });
+
+        document.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            const saveButton = target.closest('[data-save-section]');
+            if (!saveButton || !(saveButton instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const sectionId = String(saveButton.getAttribute('data-save-section') || '').trim();
+            if (!webConfigForm || !saveSectionInput || !sectionId) {
+                return;
+            }
+
+            const sectionPanel = document.getElementById(sectionId);
+            if (!sectionPanel) {
+                return;
+            }
+
+            const formControls = Array.from(webConfigForm.querySelectorAll('input, select, textarea, button'));
+            const sectionControls = new Set(Array.from(sectionPanel.querySelectorAll('input, select, textarea, button')));
+            const controlsState = [];
+
+            formControls.forEach((control) => {
+                const isToken = control instanceof HTMLInputElement && control.name === '_token';
+                const isSaveSection = control === saveSectionInput;
+                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection;
+
+                controlsState.push({ control, disabled: control.disabled });
+                if (!shouldKeep) {
+                    control.disabled = true;
+                }
+            });
+
+            saveSectionInput.value = sectionId;
+
+            // Restore control states if browser blocks submission due to validation.
+            const restoreStates = () => {
+                controlsState.forEach(({ control, disabled }) => {
+                    control.disabled = disabled;
+                });
+            };
+
+            webConfigForm.addEventListener('invalid', restoreStates, { once: true, capture: true });
+            setTimeout(restoreStates, 50);
+            webConfigForm.requestSubmit();
         });
 
         configMenuButtons.forEach((button) => setConfigMenuButtonState(button, false));

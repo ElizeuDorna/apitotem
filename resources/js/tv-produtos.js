@@ -21,9 +21,9 @@ const tvShell = document.getElementById('tvShell');
 const queryParams = new URLSearchParams(window.location.search);
 const initialToken = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
 const apiEndpoint = localStorage.getItem('tv_api_endpoint') || queryParams.get('api') || '/api/tv/produtos';
-const configEndpoint = '/api/tv/telaweb01/config';
+const configEndpoint = '/api/tv/totemweb/config';
 const mediaEndpoint = '/api/tv/midias';
-const configPageUrl = '/tv/telaweb01/configuracao';
+const configPageUrl = '/tv/totemweb/configuracao';
 const refreshSeconds = Number(localStorage.getItem('tv_refresh_seconds') || queryParams.get('refresh') || 30);
 const AUDIO_UNLOCK_STORAGE_KEY = 'tv_audio_autoplay_unlocked';
 
@@ -48,6 +48,7 @@ const visualConfig = {
     rightSidebarBorderWidth: 1,
     rightSidebarMediaType: 'video',
     rightSidebarImageUrls: '',
+    rightSidebarImageSchedules: [],
     rightSidebarImageInterval: 8,
     rightSidebarImageFit: 'scale-down',
     rightSidebarHybridVideoDuration: 120,
@@ -71,6 +72,7 @@ const visualConfig = {
     titleTextColor: '#f8fafc',
     titleBackgroundColor: '#0f172a',
     isTitleBackgroundTransparent: false,
+    showTitleBorder: true,
     showImage: true,
     showBackgroundImage: false,
     isProductsPanelTransparent: false,
@@ -189,10 +191,68 @@ function parseConfiguredImageSlideUrls() {
         return [];
     }
 
+    const normalizeSlideUrl = (value) => {
+        const url = String(value || '').trim();
+        if (!url) {
+            return '';
+        }
+
+        if (/^https?:\/\/localhost\/storage\//i.test(url)) {
+            return url.replace(/^https?:\/\/localhost\/storage\//i, '/storage/');
+        }
+
+        if (/^storage\//i.test(url)) {
+            return `/${url.replace(/^\/+/, '')}`;
+        }
+
+        return url;
+    };
+
+    const schedules = Array.isArray(visualConfig.rightSidebarImageSchedules)
+        ? visualConfig.rightSidebarImageSchedules
+        : [];
+
+    const scheduleByUrl = new Map();
+    schedules.forEach((entry) => {
+        const normalizedUrl = normalizeSlideUrl(entry?.url);
+        if (!normalizedUrl) {
+            return;
+        }
+
+        scheduleByUrl.set(normalizedUrl, {
+            startDate: String(entry?.startDate || '').trim(),
+            endDate: String(entry?.endDate || '').trim(),
+        });
+    });
+
+    const localToday = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 10);
+
+    const shouldShowByDate = (url) => {
+        const schedule = scheduleByUrl.get(normalizeSlideUrl(url));
+        if (!schedule) {
+            return true;
+        }
+
+        const startDate = schedule.startDate;
+        const endDate = schedule.endDate;
+
+        if (startDate && localToday < startDate) {
+            return false;
+        }
+
+        if (endDate && localToday > endDate) {
+            return false;
+        }
+
+        return true;
+    };
+
     return raw
         .split(/\r?\n|,|;\s*/)
         .map((item) => extractVideoUrl(item.trim()))
-        .filter(Boolean);
+        .filter((url) => Boolean(url) && shouldShowByDate(url));
 }
 
 function stopVideoPlaybackForImageMode() {
@@ -225,13 +285,10 @@ function showImageSlideAt(index) {
     tvImageSlide.src = imageSlideUrls[currentImageSlideIndex];
 }
 
-function startImageSlideMode() {
+function applyConfiguredSlideImageLayout() {
     if (!tvImageSlide) {
         return;
     }
-
-    stopVideoPlaybackForImageMode();
-    clearImageSlideTimer();
 
     const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
     const fit = configuredFit === 'cover'
@@ -242,7 +299,6 @@ function startImageSlideMode() {
     tvImageSlide.style.maxWidth = '100%';
     tvImageSlide.style.maxHeight = '100%';
 
-    // Aplica altura e largura configuráveis
     const parsedHeight = Number(visualConfig.rightSidebarImageHeight);
     const imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 96;
     const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
@@ -253,18 +309,31 @@ function startImageSlideMode() {
         tvImageSlide.style.width = 'auto';
         tvImageSlide.style.height = 'auto';
         tvImageSlide.style.objectFit = 'scale-down';
-    } else {
-        if (imgHeight > 0) {
-            tvImageSlide.style.height = imgHeight + 'px';
-        } else {
-            tvImageSlide.style.height = '';
-        }
-        if (imgWidth > 0) {
-            tvImageSlide.style.width = imgWidth + 'px';
-        } else {
-            tvImageSlide.style.width = '';
-        }
+        return;
     }
+
+    if (imgHeight > 0) {
+        tvImageSlide.style.height = imgHeight + 'px';
+    } else {
+        tvImageSlide.style.height = '';
+    }
+
+    if (imgWidth > 0) {
+        tvImageSlide.style.width = imgWidth + 'px';
+    } else {
+        tvImageSlide.style.width = '';
+    }
+}
+
+function startImageSlideMode() {
+    if (!tvImageSlide) {
+        return;
+    }
+
+    stopVideoPlaybackForImageMode();
+    clearImageSlideTimer();
+
+    applyConfiguredSlideImageLayout();
 
     imageSlideUrls = parseConfiguredImageSlideUrls();
 
@@ -321,6 +390,10 @@ function getHybridImageCountLimit() {
 
 function getNextHybridPhase(phase) {
     return phase === 'image' ? 'video' : 'image';
+}
+
+function applyHybridImageLayout() {
+    applyConfiguredSlideImageLayout();
 }
 
 async function applyRightSidebarModeOnce(token, mode) {
@@ -393,12 +466,7 @@ function startHybridImagePhase(token) {
     stopVideoPlaybackForImageMode();
     clearImageSlideTimer();
 
-    const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
-    const fit = configuredFit === 'cover'
-        ? 'cover'
-        : (configuredFit === 'contain' ? 'contain' : 'scale-down');
-    tvImageSlide.style.objectFit = fit;
-    tvImageSlide.style.objectPosition = 'center center';
+    applyHybridImageLayout();
 
     imageSlideUrls = parseConfiguredImageSlideUrls();
     if (imageSlideUrls.length === 0) {
@@ -419,6 +487,8 @@ function startHybridImagePhase(token) {
             return;
         }
 
+        applyConfiguredSlideImageLayout();
+
         if (!rightSidebarHybridHasShownAnyImage) {
             showImageSlideAt(0);
             rightSidebarHybridHasShownAnyImage = true;
@@ -430,7 +500,13 @@ function startHybridImagePhase(token) {
 
         if (rightSidebarHybridImageCountInPhase >= imageLimit) {
             clearImageSlideTimer();
-            switchRightSidebarHybridPhase(token, 'video');
+            setTimeout(() => {
+                if (getRightSidebarMediaType() !== 'hybrid' || rightSidebarHybridPhase !== 'image') {
+                    return;
+                }
+
+                switchRightSidebarHybridPhase(token, 'video');
+            }, intervalMs);
         }
     };
 
@@ -469,6 +545,8 @@ async function applyRightSidebarMediaMode(token) {
             imageUrls: String(visualConfig.rightSidebarImageUrls || ''),
             imageInterval: Number(visualConfig.rightSidebarImageInterval || 8),
             imageFit: String(visualConfig.rightSidebarImageFit || 'scale-down'),
+            imageHeight: Number(visualConfig.rightSidebarImageHeight || 0),
+            imageWidth: Number(visualConfig.rightSidebarImageWidth || 0),
             videoCount: Number(visualConfig.rightSidebarHybridVideoDuration || 2),
             imageCount: Number(visualConfig.rightSidebarHybridImageDuration || 4),
             playlist: JSON.stringify(parseConfiguredVideoUrls().map((item) => String(item?.url || ''))),
@@ -488,26 +566,10 @@ async function applyRightSidebarMediaMode(token) {
         }
 
         if (rightSidebarHybridPhase === 'image') {
+            applyHybridImageLayout();
+
             const hasRunningImageTimer = Boolean(imageSlideTimer);
-            const imageLimit = getHybridImageCountLimit();
-
-            if (!hasRunningImageTimer && imageLimit > 1 && rightSidebarHybridImageCountInPhase > 0) {
-                imageSlideTimer = setInterval(() => {
-                    if (getRightSidebarMediaType() !== 'hybrid' || rightSidebarHybridPhase !== 'image') {
-                        return;
-                    }
-
-                    showImageSlideAt(currentImageSlideIndex + 1);
-                    rightSidebarHybridImageCountInPhase += 1;
-
-                    if (rightSidebarHybridImageCountInPhase >= imageLimit) {
-                        clearImageSlideTimer();
-                        switchRightSidebarHybridPhase(token, 'video');
-                    }
-                }, Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8)) * 1000);
-            }
-
-            if (!tvImageSlide || tvImageSlide.classList.contains('hidden')) {
+            if (!hasRunningImageTimer || !tvImageSlide || tvImageSlide.classList.contains('hidden')) {
                 startHybridImagePhase(token);
             }
 
@@ -1187,6 +1249,7 @@ function applyVideoSource(videoItem) {
     const shouldForceFirstPlaybackMuted = forceMuteOnFirstPlayback && Boolean(videoUrl);
     const effectiveMuted = shouldForceFirstPlaybackMuted ? true : itemMuted;
     const itemFullscreen = toBoolean(typeof videoItem === 'object' ? videoItem?.fullscreen : false, false);
+    const effectiveFullscreen = itemFullscreen;
     const itemDurationSeconds = Math.max(0, Number(typeof videoItem === 'object' ? videoItem?.durationSeconds : 0) || 0);
     const itemHeightPx = Math.max(0, Number(typeof videoItem === 'object' ? videoItem?.heightPx : 0) || 0);
     const youTubeVideoId = getYouTubeVideoId(videoUrl);
@@ -1197,10 +1260,10 @@ function applyVideoSource(videoItem) {
     }
 
     clearVideoFallbackTimer();
-    document.body.classList.toggle('tv-video-fullscreen', itemFullscreen);
-    applyCurrentVideoHeight(itemFullscreen ? 0 : itemHeightPx);
+    document.body.classList.toggle('tv-video-fullscreen', effectiveFullscreen);
+    applyCurrentVideoHeight(effectiveFullscreen ? 0 : itemHeightPx);
 
-    if (itemFullscreen) {
+    if (effectiveFullscreen) {
         setTimeout(() => {
             if (tvVideo && !tvVideo.classList.contains('hidden') && tvVideo.paused) {
                 playHtmlVideoWithAutoplayFallback(effectiveMuted);
@@ -1458,6 +1521,29 @@ function applyTitleVisibility() {
     const titleBackgroundColor = toBoolean(visualConfig.isTitleBackgroundTransparent, false)
         ? 'transparent'
         : (visualConfig.titleBackgroundColor || '#0f172a');
+    const showTitleBorder = toBoolean(visualConfig.showTitleBorder, true);
+
+    const applyTitleContainerStyle = (element) => {
+        if (!element) {
+            return;
+        }
+
+        element.classList.toggle('border', showTitleBorder);
+        element.classList.toggle('border-slate-800', showTitleBorder);
+
+        if (showTitleBorder) {
+            element.style.border = '';
+            element.style.borderStyle = '';
+            element.style.borderWidth = '';
+            element.style.borderColor = '';
+            return;
+        }
+
+        element.style.border = 'none';
+        element.style.borderStyle = 'none';
+        element.style.borderWidth = '0';
+        element.style.borderColor = 'transparent';
+    };
 
     const applyTitleElement = (element, isVisible) => {
         if (!element) {
@@ -1484,10 +1570,12 @@ function applyTitleVisibility() {
 
     tvHeader.style.display = showOnTop ? 'block' : 'none';
     tvHeader.style.backgroundColor = titleBackgroundColor;
+    applyTitleContainerStyle(tvHeader);
     if (tvFooter) {
         tvFooter.classList.toggle('hidden', !showOnFooter);
         tvFooter.style.display = showOnFooter ? 'block' : 'none';
         tvFooter.style.backgroundColor = titleBackgroundColor;
+        applyTitleContainerStyle(tvFooter);
     }
 
     if (!tvHeaderTitle && !tvFooterTitle) {
@@ -1636,9 +1724,13 @@ function applyRightSidebarBorder() {
     }
 
     const rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
-    const shouldShowRightSidebarBorder = Boolean(visualConfig.showRightSidebarBorder) && rightSidebarBorderWidth > 0;
+    const shouldShowRightSidebarBorder = toBoolean(visualConfig.showRightSidebarBorder, true) && rightSidebarBorderWidth > 0;
+
+    tvVideoPanel.classList.toggle('border', shouldShowRightSidebarBorder);
+    tvVideoPanel.classList.toggle('border-slate-800', shouldShowRightSidebarBorder);
 
     if (!shouldShowRightSidebarBorder) {
+        tvVideoPanel.style.setProperty('border', 'none', 'important');
         tvVideoPanel.style.setProperty('border-width', '0', 'important');
         tvVideoPanel.style.setProperty('border-style', 'none', 'important');
         tvVideoPanel.style.setProperty('border-color', 'transparent', 'important');
@@ -2036,6 +2128,7 @@ async function loadVisualConfig(token) {
         visualConfig.titleTextColor = String(visualConfig.titleTextColor || '#f8fafc');
         visualConfig.titleBackgroundColor = String(visualConfig.titleBackgroundColor || '#0f172a');
         visualConfig.isTitleBackgroundTransparent = toBoolean(visualConfig.isTitleBackgroundTransparent, false);
+        visualConfig.showTitleBorder = toBoolean(visualConfig.showTitleBorder, true);
         visualConfig.isMainBorderEnabled = toBoolean(visualConfig.isMainBorderEnabled, false);
         visualConfig.isRoundedCornersEnabled = toBoolean(visualConfig.isRoundedCornersEnabled, true);
         visualConfig.isRowRoundedEnabled = toBoolean(visualConfig.isRowRoundedEnabled, false);
@@ -2056,6 +2149,9 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
         visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
         visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
+        visualConfig.rightSidebarImageSchedules = Array.isArray(visualConfig.rightSidebarImageSchedules)
+            ? visualConfig.rightSidebarImageSchedules
+            : [];
         visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
         visualConfig.groupLabelFontFamily = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
         visualConfig.showGroupLabelBadge = toBoolean(visualConfig.showGroupLabelBadge, false);
@@ -2066,7 +2162,6 @@ async function loadVisualConfig(token) {
             : (normalizedRightSidebarFit === 'contain' ? 'contain' : 'scale-down');
         visualConfig.rightSidebarHybridVideoDuration = Math.max(1, Number(visualConfig.rightSidebarHybridVideoDuration || 2));
         visualConfig.rightSidebarHybridImageDuration = Math.max(1, Number(visualConfig.rightSidebarHybridImageDuration || 4));
-
         document.body.style.backgroundColor = visualConfig.appBackgroundColor;
         const imageUrl = String(visualConfig.backgroundImageUrl || '').trim();
         if (visualConfig.showBackgroundImage && imageUrl) {
