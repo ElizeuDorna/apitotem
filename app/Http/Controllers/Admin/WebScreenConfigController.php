@@ -150,6 +150,7 @@ class WebScreenConfigController extends Controller
             'video_heights.*' => ['nullable', 'integer', 'min:0', 'max:2000'],
             'videoMuted' => ['nullable', 'boolean'],
             'showVideoPanel' => ['nullable', 'boolean'],
+            'showRightSidebarPanel' => ['nullable', 'boolean'],
             'appBackgroundColor' => ['required', 'string', 'max:9'],
             'productsPanelBackgroundColor' => ['required', 'string', 'max:9'],
             'listBorderColor' => ['required', 'string', 'max:9'],
@@ -188,6 +189,7 @@ class WebScreenConfigController extends Controller
             'isListBorderTransparent' => ['nullable', 'boolean'],
             'imageWidth' => ['nullable', 'integer', 'min:20', 'max:400'],
             'imageHeight' => ['nullable', 'integer', 'min:20', 'max:400'],
+            'rowVerticalPadding' => ['nullable', 'integer', 'min:0', 'max:40'],
             'listFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
             'groupLabelFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
             'groupLabelColor' => ['required', 'string', 'max:9'],
@@ -206,6 +208,7 @@ class WebScreenConfigController extends Controller
         $validated['isListBorderTransparent'] = (bool) ($validated['isListBorderTransparent'] ?? false);
         $validated['isVideoPanelTransparent'] = (bool) ($validated['isVideoPanelTransparent'] ?? false);
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
+        $validated['showRightSidebarPanel'] = (bool) ($validated['showRightSidebarPanel'] ?? true);
         $validated['showRightSidebarBorder'] = (bool) ($validated['showRightSidebarBorder'] ?? true);
         $validated['videoMuted'] = (bool) ($validated['videoMuted'] ?? false);
         $validated['isPaginationEnabled'] = (bool) ($validated['isPaginationEnabled'] ?? false);
@@ -228,6 +231,7 @@ class WebScreenConfigController extends Controller
         $validated['rowBorderWidth'] = (int) ($validated['rowBorderWidth'] ?? 1);
         $validated['rightSidebarImageHeight'] = (int) ($validated['rightSidebarImageHeight'] ?? 96);
         $validated['rightSidebarImageWidth'] = (int) ($validated['rightSidebarImageWidth'] ?? 0);
+        $validated['rowVerticalPadding'] = (int) ($validated['rowVerticalPadding'] ?? 9);
         $validated['listFontSize'] = (int) ($validated['listFontSize'] ?? 16);
         $validated['groupLabelFontSize'] = (int) ($validated['groupLabelFontSize'] ?? 14);
         $validated['pageSize'] = (int) ($validated['pageSize'] ?? 10);

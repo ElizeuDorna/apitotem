@@ -66,7 +66,7 @@
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="displayConfigSection">Exibição da Tela</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="rightSidebarConfigSection">Configuração Tela Lateral Direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Galeria Imagem da Empresa</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Tamanho da Imagem do Produto</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Fonte do produto</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="paginationConfigSection">Paginação da Lista</button>
                             </aside>
 
@@ -77,7 +77,7 @@
                             <label class="inline-flex items-center gap-2">
                                 <input type="hidden" name="showVideoPanel" value="0">
                                 <input type="checkbox" name="showVideoPanel" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showVideoPanel', $config->showVideoPanel ?? true))>
-                                <span class="text-sm text-gray-700">Ativar tela de vídeo (geral)</span>
+                                <span class="text-sm text-gray-700">Ativar vídeos da lateral direita</span>
                             </label>
 
                             <div>
@@ -340,6 +340,13 @@
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Tipo de mídia</h4>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showRightSidebarPanel" value="0">
+                                    <input type="checkbox" id="showRightSidebarPanel" name="showRightSidebarPanel" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showRightSidebarPanel', $config->showRightSidebarPanel ?? true))>
+                                    <span class="text-sm text-gray-700">Ativar lateral direita completa</span>
+                                </label>
+                                <p class="text-xs text-gray-600">Quando desativado, a lateral direita e ocultada e a lista de produtos ocupa toda a largura da tela.</p>
+
                                 <label class="inline-flex items-center gap-2 mr-6">
                                     <input type="radio" id="rightSidebarMediaTypeVideo" name="rightSidebarMediaType" value="video" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'video')>
                                     <span class="text-sm text-gray-700">Vídeo</span>
@@ -561,19 +568,25 @@
                         </div>
 
                         <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <h3 class="text-base font-semibold text-gray-800">Tamanho da Imagem do Produto</h3>
+                            <h3 class="text-base font-semibold text-gray-800">Fonte do produto</h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Largura (px)</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem do produto (px)</label>
                                     <input type="number" name="imageWidth" min="20" max="400" value="{{ old('imageWidth', $config->imageWidth ?? 56) }}" class="w-full border rounded px-3 py-2">
                                     @error('imageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Altura (px)</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Altura da imagem do produto (px)</label>
                                     <input type="number" name="imageHeight" min="20" max="400" value="{{ old('imageHeight', $config->imageHeight ?? 56) }}" class="w-full border rounded px-3 py-2">
                                     @error('imageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Espacamento vertical da linha (px)</label>
+                                    <input type="number" name="rowVerticalPadding" min="0" max="40" value="{{ old('rowVerticalPadding', $config->rowVerticalPadding ?? 9) }}" class="w-full border rounded px-3 py-2">
+                                    @error('rowVerticalPadding')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div>

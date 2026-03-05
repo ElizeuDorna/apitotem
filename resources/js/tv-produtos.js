@@ -28,6 +28,7 @@ const visualConfig = {
     videoMuted: false,
     videoPlaylist: [],
     showVideoPanel: true,
+    showRightSidebarPanel: true,
     appBackgroundColor: '#020617',
     productsPanelBackgroundColor: '#0f172a',
     listBorderColor: '#334155',
@@ -60,6 +61,7 @@ const visualConfig = {
     gradientEndColor: '#1f2937',
     imageWidth: 56,
     imageHeight: 56,
+    rowVerticalPadding: 9,
     listFontSize: 16,
     groupLabelFontSize: 14,
     groupLabelColor: '#cbd5e1',
@@ -273,6 +275,12 @@ function stopImageSlideMode() {
 
 function getRightSidebarMediaType() {
     const mode = String(visualConfig.rightSidebarMediaType || 'video').trim().toLowerCase();
+
+    // If videos are disabled, force image mode for the right sidebar media logic.
+    if (!toBoolean(visualConfig.showVideoPanel, true)) {
+        return 'image';
+    }
+
     if (mode === 'image' || mode === 'hybrid') {
         return mode;
     }
@@ -411,6 +419,12 @@ function startHybridImagePhase(token) {
 }
 
 async function applyRightSidebarMediaMode(token) {
+    if (!toBoolean(visualConfig.showRightSidebarPanel, true)) {
+        stopImageSlideMode();
+        stopVideoPlaybackForImageMode();
+        return;
+    }
+
     const mode = getRightSidebarMediaType();
 
     if (mode === 'image') {
@@ -1485,12 +1499,14 @@ function applyRightSidebarBorder() {
     tvVideoPanel.style.setProperty('border-color', visualConfig.rightSidebarBorderColor || '#334155', 'important');
 }
 
-function applyVideoPanelVisibility() {
+function applyRightSidebarPanelVisibility() {
     if (!tvVideoPanel || !tvMain) {
         return;
     }
 
-    if (!visualConfig.showVideoPanel) {
+    if (!toBoolean(visualConfig.showRightSidebarPanel, true)) {
+        stopImageSlideMode();
+        stopVideoPlaybackForImageMode();
         tvVideoPanel.style.display = 'none';
         tvMain.style.gridTemplateColumns = '1fr';
         return;
@@ -1541,7 +1557,7 @@ function renderProducts(produtos) {
 
     for (const item of produtos) {
         const row = document.createElement('article');
-        row.className = 'rounded-lg bg-slate-950 px-4 py-3';
+        row.className = 'rounded-lg bg-slate-950';
 
         const rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
         const shouldShowRowBorder = Boolean(visualConfig.showBorder) && !visualConfig.isRowBorderTransparent && rowBorderWidth > 0;
@@ -1549,6 +1565,8 @@ function renderProducts(produtos) {
         row.style.borderWidth = shouldShowRowBorder ? `${rowBorderWidth}px` : '0';
         row.style.borderColor = shouldShowRowBorder ? (visualConfig.borderColor || '#334155') : 'transparent';
         row.style.backgroundColor = visualConfig.rowBackgroundColor;
+        const rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
+        row.style.padding = `${rowVerticalPadding}px 16px`;
         if (visualConfig.useGradient) {
             row.style.backgroundImage = `linear-gradient(to bottom, ${visualConfig.gradientStartColor}, ${visualConfig.gradientEndColor})`;
         } else {
@@ -1639,11 +1657,14 @@ async function loadVisualConfig(token) {
 
         Object.assign(visualConfig, payload.data || {});
         visualConfig.showImage = Boolean(visualConfig.showImage);
+        visualConfig.showVideoPanel = toBoolean(visualConfig.showVideoPanel, true);
+        visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
         visualConfig.rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
         visualConfig.listBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.listBorderWidth ?? 1)));
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
         visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
         visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
+        visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
         const normalizedRightSidebarFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
         visualConfig.rightSidebarImageFit = normalizedRightSidebarFit === 'cover'
             ? 'cover'
@@ -1668,7 +1689,7 @@ async function loadVisualConfig(token) {
         applyProductsPanelBackground();
         applyVideoBackground();
         applyRightSidebarBorder();
-        applyVideoPanelVisibility();
+        applyRightSidebarPanelVisibility();
         applyTitleVisibility();
     } catch (_error) {
     }
