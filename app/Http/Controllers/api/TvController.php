@@ -10,6 +10,7 @@ use App\Models\Device;
 use App\Models\DeviceConfiguration;
 use App\Models\DeviceActivation;
 use App\Models\GlobalImageGallery;
+use App\Models\Empresa;
 use App\Models\Produto;
 use App\Models\TemplateItem;
 use Illuminate\Support\Facades\Cache;
@@ -412,6 +413,14 @@ class TvController extends Controller
             'empresa_id' => $device->empresa_id,
         ], []);
 
+        $empresa = Empresa::query()->find($device->empresa_id);
+        $configuredRightSidebarLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->rightSidebarLogoUrl ?? ''));
+        $companyLogoUrl = $this->normalizeCompanyLogoUrl((string) ($empresa->urlimagem ?? ''));
+        $rightSidebarLogoUrl = $configuredRightSidebarLogoUrl !== ''
+            ? $configuredRightSidebarLogoUrl
+            : $companyLogoUrl;
+        $leftVerticalLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->leftVerticalLogoUrl ?? ''));
+
         $playlist = collect($config->videoPlaylist ?? [])
             ->map(function ($item) {
                 return [
@@ -447,6 +456,17 @@ class TvController extends Controller
                 'videoMuted' => (bool) $config->videoMuted,
                 'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
                 'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
+                'showRightSidebarLogo' => (bool) ($config->showRightSidebarLogo ?? false),
+                'rightSidebarLogoPosition' => 'sidebar_top',
+                'rightSidebarLogoUrl' => $rightSidebarLogoUrl,
+                'rightSidebarLogoWidth' => (int) ($config->rightSidebarLogoWidth ?? 220),
+                'rightSidebarLogoHeight' => (int) ($config->rightSidebarLogoHeight ?? 58),
+                'showLeftVerticalLogo' => (bool) ($config->showLeftVerticalLogo ?? false),
+                'leftVerticalLogoUrl' => $leftVerticalLogoUrl,
+                'leftVerticalLogoWidth' => (int) ($config->leftVerticalLogoWidth ?? 120),
+                'leftVerticalLogoHeight' => (int) ($config->leftVerticalLogoHeight ?? 220),
+                'rightSidebarLogoBackgroundColor' => (string) ($config->rightSidebarLogoBackgroundColor ?? '#0f172a'),
+                'isRightSidebarLogoBackgroundTransparent' => (bool) ($config->isRightSidebarLogoBackgroundTransparent ?? false),
                 'isMainBorderEnabled' => (bool) ($config->isMainBorderEnabled ?? false),
                 'isRoundedCornersEnabled' => (bool) ($config->isRoundedCornersEnabled ?? true),
                 'mainBorderColor' => (string) ($config->mainBorderColor ?? '#000000'),
@@ -568,6 +588,37 @@ class TvController extends Controller
     private function publicStorageUrl(string $path): string
     {
         return '/storage/'.ltrim($path, '/');
+    }
+
+    private function normalizeCompanyLogoUrl(string $raw): string
+    {
+        $value = trim($raw);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $value)) {
+            return $value;
+        }
+
+        if (preg_match('#^https?://localhost/storage/(.+)$#i', $value, $matches)) {
+            return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
+        }
+
+        if (str_starts_with($value, '/storage/')) {
+            return $value;
+        }
+
+        if (str_starts_with($value, 'storage/')) {
+            return '/'.ltrim($value, '/');
+        }
+
+        if (str_starts_with($value, '/')) {
+            return $value;
+        }
+
+        return '/storage/'.ltrim($value, '/');
     }
 
     private function generateUniqueActivationCode(): string

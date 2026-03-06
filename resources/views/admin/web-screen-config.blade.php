@@ -119,6 +119,106 @@
                                     <span class="text-sm text-gray-700">Ativar cantos arredondados</span>
                                 </label>
 
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="showRightSidebarLogo" value="0">
+                                    <input type="checkbox" id="showRightSidebarLogo" name="showRightSidebarLogo" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showRightSidebarLogo', $config->showRightSidebarLogo ?? false))>
+                                    <span class="text-sm text-gray-700">Mostrar logo no topo do retangulo direito</span>
+                                </label>
+
+                                <div>
+                                    <label for="rightSidebarLogoPosition" class="block text-sm font-medium text-gray-700 mb-1">Local de exibicao da logo</label>
+                                    <input type="hidden" id="rightSidebarLogoPosition" name="rightSidebarLogoPosition" value="sidebar_top">
+                                    <div class="w-full border rounded px-3 py-2 text-sm bg-gray-100 text-gray-700">Lateral direita (no retangulo)</div>
+                                    @error('rightSidebarLogoPosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                    <label for="rightSidebarLogoUpload" class="block text-sm font-medium text-gray-700">Logo personalizada da TV (opcional)</label>
+                                    <input type="hidden" name="rightSidebarLogoUrl" value="{{ old('rightSidebarLogoUrl', $config->rightSidebarLogoUrl ?? '') }}">
+                                    <input id="rightSidebarLogoUpload" name="rightSidebarLogoUpload" type="file" accept="image/png,image/jpeg,image/webp" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                    <p class="text-xs text-gray-500">Se enviar uma imagem aqui, ela sera usada no topo do retangulo direito da TV.</p>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="rightSidebarLogoWidth" class="block text-sm font-medium text-gray-700 mb-1">Largura da logo (px)</label>
+                                            <input id="rightSidebarLogoWidth" name="rightSidebarLogoWidth" type="number" min="60" max="1200" value="{{ old('rightSidebarLogoWidth', $config->rightSidebarLogoWidth ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                            @error('rightSidebarLogoWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="rightSidebarLogoHeight" class="block text-sm font-medium text-gray-700 mb-1">Altura da logo (px)</label>
+                                            <input id="rightSidebarLogoHeight" name="rightSidebarLogoHeight" type="number" min="30" max="300" value="{{ old('rightSidebarLogoHeight', $config->rightSidebarLogoHeight ?? 58) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                            @error('rightSidebarLogoHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="rightSidebarLogoBackgroundColor" class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja da logo</label>
+                                            <input id="rightSidebarLogoBackgroundColor" name="rightSidebarLogoBackgroundColor" type="color" value="{{ old('rightSidebarLogoBackgroundColor', $config->rightSidebarLogoBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded bg-white">
+                                            @error('rightSidebarLogoBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div class="flex items-end">
+                                            <label class="inline-flex items-center gap-2">
+                                                <input type="hidden" name="isRightSidebarLogoBackgroundTransparent" value="0">
+                                                <input type="checkbox" id="isRightSidebarLogoBackgroundTransparent" name="isRightSidebarLogoBackgroundTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isRightSidebarLogoBackgroundTransparent', $config->isRightSidebarLogoBackgroundTransparent ?? false))>
+                                                <span class="text-sm text-gray-700">Deixar tarja transparente</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    @php
+                                        $logoPreviewUrl = old('rightSidebarLogoUrl', $config->rightSidebarLogoUrl ?? '');
+                                    @endphp
+                                    @if(!empty($logoPreviewUrl))
+                                        <div class="rounded border border-gray-200 bg-white p-2 inline-flex items-center">
+                                            <img src="{{ $logoPreviewUrl }}" alt="Preview da logo da TV" class="h-10 w-auto object-contain">
+                                        </div>
+                                    @endif
+
+                                    @error('rightSidebarLogoUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                    <h5 class="text-sm font-semibold text-gray-800">Logo vertical esquerda</h5>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="showLeftVerticalLogo" value="0">
+                                        <input type="checkbox" id="showLeftVerticalLogo" name="showLeftVerticalLogo" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showLeftVerticalLogo', $config->showLeftVerticalLogo ?? false))>
+                                        <span class="text-sm text-gray-700">Mostrar imagem na lateral esquerda da tela</span>
+                                    </label>
+
+                                    <label for="leftVerticalLogoUpload" class="block text-sm font-medium text-gray-700">Imagem da logo vertical esquerda (opcional)</label>
+                                    <input type="hidden" name="leftVerticalLogoUrl" value="{{ old('leftVerticalLogoUrl', $config->leftVerticalLogoUrl ?? '') }}">
+                                    <input id="leftVerticalLogoUpload" name="leftVerticalLogoUpload" type="file" accept="image/png,image/jpeg,image/webp" class="w-full border rounded px-3 py-2 text-sm bg-white">
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="leftVerticalLogoWidth" class="block text-sm font-medium text-gray-700 mb-1">Largura da logo vertical esquerda (px)</label>
+                                            <input id="leftVerticalLogoWidth" name="leftVerticalLogoWidth" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoWidth', $config->leftVerticalLogoWidth ?? 120) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                            @error('leftVerticalLogoWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="leftVerticalLogoHeight" class="block text-sm font-medium text-gray-700 mb-1">Altura da logo vertical esquerda (px)</label>
+                                            <input id="leftVerticalLogoHeight" name="leftVerticalLogoHeight" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoHeight', $config->leftVerticalLogoHeight ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                            @error('leftVerticalLogoHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    @php
+                                        $leftVerticalLogoPreviewUrl = old('leftVerticalLogoUrl', $config->leftVerticalLogoUrl ?? '');
+                                    @endphp
+                                    @if(!empty($leftVerticalLogoPreviewUrl))
+                                        <div class="rounded border border-gray-200 bg-white p-2 inline-flex items-center">
+                                            <img src="{{ $leftVerticalLogoPreviewUrl }}" alt="Preview da logo vertical esquerda" class="h-10 w-auto object-contain">
+                                        </div>
+                                    @endif
+
+                                    @error('leftVerticalLogoUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda geral</label>
@@ -551,7 +651,13 @@
                             </div>
                             <p class="text-sm text-gray-600">Configurações da galeria de imagens da empresa para uso na lateral direita.</p>
 
-                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-2">
+                            <div class="rounded-md border border-gray-200 bg-white p-3 space-y-2">
+                                <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Submenu</p>
+                                <div id="companyGallerySubmenuList" class="space-y-2"></div>
+                                <p class="text-xs text-gray-500">Clique em um item para abrir o conteúdo.</p>
+                            </div>
+
+                            <div id="companyGalleryCodeBlock" data-company-gallery-name="Imagem da Base Geral" class="rounded-md border border-gray-200 bg-white p-4 space-y-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Código da Galeria Imagem Geral (opcional)</label>
                                 <input
                                     type="text"
@@ -567,39 +673,31 @@
                                 <p class="text-xs text-gray-500">Se preencher, a empresa passa a usar as imagens da galeria global deste código.</p>
 
                                 <div id="globalGalleryLookupFeedback" class="text-xs text-gray-500 mt-2">Digite o código para buscar imagens da galeria geral.</div>
-                                <div id="globalGalleryProductStatus" class="text-xs text-gray-500 mt-1"></div>
                                 <div id="globalGalleryLookupResults" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3"></div>
                                 <div id="globalGalleryLookupEmpty" class="text-xs text-amber-700 mt-2 hidden">Nenhuma imagem encontrada para este código.</div>
 
                                 <div class="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
-                                    <h4 class="text-sm font-semibold text-gray-800">Cadastro do Produto com mesmo código</h4>
-                                    <p class="text-xs text-gray-600">Escolha qual imagem vai para o produto (somente uma). No slide você pode selecionar uma ou mais.</p>
-                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                                        <input type="radio" name="suggestedProductImageSource" value="none" class="rounded border-gray-300 text-indigo-600" @checked(old('suggestedProductImageSource', 'none') === 'none')>
-                                        <span>Não alterar imagem do produto</span>
-                                    </label>
-                                    @error('suggestedProductImageSource')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-
-                                    <div id="productSearchBlock" class="hidden mt-2 rounded-md border border-gray-200 bg-white p-3 space-y-2">
-                                        <label class="block text-sm font-medium text-gray-700">Buscar produto (código ou descrição)</label>
-                                        <input type="text" id="productSearchInput" placeholder="Digite código ou descrição" class="w-full border rounded px-3 py-2">
-                                        <input type="hidden" name="selectedProductCode" id="selectedProductCode" value="{{ old('selectedProductCode', old('rightSidebarGlobalGalleryCode', $config->rightSidebarGlobalGalleryCode ?? '')) }}">
-                                        @error('selectedProductCode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        <div id="productSearchResults" class="space-y-1"></div>
-                                        <div id="selectedProductBadge" class="text-xs text-green-700"></div>
-                                    </div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pesquisar por nome da base</label>
+                                    <input
+                                        type="text"
+                                        id="globalGalleryNameSearch"
+                                        placeholder="Digite o nome da base"
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    <div id="globalGalleryNameSearchResults" class="space-y-1"></div>
+                                    <p id="globalGalleryNameSearchHint" class="text-xs text-gray-500">Digite ao menos 2 caracteres para pesquisar.</p>
                                 </div>
+                            </div>
 
-                                <div class="mt-4 rounded-md border border-gray-200 bg-white p-3 space-y-3">
-                                    <h4 class="text-sm font-semibold text-gray-800">Upload de Imagem Propria</h4>
-                                    <p class="text-xs text-gray-600">Se não quiser usar sugestão da galeria geral, envie uma imagem própria da empresa.</p>
-                                    <input type="file" name="companyGalleryUpload" id="companyGalleryUpload" accept="image/*" class="w-full border rounded px-3 py-2 bg-white">
-                                    @error('companyGalleryUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div class="mt-4 rounded-md border border-gray-200 bg-white p-3 space-y-3">
-                                    <h4 class="text-sm font-semibold text-gray-800">Imagens já enviadas da empresa logada</h4>
+                            <div id="companyGalleryLibraryBlock" data-company-gallery-name="Base de imagem propria" class="rounded-md border border-gray-200 bg-white p-3 space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-800">Base de imagem propria</h4>
                                     <p class="text-xs text-gray-600">Galeria da empresa (estilo biblioteca). Clique na imagem para abrir ações: usar no produto e/ou no slide.</p>
+
+                                    <div class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                        <h5 class="text-sm font-semibold text-gray-800">Upload de Imagem Propria</h5>
+                                        <input type="file" name="companyGalleryUpload" id="companyGalleryUpload" accept="image/*" class="w-full border rounded px-3 py-2 bg-white">
+                                        @error('companyGalleryUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
 
                                     @if (!empty($companyGalleryImages))
                                         <div class="max-h-[420px] overflow-y-auto pr-1 border border-gray-200 rounded-md p-2 bg-gray-50">
@@ -607,7 +705,6 @@
                                             @foreach ($companyGalleryImages as $index => $companyImage)
                                                 @php
                                                     $sourceKey = 'company_existing_' . $index;
-                                                    $isProductSelected = old('suggestedProductImageSource') === $sourceKey;
                                                     $normalizedCompanyImageUrl = $normalizeSlideUrl((string) ($companyImage['url'] ?? ''));
                                                     $isSlideSelected = $hasOldSlideSources
                                                         ? in_array($sourceKey, (array) $oldSlideSources, true)
@@ -622,11 +719,7 @@
                                                     <p class="text-[11px] text-gray-600 truncate" title="{{ $companyImage['name'] }}">{{ $companyImage['name'] }}</p>
 
                                                     <div class="company-gallery-badge text-[11px] text-gray-500" data-company-gallery-badge="{{ $sourceKey }}">
-                                                        @if($isProductSelected && $isSlideSelected)
-                                                            Selecionada para produto e slide
-                                                        @elseif($isProductSelected)
-                                                            Selecionada para produto
-                                                        @elseif($isSlideSelected)
+                                                        @if($isSlideSelected)
                                                             Selecionada para slide
                                                         @else
                                                             Sem destino selecionado
@@ -634,15 +727,11 @@
                                                     </div>
 
                                                     <div class="company-gallery-actions hidden rounded border border-gray-200 bg-white p-2 space-y-2" data-company-gallery-actions="{{ $sourceKey }}">
-                                                        <button type="button" class="w-full text-left text-xs rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" data-company-mark-product="{{ $sourceKey }}">Usar no produto</button>
-                                                        <button type="button" class="w-full text-left text-xs rounded border border-gray-300 px-2 py-1 hover:bg-gray-50" data-company-clear-product="{{ $sourceKey }}">Não usar no produto</button>
                                                         <label class="inline-flex items-center gap-2 text-xs text-gray-700">
                                                             <input type="checkbox" name="suggestedSlideImageSources[]" value="{{ $sourceKey }}" class="company-slide-checkbox rounded border-gray-300 text-indigo-600" data-company-slide-checkbox="{{ $sourceKey }}" data-source-url="{{ $companyImage['url'] }}" @checked($isSlideSelected)>
                                                             <span>Usar no slide</span>
                                                         </label>
                                                     </div>
-
-                                                    <input type="radio" name="suggestedProductImageSource" value="{{ $sourceKey }}" class="hidden company-product-radio" data-company-product-radio="{{ $sourceKey }}" @checked($isProductSelected)>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -651,9 +740,8 @@
                                         <p class="text-xs text-gray-500">Nenhuma imagem da empresa encontrada ainda. Faça upload para começar.</p>
                                     @endif
                                 </div>
-                            </div>
 
-                            <div id="rightSidebarImageConfig" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                            <div id="rightSidebarImageConfig" data-company-gallery-name="Configuracao do Slide de Imagens" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Configuração do Slide de Imagens</h4>
 
                                 <div>
@@ -955,6 +1043,8 @@
         const isMainBorderEnabled = document.getElementById('isMainBorderEnabled');
         const mainBorderColor = document.getElementById('mainBorderColor');
         const mainBorderWidth = document.getElementById('mainBorderWidth');
+        const rightSidebarLogoBackgroundColor = document.getElementById('rightSidebarLogoBackgroundColor');
+        const isRightSidebarLogoBackgroundTransparent = document.getElementById('isRightSidebarLogoBackgroundTransparent');
         const showRightSidebarPanel = document.getElementById('showRightSidebarPanel');
         const rightSidebarMediaTypeVideo = document.getElementById('rightSidebarMediaTypeVideo');
         const rightSidebarMediaTypeImage = document.getElementById('rightSidebarMediaTypeImage');
@@ -968,14 +1058,11 @@
         const rightSidebarImageScheduleHint = document.getElementById('rightSidebarImageScheduleHint');
         const rightSidebarGlobalGalleryCode = document.getElementById('rightSidebarGlobalGalleryCode');
         const globalGalleryLookupFeedback = document.getElementById('globalGalleryLookupFeedback');
-        const globalGalleryProductStatus = document.getElementById('globalGalleryProductStatus');
         const globalGalleryLookupResults = document.getElementById('globalGalleryLookupResults');
         const globalGalleryLookupEmpty = document.getElementById('globalGalleryLookupEmpty');
-        const productSearchBlock = document.getElementById('productSearchBlock');
-        const productSearchInput = document.getElementById('productSearchInput');
-        const productSearchResults = document.getElementById('productSearchResults');
-        const selectedProductCodeInput = document.getElementById('selectedProductCode');
-        const selectedProductBadge = document.getElementById('selectedProductBadge');
+        const globalGalleryNameSearch = document.getElementById('globalGalleryNameSearch');
+        const globalGalleryNameSearchResults = document.getElementById('globalGalleryNameSearchResults');
+        const globalGalleryNameSearchHint = document.getElementById('globalGalleryNameSearchHint');
         const companyGalleryCards = Array.from(document.querySelectorAll('.company-gallery-card'));
         const configAccordionMenu = document.getElementById('configAccordionMenu');
         const configPanelsStorage = document.getElementById('configPanelsStorage');
@@ -990,9 +1077,13 @@
         const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
         const webConfigForm = document.getElementById('webConfigForm');
         const saveSectionInput = document.getElementById('saveSection');
+        const companyGallerySubmenuList = document.getElementById('companyGallerySubmenuList');
+        let companyGallerySubmenuButtons = [];
+        const companyGalleryNavBlocks = Array.from(document.querySelectorAll('[data-company-gallery-name][id]'));
+        let activeCompanyGalleryTargetId = null;
         let openedConfigPanelId = null;
         let globalGalleryLookupTimer = null;
-        let productSearchTimer = null;
+        let globalGalleryNameSearchTimer = null;
         let hasUserInteractedWithSlideSelection = false;
         const hasOldSlideSources = @json($hasOldSlideSources);
         const savedSlideUrls = @json($savedSlideUrls->all());
@@ -1232,6 +1323,18 @@
             updateMainBorderState();
         }
 
+        function updateRightSidebarLogoBackgroundState() {
+            if (!rightSidebarLogoBackgroundColor || !isRightSidebarLogoBackgroundTransparent) return;
+            const enabled = !isRightSidebarLogoBackgroundTransparent.checked;
+            rightSidebarLogoBackgroundColor.style.opacity = enabled ? '1' : '0.5';
+            rightSidebarLogoBackgroundColor.style.pointerEvents = enabled ? 'auto' : 'none';
+        }
+
+        if (isRightSidebarLogoBackgroundTransparent) {
+            isRightSidebarLogoBackgroundTransparent.addEventListener('change', updateRightSidebarLogoBackgroundState);
+            updateRightSidebarLogoBackgroundState();
+        }
+
         function updateProductListTypeAvailability() {
             if (!productListType2) return;
 
@@ -1348,7 +1451,8 @@
             if (!rightSidebarImageConfig) return;
             const isImageMode = Boolean(rightSidebarMediaTypeImage && rightSidebarMediaTypeImage.checked);
             const isHybridMode = Boolean(rightSidebarMediaTypeHybrid && rightSidebarMediaTypeHybrid.checked);
-            rightSidebarImageConfig.style.display = (isImageMode || isHybridMode) ? 'block' : 'none';
+            const isSlideSubmenuActive = activeCompanyGalleryTargetId === 'rightSidebarImageConfig';
+            rightSidebarImageConfig.style.display = (isImageMode || isHybridMode) && isSlideSubmenuActive ? 'block' : 'none';
 
             if (rightSidebarHybridConfig) {
                 rightSidebarHybridConfig.style.display = isHybridMode ? 'block' : 'none';
@@ -1613,10 +1717,6 @@
         renderRightSidebarImagePreview();
         renderRightSidebarImageScheduleEditor();
 
-        function getOldSuggestedProductSource() {
-            return @json(old('suggestedProductImageSource', 'none'));
-        }
-
         function getOldSuggestedSlideSources() {
             return @json(array_values((array) old('suggestedSlideImageSources', [])));
         }
@@ -1633,34 +1733,12 @@
                 globalGalleryLookupFeedback.textContent = 'Código não encontrado na galeria geral.';
                 globalGalleryLookupEmpty.classList.remove('hidden');
 
-                if (globalGalleryProductStatus) {
-                    if (payload?.productFound) {
-                        globalGalleryProductStatus.className = 'text-xs text-green-700 mt-1';
-                        globalGalleryProductStatus.textContent = `Produto encontrado na empresa: ${payload?.productName || 'Sem nome'}.`;
-                    } else {
-                        globalGalleryProductStatus.className = 'text-xs text-amber-700 mt-1';
-                        globalGalleryProductStatus.textContent = 'Produto com este código não encontrado na empresa logada.';
-                    }
-                }
-
-                updateProductSearchVisibility();
                 return;
             }
 
-            const oldProductSource = getOldSuggestedProductSource();
             const oldSlideSources = new Set(getOldSuggestedSlideSources());
 
             globalGalleryLookupFeedback.textContent = `Código ${payload.code} encontrado: ${payload.name}.`;
-
-            if (globalGalleryProductStatus) {
-                if (payload?.productFound) {
-                    globalGalleryProductStatus.className = 'text-xs text-green-700 mt-1';
-                    globalGalleryProductStatus.textContent = `Produto encontrado na empresa: ${payload?.productName || 'Sem nome'}.`;
-                } else {
-                    globalGalleryProductStatus.className = 'text-xs text-amber-700 mt-1';
-                    globalGalleryProductStatus.textContent = 'Produto com este código não encontrado na empresa logada.';
-                }
-            }
 
             (payload.images || []).forEach((item) => {
                 const slot = Number(item.slot || 0);
@@ -1686,11 +1764,6 @@
                 legend.title = url;
                 card.appendChild(legend);
 
-                const productLabel = document.createElement('label');
-                productLabel.className = 'inline-flex items-center gap-2 text-xs text-gray-700';
-                productLabel.innerHTML = `<input type="radio" name="suggestedProductImageSource" value="${slotKey}" class="rounded border-gray-300 text-indigo-600" ${oldProductSource === slotKey ? 'checked' : ''}><span>Usar no produto</span>`;
-                card.appendChild(productLabel);
-
                 const slideLabel = document.createElement('label');
                 slideLabel.className = 'inline-flex items-center gap-2 text-xs text-gray-700';
                 const isChecked = hasOldSlideSources ? oldSlideSources.has(slotKey) : isSavedSlideUrl(url);
@@ -1705,7 +1778,73 @@
                 globalGalleryLookupFeedback.textContent = 'Código encontrado, mas sem imagens válidas.';
             }
 
-            updateProductSearchVisibility();
+        }
+
+        function renderGlobalGalleryNameSearchResults(items) {
+            if (!globalGalleryNameSearchResults || !globalGalleryNameSearchHint) {
+                return;
+            }
+
+            globalGalleryNameSearchResults.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                globalGalleryNameSearchHint.textContent = 'Nenhuma base encontrada para o nome informado.';
+                return;
+            }
+
+            globalGalleryNameSearchHint.textContent = `${items.length} base(s) encontrada(s).`;
+
+            items.forEach((item) => {
+                const code = String(item?.code || '').trim();
+                const name = String(item?.name || '').trim();
+
+                if (code === '') {
+                    return;
+                }
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'w-full text-left rounded border border-gray-200 px-3 py-2 hover:bg-white';
+                button.innerHTML = `<span class="text-xs font-semibold text-gray-700">${name || 'Sem nome'}</span><span class="block text-[11px] text-gray-500">Código: ${code}</span>`;
+                button.addEventListener('click', () => {
+                    if (!rightSidebarGlobalGalleryCode) {
+                        return;
+                    }
+
+                    rightSidebarGlobalGalleryCode.value = code;
+                    globalGalleryNameSearchResults.innerHTML = '';
+                    globalGalleryNameSearchHint.textContent = `Selecionado: ${name || 'Sem nome'} (código ${code}).`;
+                    lookupGlobalGalleryByCode();
+                });
+
+                globalGalleryNameSearchResults.appendChild(button);
+            });
+        }
+
+        async function searchGlobalGalleryByName() {
+            if (!globalGalleryNameSearch || !globalGalleryNameSearchResults || !globalGalleryNameSearchHint) {
+                return;
+            }
+
+            const query = String(globalGalleryNameSearch.value || '').trim();
+
+            if (query.length < 2) {
+                globalGalleryNameSearchResults.innerHTML = '';
+                globalGalleryNameSearchHint.textContent = 'Digite ao menos 2 caracteres para pesquisar.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`{{ route('admin.global-image-galleries.search-by-name') }}?q=${encodeURIComponent(query)}`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+
+                const payload = await response.json();
+                renderGlobalGalleryNameSearchResults(payload?.items || []);
+            } catch (_error) {
+                globalGalleryNameSearchHint.textContent = 'Falha ao pesquisar base por nome.';
+            }
         }
 
         async function lookupGlobalGalleryByCode() {
@@ -1723,10 +1862,6 @@
                 globalGalleryLookupResults.innerHTML = '';
                 globalGalleryLookupEmpty.classList.add('hidden');
                 globalGalleryLookupFeedback.textContent = 'Digite o código para buscar imagens da galeria geral.';
-                if (globalGalleryProductStatus) {
-                    globalGalleryProductStatus.className = 'text-xs text-gray-500 mt-1';
-                    globalGalleryProductStatus.textContent = '';
-                }
                 return;
             }
 
@@ -1762,21 +1897,16 @@
             lookupGlobalGalleryByCode();
         }
 
-        function hasSelectedProductImageSource() {
-            const checked = document.querySelector('input[name="suggestedProductImageSource"]:checked');
-            if (!checked) {
-                return false;
-            }
+        if (globalGalleryNameSearch) {
+            globalGalleryNameSearch.addEventListener('input', () => {
+                if (globalGalleryNameSearchTimer) {
+                    clearTimeout(globalGalleryNameSearchTimer);
+                }
 
-            return String(checked.value || 'none') !== 'none';
-        }
-
-        function updateProductSearchVisibility() {
-            if (!productSearchBlock) {
-                return;
-            }
-
-            productSearchBlock.classList.toggle('hidden', !hasSelectedProductImageSource());
+                globalGalleryNameSearchTimer = setTimeout(() => {
+                    searchGlobalGalleryByName();
+                }, 300);
+            });
         }
 
         function updateCompanyGalleryCardStates() {
@@ -1787,29 +1917,21 @@
                 }
 
                 const badge = card.querySelector(`[data-company-gallery-badge="${sourceKey}"]`);
-                const productRadio = card.querySelector(`[data-company-product-radio="${sourceKey}"]`);
                 const slideCheckbox = card.querySelector(`[data-company-slide-checkbox="${sourceKey}"]`);
                 const image = card.querySelector('img');
 
-                const isProductSelected = Boolean(productRadio && productRadio.checked);
                 const isSlideSelected = Boolean(slideCheckbox && slideCheckbox.checked);
 
-                card.classList.toggle('border-indigo-500', isProductSelected || isSlideSelected);
-                card.classList.toggle('bg-indigo-50', isProductSelected || isSlideSelected);
+                card.classList.toggle('border-indigo-500', isSlideSelected);
+                card.classList.toggle('bg-indigo-50', isSlideSelected);
 
                 if (image) {
-                    image.classList.toggle('ring-2', isProductSelected || isSlideSelected);
-                    image.classList.toggle('ring-indigo-500', isProductSelected || isSlideSelected);
+                    image.classList.toggle('ring-2', isSlideSelected);
+                    image.classList.toggle('ring-indigo-500', isSlideSelected);
                 }
 
                 if (badge) {
-                    if (isProductSelected && isSlideSelected) {
-                        badge.textContent = 'Selecionada para produto e slide';
-                        badge.className = 'company-gallery-badge text-[11px] text-indigo-700';
-                    } else if (isProductSelected) {
-                        badge.textContent = 'Selecionada para produto';
-                        badge.className = 'company-gallery-badge text-[11px] text-indigo-700';
-                    } else if (isSlideSelected) {
+                    if (isSlideSelected) {
                         badge.textContent = 'Selecionada para slide';
                         badge.className = 'company-gallery-badge text-[11px] text-indigo-700';
                     } else {
@@ -1836,73 +1958,10 @@
             });
         }
 
-        function renderProductSearchResults(items) {
-            if (!productSearchResults) {
-                return;
-            }
-
-            productSearchResults.innerHTML = '';
-
-            if (!Array.isArray(items) || items.length === 0) {
-                productSearchResults.innerHTML = '<p class="text-xs text-gray-500">Nenhum produto encontrado.</p>';
-                return;
-            }
-
-            items.forEach((item) => {
-                const codigo = String(item?.codigo || '');
-                const nome = String(item?.nome || 'Sem nome');
-
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'w-full text-left rounded border border-gray-200 px-3 py-2 hover:bg-gray-50';
-                button.innerHTML = `<span class="text-xs font-semibold text-gray-700">${codigo}</span> <span class="text-xs text-gray-600">- ${nome}</span>`;
-                button.addEventListener('click', () => {
-                    if (selectedProductCodeInput) {
-                        selectedProductCodeInput.value = codigo;
-                    }
-
-                    if (selectedProductBadge) {
-                        selectedProductBadge.textContent = `Produto selecionado: ${codigo} - ${nome}`;
-                    }
-                });
-
-                productSearchResults.appendChild(button);
-            });
-        }
-
-        async function searchProductsForAssignment() {
-            if (!productSearchInput || !productSearchResults) {
-                return;
-            }
-
-            const query = String(productSearchInput.value || '').trim();
-            if (query.length < 2) {
-                productSearchResults.innerHTML = '<p class="text-xs text-gray-500">Digite ao menos 2 caracteres para buscar.</p>';
-                return;
-            }
-
-            try {
-                const response = await fetch(`{{ route('admin.web-screen-config.search-products') }}?q=${encodeURIComponent(query)}`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'same-origin',
-                });
-
-                const payload = await response.json();
-                renderProductSearchResults(payload?.items || []);
-            } catch (_error) {
-                productSearchResults.innerHTML = '<p class="text-xs text-red-600">Falha ao buscar produtos.</p>';
-            }
-        }
-
         document.addEventListener('change', (event) => {
             const target = event.target;
             if (!(target instanceof HTMLInputElement)) {
                 return;
-            }
-
-            if (target.name === 'suggestedProductImageSource') {
-                updateProductSearchVisibility();
-                updateCompanyGalleryCardStates();
             }
 
             if (target.name === 'suggestedSlideImageSources[]' && target.hasAttribute('data-company-slide-checkbox')) {
@@ -1930,45 +1989,94 @@
                 return;
             }
 
-            const markProductButton = target.closest('[data-company-mark-product]');
-            if (markProductButton) {
-                const sourceKey = String(markProductButton.getAttribute('data-company-mark-product') || '');
-                const radio = document.querySelector(`[data-company-product-radio="${sourceKey}"]`);
-                if (radio instanceof HTMLInputElement) {
-                    radio.checked = true;
-                    radio.dispatchEvent(new Event('change', { bubbles: true }));
-                }
+        });
+
+        updateCompanyGalleryCardStates();
+
+        function setCompanyGallerySubmenuButtonState(button, isActive) {
+            if (!(button instanceof HTMLButtonElement)) {
                 return;
             }
 
-            const clearProductButton = target.closest('[data-company-clear-product]');
-            if (clearProductButton) {
-                const noneRadio = document.querySelector('input[name="suggestedProductImageSource"][value="none"]');
-                if (noneRadio instanceof HTMLInputElement) {
-                    noneRadio.checked = true;
-                    noneRadio.dispatchEvent(new Event('change', { bubbles: true }));
+            button.classList.toggle('bg-indigo-100', isActive);
+            button.classList.toggle('text-indigo-700', isActive);
+            button.classList.toggle('font-semibold', isActive);
+            button.classList.toggle('bg-white', !isActive);
+            button.classList.toggle('text-gray-700', !isActive);
+        }
+
+        function setCompanyGalleryActiveBlock(targetId, triggerButton = null) {
+            companyGalleryNavBlocks.forEach((block) => {
+                const isActive = block.id === targetId;
+                block.classList.toggle('hidden', !isActive);
+                block.style.display = isActive ? '' : 'none';
+            });
+
+            if (triggerButton instanceof HTMLElement) {
+                const targetBlock = companyGalleryNavBlocks.find((block) => block.id === targetId);
+                if (targetBlock) {
+                    triggerButton.insertAdjacentElement('afterend', targetBlock);
                 }
             }
-        });
+        }
 
-        if (productSearchInput) {
-            productSearchInput.addEventListener('input', () => {
-                if (productSearchTimer) {
-                    clearTimeout(productSearchTimer);
+        function closeAllCompanyGalleryBlocks() {
+            activeCompanyGalleryTargetId = null;
+            companyGalleryNavBlocks.forEach((block) => {
+                block.classList.add('hidden');
+                block.style.display = 'none';
+            });
+            companyGallerySubmenuButtons.forEach((button) => setCompanyGallerySubmenuButtonState(button, false));
+        }
+
+        function buildCompanyGallerySubmenuButtons() {
+            if (!companyGallerySubmenuList) {
+                return;
+            }
+
+            companyGallerySubmenuList.innerHTML = '';
+
+            companyGalleryNavBlocks.forEach((block) => {
+                const targetId = String(block.id || '').trim();
+                const label = String(block.getAttribute('data-company-gallery-name') || '').trim();
+
+                if (!targetId || !label) {
+                    return;
                 }
 
-                productSearchTimer = setTimeout(() => {
-                    searchProductsForAssignment();
-                }, 300);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'company-gallery-submenu-btn w-full rounded border border-gray-300 px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50';
+                button.setAttribute('data-company-gallery-target', targetId);
+                button.textContent = label;
+
+                button.addEventListener('click', () => {
+                    const clickedTargetId = String(button.getAttribute('data-company-gallery-target') || '').trim();
+                    if (!clickedTargetId) {
+                        return;
+                    }
+
+                    if (activeCompanyGalleryTargetId === clickedTargetId) {
+                        closeAllCompanyGalleryBlocks();
+                        return;
+                    }
+
+                    activeCompanyGalleryTargetId = clickedTargetId;
+                    setCompanyGalleryActiveBlock(clickedTargetId, button);
+                    companyGallerySubmenuButtons.forEach((submenuButton) => {
+                        setCompanyGallerySubmenuButtonState(submenuButton, submenuButton === button);
+                    });
+                    updateRightSidebarMediaConfigState();
+                });
+
+                companyGallerySubmenuList.appendChild(button);
             });
+
+            companyGallerySubmenuButtons = Array.from(companyGallerySubmenuList.querySelectorAll('.company-gallery-submenu-btn'));
         }
 
-        if (selectedProductBadge && selectedProductCodeInput && selectedProductCodeInput.value) {
-            selectedProductBadge.textContent = `Produto selecionado: ${selectedProductCodeInput.value}`;
-        }
-
-        updateProductSearchVisibility();
-        updateCompanyGalleryCardStates();
+        buildCompanyGallerySubmenuButtons();
+        closeAllCompanyGalleryBlocks();
 
         function setConfigMenuButtonState(button, isActive) {
             if (!button) return;

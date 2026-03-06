@@ -15,8 +15,13 @@ const tvFooter = document.getElementById('tvFooter');
 const tvFooterTitle = document.getElementById('tvFooterTitle');
 const tvProductsPanel = document.getElementById('tvProductsPanel');
 const tvVideoPanel = document.getElementById('tvVideoPanel');
+const tvRightSidebarLogoSlot = document.getElementById('tvRightSidebarLogoSlot');
+const tvRightSidebarLogo = document.getElementById('tvRightSidebarLogo');
+const tvLeftVerticalLogoSlot = document.getElementById('tvLeftVerticalLogoSlot');
+const tvLeftVerticalLogo = document.getElementById('tvLeftVerticalLogo');
 const tvMain = document.getElementById('tvMain');
 const tvShell = document.getElementById('tvShell');
+const fullscreenTestButton = document.getElementById('fullscreenTestButton');
 
 const queryParams = new URLSearchParams(window.location.search);
 const initialToken = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
@@ -33,6 +38,17 @@ const visualConfig = {
     videoPlaylist: [],
     showVideoPanel: true,
     showRightSidebarPanel: true,
+    showRightSidebarLogo: false,
+    showLeftVerticalLogo: false,
+    rightSidebarLogoPosition: 'sidebar_top',
+    rightSidebarLogoUrl: '',
+    leftVerticalLogoUrl: '',
+    leftVerticalLogoWidth: 120,
+    leftVerticalLogoHeight: 220,
+    rightSidebarLogoWidth: 220,
+    rightSidebarLogoHeight: 58,
+    rightSidebarLogoBackgroundColor: '#0f172a',
+    isRightSidebarLogoBackgroundTransparent: false,
     isMainBorderEnabled: false,
     isRoundedCornersEnabled: true,
     isRowRoundedEnabled: false,
@@ -127,6 +143,120 @@ let forceVideoPlaylistApplyOnce = false;
 let rightSidebarHybridHasShownAnyImage = false;
 let audioAutoplayUnlocked = localStorage.getItem(AUDIO_UNLOCK_STORAGE_KEY) === '1';
 let forceMuteOnFirstPlayback = true;
+let autoFullscreenGestureListenerAttached = false;
+let autoFullscreenRetryTimer = null;
+let fullscreenWarningShown = false;
+
+function isFullscreenSupported() {
+    const element = document.documentElement;
+
+    return Boolean(
+        document.fullscreenEnabled
+        || document.webkitFullscreenEnabled
+        || document.msFullscreenEnabled
+        || typeof element.requestFullscreen === 'function'
+        || typeof element.webkitRequestFullscreen === 'function'
+        || typeof element.msRequestFullscreen === 'function'
+        || (tvVideo && typeof tvVideo.webkitEnterFullscreen === 'function')
+    );
+}
+
+function getCurrentFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+}
+
+function requestDocumentFullscreen() {
+    const activated = openFullscreenNow();
+    if (activated) {
+        return Promise.resolve();
+    }
+
+    return Promise.reject(new Error('Fullscreen API nao suportada ou bloqueada.'));
+}
+
+function openFullscreenNow() {
+    const element = document.documentElement;
+
+    try {
+        if (typeof element.requestFullscreen === 'function') {
+            element.requestFullscreen();
+            return true;
+        }
+
+        if (typeof element.webkitRequestFullscreen === 'function') {
+            element.webkitRequestFullscreen();
+            return true;
+        }
+
+        if (typeof element.msRequestFullscreen === 'function') {
+            element.msRequestFullscreen();
+            return true;
+        }
+
+        if (tvVideo && typeof tvVideo.webkitEnterFullscreen === 'function') {
+            tvVideo.webkitEnterFullscreen();
+            return true;
+        }
+    } catch (_error) {
+        return false;
+    }
+
+    return false;
+}
+
+window.abrirTelaCheia = function abrirTelaCheia() {
+    const activated = openFullscreenNow();
+
+    if (activated) {
+        updateStatus('Tela cheia ativada para teste.');
+        setFullscreenTestButtonState();
+        return true;
+    }
+
+    updateStatus('Nao foi possivel ativar tela cheia. Tente em modo kiosk.', true);
+    return false;
+};
+
+function exitDocumentFullscreen() {
+    if (typeof document.exitFullscreen === 'function') {
+        return document.exitFullscreen();
+    }
+
+    if (typeof document.webkitExitFullscreen === 'function') {
+        return Promise.resolve(document.webkitExitFullscreen());
+    }
+
+    if (typeof document.msExitFullscreen === 'function') {
+        return Promise.resolve(document.msExitFullscreen());
+    }
+
+    return Promise.resolve();
+}
+
+function clearAutoFullscreenRetryTimer() {
+    if (!autoFullscreenRetryTimer) {
+        return;
+    }
+
+    clearTimeout(autoFullscreenRetryTimer);
+    autoFullscreenRetryTimer = null;
+}
+
+function shouldShowFullscreenBlockedWarning() {
+    return true;
+}
+
+function scheduleAutoFullscreenRetry(delayMs = 2500) {
+    if (!isFullscreenSupported() || getCurrentFullscreenElement()) {
+        return;
+    }
+
+    clearAutoFullscreenRetryTimer();
+    autoFullscreenRetryTimer = setTimeout(() => {
+        autoFullscreenRetryTimer = null;
+        applyAutoFullscreenPreference();
+    }, Math.max(500, Number(delayMs) || 2500));
+}
 
 function toBoolean(value, fallback = false) {
     if (value === null || value === undefined) {
@@ -1503,7 +1633,47 @@ function updateStatus(message, isError = false) {
     }
 
     statusMessage.textContent = message;
-    statusMessage.className = `text-xs ${isError ? 'text-red-400' : 'text-slate-400'}`;
+    statusMessage.className = `tv-status-floating text-xs ${isError ? 'text-red-400' : 'text-slate-400'}`;
+}
+
+function setFullscreenTestButtonState() {
+    if (!fullscreenTestButton) {
+        return;
+    }
+
+    const isActive = Boolean(getCurrentFullscreenElement());
+    fullscreenTestButton.textContent = '•';
+    fullscreenTestButton.title = isActive ? 'Sair da tela cheia' : 'Entrar em tela cheia';
+    fullscreenTestButton.setAttribute('aria-label', isActive ? 'Sair da tela cheia' : 'Entrar em tela cheia');
+}
+
+function isTypingElement(element) {
+    if (!element) {
+        return false;
+    }
+
+    const tagName = String(element.tagName || '').toLowerCase();
+    return element.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+}
+
+async function toggleFullscreenByUserAction() {
+    if (!isFullscreenSupported()) {
+        updateStatus('Este navegador nao suporta tela cheia.', true);
+        return;
+    }
+
+    try {
+        if (getCurrentFullscreenElement()) {
+            await exitDocumentFullscreen();
+            updateStatus('Tela cheia desativada.');
+            setFullscreenTestButtonState();
+            return;
+        }
+
+        window.abrirTelaCheia();
+    } catch (_error) {
+        updateStatus('Nao foi possivel alternar tela cheia.', true);
+    }
 }
 
 function applyTitleVisibility() {
@@ -1752,11 +1922,157 @@ function applyRightSidebarPanelVisibility() {
         stopVideoPlaybackForImageMode();
         tvVideoPanel.style.display = 'none';
         tvMain.style.gridTemplateColumns = '1fr';
+        applyRightSidebarLogoVisibility();
         return;
     }
 
     tvVideoPanel.style.display = '';
     tvMain.style.gridTemplateColumns = '';
+    applyRightSidebarLogoVisibility();
+}
+
+function applyRightSidebarLogoVisibility() {
+    if (!tvRightSidebarLogoSlot) {
+        return;
+    }
+
+    const shouldShowLogo = toBoolean(visualConfig.showRightSidebarPanel, true)
+        && toBoolean(visualConfig.showRightSidebarLogo, false);
+    const shouldShowSidebarSlot = shouldShowLogo;
+
+    const logoWidth = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidth || 220)));
+    const logoHeight = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeight || 58)));
+    const logoBackgroundColor = String(visualConfig.rightSidebarLogoBackgroundColor || '#0f172a');
+    const logoBackgroundTransparent = toBoolean(visualConfig.isRightSidebarLogoBackgroundTransparent, false);
+    if (tvRightSidebarLogoSlot) {
+        tvRightSidebarLogoSlot.style.height = `${logoHeight}px`;
+        tvRightSidebarLogoSlot.style.minHeight = `${logoHeight}px`;
+        tvRightSidebarLogoSlot.style.background = logoBackgroundTransparent ? 'transparent' : logoBackgroundColor;
+        tvRightSidebarLogoSlot.classList.toggle('hidden', !shouldShowSidebarSlot);
+        tvRightSidebarLogoSlot.style.display = shouldShowSidebarSlot ? '' : 'none';
+    }
+
+    const logoUrl = String(visualConfig.rightSidebarLogoUrl || '').trim();
+    if (!tvRightSidebarLogo) {
+        return;
+    }
+
+    tvRightSidebarLogo.style.maxWidth = `${logoWidth}px`;
+    tvRightSidebarLogo.style.maxHeight = `${Math.max(20, logoHeight - 12)}px`;
+
+    if (logoUrl !== '') {
+        tvRightSidebarLogo.src = logoUrl;
+        tvRightSidebarLogo.classList.remove('hidden');
+        tvRightSidebarLogoSlot.classList.remove('is-placeholder');
+        return;
+    }
+
+    tvRightSidebarLogo.classList.add('hidden');
+    tvRightSidebarLogo.removeAttribute('src');
+    tvRightSidebarLogoSlot.classList.add('is-placeholder');
+}
+
+function applyLeftVerticalLogoVisibility() {
+    if (!tvLeftVerticalLogoSlot || !tvLeftVerticalLogo) {
+        return;
+    }
+
+    const shouldShowLogo = toBoolean(visualConfig.showLeftVerticalLogo, false);
+    const logoUrl = String(visualConfig.leftVerticalLogoUrl || '').trim();
+    const logoWidth = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidth || 120)));
+    const logoHeight = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeight || 220)));
+
+    tvLeftVerticalLogoSlot.style.width = `${logoWidth}px`;
+    tvLeftVerticalLogoSlot.style.height = `${logoHeight}px`;
+    tvLeftVerticalLogoSlot.style.minHeight = `${logoHeight}px`;
+    tvLeftVerticalLogoSlot.classList.toggle('hidden', !shouldShowLogo);
+    tvLeftVerticalLogoSlot.style.display = shouldShowLogo ? '' : 'none';
+
+    tvLeftVerticalLogo.style.maxWidth = `${logoWidth}px`;
+    tvLeftVerticalLogo.style.maxHeight = `${Math.max(20, logoHeight - 10)}px`;
+
+    if (!shouldShowLogo) {
+        tvLeftVerticalLogoSlot.classList.add('is-placeholder');
+        tvLeftVerticalLogo.classList.add('hidden');
+        tvLeftVerticalLogo.removeAttribute('src');
+        return;
+    }
+
+    if (logoUrl !== '') {
+        tvLeftVerticalLogo.src = logoUrl;
+        tvLeftVerticalLogo.classList.remove('hidden');
+        tvLeftVerticalLogoSlot.classList.remove('is-placeholder');
+        return;
+    }
+
+    tvLeftVerticalLogoSlot.classList.add('is-placeholder');
+    tvLeftVerticalLogo.classList.add('hidden');
+    tvLeftVerticalLogo.removeAttribute('src');
+}
+
+async function applyAutoFullscreenPreference() {
+    if (!isFullscreenSupported()) {
+        return;
+    }
+
+    if (!getCurrentFullscreenElement()) {
+        try {
+            await requestDocumentFullscreen();
+            clearAutoFullscreenRetryTimer();
+            fullscreenWarningShown = false;
+        } catch (_error) {
+            armAutoFullscreenOnUserGesture();
+            scheduleAutoFullscreenRetry(3000);
+
+            if (!fullscreenWarningShown && shouldShowFullscreenBlockedWarning()) {
+                fullscreenWarningShown = true;
+                updateStatus('Tela cheia bloqueada pelo navegador. Clique/toque uma vez ou rode em modo kiosk.', true);
+            }
+        }
+    }
+}
+
+function disarmAutoFullscreenOnUserGesture() {
+    if (!autoFullscreenGestureListenerAttached) {
+        return;
+    }
+
+    window.removeEventListener('pointerdown', handleUserGestureForAutoFullscreen);
+    window.removeEventListener('keydown', handleUserGestureForAutoFullscreen);
+    window.removeEventListener('touchstart', handleUserGestureForAutoFullscreen);
+    autoFullscreenGestureListenerAttached = false;
+}
+
+function armAutoFullscreenOnUserGesture() {
+    if (!isFullscreenSupported()) {
+        return;
+    }
+
+    if (autoFullscreenGestureListenerAttached) {
+        return;
+    }
+
+    window.addEventListener('pointerdown', handleUserGestureForAutoFullscreen, { passive: true, once: true });
+    window.addEventListener('keydown', handleUserGestureForAutoFullscreen, { passive: true, once: true });
+    window.addEventListener('touchstart', handleUserGestureForAutoFullscreen, { passive: true, once: true });
+    autoFullscreenGestureListenerAttached = true;
+}
+
+async function handleUserGestureForAutoFullscreen() {
+    autoFullscreenGestureListenerAttached = false;
+
+    if (!isFullscreenSupported() || getCurrentFullscreenElement()) {
+        return;
+    }
+
+    try {
+        await requestDocumentFullscreen();
+        clearAutoFullscreenRetryTimer();
+        fullscreenWarningShown = false;
+    } catch (_error) {
+        armAutoFullscreenOnUserGesture();
+        scheduleAutoFullscreenRetry(2500);
+    }
 }
 
 function renderProducts(produtos) {
@@ -2119,6 +2435,17 @@ async function loadVisualConfig(token) {
         visualConfig.showImage = Boolean(visualConfig.showImage);
         visualConfig.showVideoPanel = toBoolean(visualConfig.showVideoPanel, true);
         visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
+        visualConfig.showRightSidebarLogo = toBoolean(visualConfig.showRightSidebarLogo, false);
+        visualConfig.showLeftVerticalLogo = toBoolean(visualConfig.showLeftVerticalLogo, false);
+        visualConfig.rightSidebarLogoPosition = 'sidebar_top';
+        visualConfig.rightSidebarLogoUrl = String(visualConfig.rightSidebarLogoUrl || '').trim();
+        visualConfig.rightSidebarLogoWidth = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidth || 220)));
+        visualConfig.rightSidebarLogoHeight = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeight || 58)));
+        visualConfig.leftVerticalLogoUrl = String(visualConfig.leftVerticalLogoUrl || '').trim();
+        visualConfig.leftVerticalLogoWidth = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidth || 120)));
+        visualConfig.leftVerticalLogoHeight = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeight || 220)));
+        visualConfig.rightSidebarLogoBackgroundColor = String(visualConfig.rightSidebarLogoBackgroundColor || '#0f172a');
+        visualConfig.isRightSidebarLogoBackgroundTransparent = toBoolean(visualConfig.isRightSidebarLogoBackgroundTransparent, false);
         visualConfig.showTitle = toBoolean(visualConfig.showTitle, true);
         visualConfig.titleText = String(visualConfig.titleText || 'Lista de Produtos (TV)');
         visualConfig.isTitleDynamic = toBoolean(visualConfig.isTitleDynamic, false);
@@ -2181,7 +2508,9 @@ async function loadVisualConfig(token) {
         applyRightSidebarBorder();
         applyGeneralBorder();
         applyRightSidebarPanelVisibility();
+        applyLeftVerticalLogoVisibility();
         applyTitleVisibility();
+        await applyAutoFullscreenPreference();
     } catch (_error) {
     }
 }
@@ -2240,6 +2569,60 @@ if (tokenInput) {
 window.addEventListener('pointerdown', markAudioAutoplayUnlocked, { passive: true });
 window.addEventListener('keydown', markAudioAutoplayUnlocked, { passive: true });
 window.addEventListener('touchstart', markAudioAutoplayUnlocked, { passive: true });
+
+window.addEventListener('focus', () => {
+    scheduleAutoFullscreenRetry(1200);
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        scheduleAutoFullscreenRetry(1200);
+        applyLeftVerticalLogoVisibility();
+    }
+});
+
+window.addEventListener('resize', () => {
+    applyLeftVerticalLogoVisibility();
+});
+
+window.addEventListener('orientationchange', () => {
+    applyLeftVerticalLogoVisibility();
+});
+
+if (fullscreenTestButton) {
+    fullscreenTestButton.addEventListener('click', async () => {
+        await toggleFullscreenByUserAction();
+    });
+
+    document.addEventListener('fullscreenchange', setFullscreenTestButtonState);
+    document.addEventListener('webkitfullscreenchange', setFullscreenTestButtonState);
+    document.addEventListener('msfullscreenchange', setFullscreenTestButtonState);
+    setFullscreenTestButtonState();
+}
+
+window.addEventListener('keydown', async (event) => {
+    const key = String(event.key || '').toLowerCase();
+    const keyCode = Number(event.keyCode || event.which || 0);
+    const isEnterKey = key === 'enter' || key === 'numpadenter' || keyCode === 13;
+
+    if (!isEnterKey) {
+        return;
+    }
+
+    if (isTypingElement(event.target)) {
+        return;
+    }
+
+    if (getCurrentFullscreenElement() && document.activeElement !== fullscreenTestButton) {
+        if (typeof window.showBolinhaForExit === 'function') {
+            window.showBolinhaForExit(true);
+        }
+        return;
+    }
+
+    event.preventDefault();
+    await toggleFullscreenByUserAction();
+});
 
 if (initialToken) {
     loadProducts();

@@ -54,6 +54,18 @@
                             {{ __('Organizar Lista') }}
                         </a>
                     @endif
+                    @if (Auth::user()->hasMenuAccess('configuracao') || Auth::user()->hasMenuAccess('editor_template') || Auth::user()->isDefaultAdmin())
+                        @php
+                            $galeriaHref = Auth::user()->hasMenuAccess('configuracao')
+                                ? route('admin.web-screen-config.edit')
+                                : (Auth::user()->hasMenuAccess('editor_template')
+                                    ? route('admin.templates.index')
+                                    : route('admin.global-image-galleries.index'));
+                        @endphp
+                        <a href="{{ $galeriaHref }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                            {{ __('Galeria') }}
+                        </a>
+                    @endif
                     @if (Auth::user()->hasMenuAccess('token_api'))
                         <a href="{{ route('admin.api-token.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                             {{ __('Token API') }}
@@ -64,20 +76,12 @@
                             {{ __('Gestão de TVs') }}
                         </a>
                     @endif
-                    @if (Auth::user()->hasMenuAccess('editor_template'))
-                        <a href="{{ route('admin.templates.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
-                            {{ __('Editor de Template') }}
-                        </a>
-                    @endif
                     @if (Auth::user()->hasMenuAccess('ativar_tv'))
                         <a href="{{ route('admin.activate-tv.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                             {{ __('Ativar TV') }}
                         </a>
                     @endif
                     @if (Auth::user()->isDefaultAdmin())
-                        <a href="{{ route('admin.global-image-galleries.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
-                            {{ __('Galeria Imagem Geral') }}
-                        </a>
                         <a href="{{ route('admin.user-permissions.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
                             {{ __('Permissões de Acesso') }}
                         </a>
@@ -176,6 +180,18 @@
                     {{ __('Organizar Lista') }}
                 </x-responsive-nav-link>
             @endif
+            @if (Auth::user()->hasMenuAccess('configuracao') || Auth::user()->hasMenuAccess('editor_template') || Auth::user()->isDefaultAdmin())
+                @php
+                    $galeriaHrefMobile = Auth::user()->hasMenuAccess('configuracao')
+                        ? route('admin.web-screen-config.edit')
+                        : (Auth::user()->hasMenuAccess('editor_template')
+                            ? route('admin.templates.index')
+                            : route('admin.global-image-galleries.index'));
+                @endphp
+                <x-responsive-nav-link :href="$galeriaHrefMobile">
+                    {{ __('Galeria') }}
+                </x-responsive-nav-link>
+            @endif
             @if (Auth::user()->hasMenuAccess('token_api'))
                 <x-responsive-nav-link :href="route('admin.api-token.index')">
                     {{ __('Token API') }}
@@ -186,20 +202,12 @@
                     {{ __('Gestão de TVs') }}
                 </x-responsive-nav-link>
             @endif
-            @if (Auth::user()->hasMenuAccess('editor_template'))
-                <x-responsive-nav-link :href="route('admin.templates.index')">
-                    {{ __('Editor de Template') }}
-                </x-responsive-nav-link>
-            @endif
             @if (Auth::user()->hasMenuAccess('ativar_tv'))
                 <x-responsive-nav-link :href="route('admin.activate-tv.index')">
                     {{ __('Ativar TV') }}
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user()->isDefaultAdmin())
-                <x-responsive-nav-link :href="route('admin.global-image-galleries.index')">
-                    {{ __('Galeria Imagem Geral') }}
-                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.user-permissions.index')">
                     {{ __('Permissões de Acesso') }}
                 </x-responsive-nav-link>

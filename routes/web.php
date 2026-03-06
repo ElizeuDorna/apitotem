@@ -45,8 +45,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/global-image-galleries/lookup/{code}', [\App\Http\Controllers\Admin\GlobalImageGalleryController::class, 'lookupByCode'])
             ->name('admin.global-image-galleries.lookup')
             ->middleware('menu.access:configuracao');
-        Route::get('/admin/configuracao-tela-web/produtos/search', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'searchProducts'])
-            ->name('admin.web-screen-config.search-products')
+        Route::get('/admin/global-image-galleries/search-by-name', [\App\Http\Controllers\Admin\GlobalImageGalleryController::class, 'searchByName'])
+            ->name('admin.global-image-galleries.search-by-name')
             ->middleware('menu.access:configuracao');
         Route::get('/admin/organizar-lista', [\App\Http\Controllers\Admin\OrganizarListaController::class, 'edit'])
             ->name('admin.organizar-lista.edit')

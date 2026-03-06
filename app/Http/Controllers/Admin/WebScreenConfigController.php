@@ -7,8 +7,6 @@ use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
-use App\Models\Produto;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,39 +39,12 @@ class WebScreenConfigController extends Controller
         ]);
     }
 
-    public function searchProducts(Request $request): JsonResponse
-    {
-        $empresaId = $this->resolveEmpresaId();
-        $query = trim((string) $request->query('q', ''));
-
-        if ($query === '') {
-            return response()->json(['items' => []]);
-        }
-
-        $items = Produto::query()
-            ->where('empresa_id', $empresaId)
-            ->where(function ($builder) use ($query) {
-                $builder
-                    ->where('CODIGO', 'like', $query.'%')
-                    ->orWhere('NOME', 'like', '%'.$query.'%');
-            })
-            ->orderBy('NOME')
-            ->limit(20)
-            ->get(['CODIGO', 'NOME'])
-            ->map(fn (Produto $produto) => [
-                'codigo' => (string) $produto->CODIGO,
-                'nome' => (string) $produto->NOME,
-            ])
-            ->values();
-
-        return response()->json(['items' => $items]);
-    }
-
     public function update(Request $request): RedirectResponse
     {
         $empresaId = $this->resolveEmpresaId();
         $saveSection = trim((string) $request->input('saveSection', ''));
         $shouldProcessRightSidebarMedia = in_array($saveSection, ['', 'companyGalleryConfigSection'], true);
+        $shouldProcessGeneralConfig = in_array($saveSection, ['', 'generalConfigSection'], true);
         $shouldProcessVideoValidation = in_array($saveSection, ['', 'videoConfigSection'], true);
         $slideSelectionSubmitted = (bool) $request->boolean('suggestedSlideSelectionSubmitted', false);
         $currentConfig = Configuracao::firstOrCreate(['empresa_id' => $empresaId], []);
@@ -167,6 +138,9 @@ class WebScreenConfigController extends Controller
             'videoMuted' => ['nullable', 'boolean'],
             'showVideoPanel' => ['nullable', 'boolean'],
             'showRightSidebarPanel' => ['nullable', 'boolean'],
+            'showRightSidebarLogo' => ['nullable', 'boolean'],
+            'rightSidebarLogoPosition' => ['nullable', 'in:sidebar_top,screen_right_vertical'],
+            'showLeftVerticalLogo' => ['nullable', 'boolean'],
             'isMainBorderEnabled' => ['nullable', 'boolean'],
             'isRoundedCornersEnabled' => ['nullable', 'boolean'],
             'mainBorderColor' => ['required', 'string', 'max:9'],
@@ -186,12 +160,20 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageSchedules.*.url' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageSchedules.*.startDate' => ['nullable', 'date_format:Y-m-d'],
             'rightSidebarImageSchedules.*.endDate' => ['nullable', 'date_format:Y-m-d'],
-            'suggestedProductImageSource' => ['nullable', 'string', 'regex:/^(none|slot_[1-3]|company_upload|company_existing_\d+)$/'],
             'suggestedSlideImageSources' => ['nullable', 'array'],
             'suggestedSlideImageSources.*' => ['string', 'regex:/^(slot_[1-3]|company_upload|company_existing_\d+)$/'],
             'suggestedSlideSelectionSubmitted' => ['nullable', 'boolean'],
-            'selectedProductCode' => ['nullable', 'string', 'max:14'],
             'companyGalleryUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'rightSidebarLogoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'rightSidebarLogoUrl' => ['nullable', 'string', 'max:1000'],
+            'rightSidebarLogoWidth' => ['nullable', 'integer', 'min:60', 'max:1200'],
+            'rightSidebarLogoHeight' => ['nullable', 'integer', 'min:30', 'max:300'],
+            'leftVerticalLogoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'leftVerticalLogoUrl' => ['nullable', 'string', 'max:1000'],
+            'leftVerticalLogoWidth' => ['nullable', 'integer', 'min:40', 'max:1000'],
+            'leftVerticalLogoHeight' => ['nullable', 'integer', 'min:40', 'max:1000'],
+            'rightSidebarLogoBackgroundColor' => ['nullable', 'string', 'max:9'],
+            'isRightSidebarLogoBackgroundTransparent' => ['nullable', 'boolean'],
             'rightSidebarImageInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
             'rightSidebarImageFit' => ['required', 'in:contain,cover,scale-down'],
             'rightSidebarHybridVideoDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
@@ -262,6 +244,17 @@ class WebScreenConfigController extends Controller
         $validated['isVideoPanelTransparent'] = (bool) ($validated['isVideoPanelTransparent'] ?? false);
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
         $validated['showRightSidebarPanel'] = (bool) ($validated['showRightSidebarPanel'] ?? true);
+        $validated['showRightSidebarLogo'] = (bool) ($validated['showRightSidebarLogo'] ?? false);
+        $validated['rightSidebarLogoPosition'] = 'sidebar_top';
+        $validated['showLeftVerticalLogo'] = (bool) ($validated['showLeftVerticalLogo'] ?? false);
+        $validated['rightSidebarLogoUrl'] = trim((string) ($validated['rightSidebarLogoUrl'] ?? ''));
+        $validated['rightSidebarLogoWidth'] = (int) ($validated['rightSidebarLogoWidth'] ?? 220);
+        $validated['rightSidebarLogoHeight'] = (int) ($validated['rightSidebarLogoHeight'] ?? 58);
+        $validated['leftVerticalLogoUrl'] = trim((string) ($validated['leftVerticalLogoUrl'] ?? ''));
+        $validated['leftVerticalLogoWidth'] = (int) ($validated['leftVerticalLogoWidth'] ?? 120);
+        $validated['leftVerticalLogoHeight'] = (int) ($validated['leftVerticalLogoHeight'] ?? 220);
+        $validated['rightSidebarLogoBackgroundColor'] = (string) ($validated['rightSidebarLogoBackgroundColor'] ?? '#0f172a');
+        $validated['isRightSidebarLogoBackgroundTransparent'] = (bool) ($validated['isRightSidebarLogoBackgroundTransparent'] ?? false);
         $validated['isMainBorderEnabled'] = (bool) ($validated['isMainBorderEnabled'] ?? false);
         $validated['isRoundedCornersEnabled'] = (bool) ($validated['isRoundedCornersEnabled'] ?? true);
         $validated['showRightSidebarBorder'] = (bool) ($validated['showRightSidebarBorder'] ?? true);
@@ -302,9 +295,7 @@ class WebScreenConfigController extends Controller
             ->unique(fn (array $item) => (string) ($item['url'] ?? ''))
             ->values()
             ->all();
-        $validated['suggestedProductImageSource'] = (string) ($validated['suggestedProductImageSource'] ?? 'none');
         $validated['suggestedSlideImageSources'] = array_values(array_unique((array) ($validated['suggestedSlideImageSources'] ?? [])));
-        $validated['selectedProductCode'] = substr(preg_replace('/\D/', '', (string) ($validated['selectedProductCode'] ?? '')) ?? '', 0, 14);
         $validated['rightSidebarImageInterval'] = (int) ($validated['rightSidebarImageInterval'] ?? 8);
         $validated['rightSidebarImageFit'] = (string) ($validated['rightSidebarImageFit'] ?? 'scale-down');
         $validated['rightSidebarHybridVideoDuration'] = (int) ($validated['rightSidebarHybridVideoDuration'] ?? 2);
@@ -365,6 +356,70 @@ class WebScreenConfigController extends Controller
         // Backward compatibility: if migration has not run yet, avoid writing unknown column.
         if (! Schema::hasColumn('configuracoes', 'showTitleBorder')) {
             unset($validated['showTitleBorder']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'showRightSidebarLogo')) {
+            unset($validated['showRightSidebarLogo']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoPosition')) {
+            unset($validated['rightSidebarLogoPosition']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'showLeftVerticalLogo')) {
+            unset($validated['showLeftVerticalLogo']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoUrl')) {
+            unset($validated['rightSidebarLogoUrl']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoWidth')) {
+            unset($validated['rightSidebarLogoWidth']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoHeight')) {
+            unset($validated['rightSidebarLogoHeight']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoUrl')) {
+            unset($validated['leftVerticalLogoUrl']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoWidth')) {
+            unset($validated['leftVerticalLogoWidth']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoHeight')) {
+            unset($validated['leftVerticalLogoHeight']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoBackgroundColor')) {
+            unset($validated['rightSidebarLogoBackgroundColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'isRightSidebarLogoBackgroundTransparent')) {
+            unset($validated['isRightSidebarLogoBackgroundTransparent']);
+        }
+
+        if ($shouldProcessGeneralConfig && $request->hasFile('rightSidebarLogoUpload') && Schema::hasColumn('configuracoes', 'rightSidebarLogoUrl')) {
+            $currentLogoPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->rightSidebarLogoUrl ?? ''));
+            if ($currentLogoPath !== '' && Storage::disk('public')->exists($currentLogoPath)) {
+                Storage::disk('public')->delete($currentLogoPath);
+            }
+
+            $logoPath = $this->storeRightSidebarLogo($request);
+            $validated['rightSidebarLogoUrl'] = $this->publicStorageUrl($logoPath);
+        }
+
+        if ($shouldProcessGeneralConfig && $request->hasFile('leftVerticalLogoUpload') && Schema::hasColumn('configuracoes', 'leftVerticalLogoUrl')) {
+            $currentLeftLogoPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->leftVerticalLogoUrl ?? ''));
+            if ($currentLeftLogoPath !== '' && Storage::disk('public')->exists($currentLeftLogoPath)) {
+                Storage::disk('public')->delete($currentLeftLogoPath);
+            }
+
+            $leftLogoPath = $this->storeLeftVerticalLogo($request);
+            $validated['leftVerticalLogoUrl'] = $this->publicStorageUrl($leftLogoPath);
         }
 
 
@@ -449,24 +504,6 @@ class WebScreenConfigController extends Controller
                 ->values()
                 ->all();
 
-            $selectedProductImageUrl = $availableSources[$validated['suggestedProductImageSource']] ?? null;
-            if (is_string($selectedProductImageUrl) && $selectedProductImageUrl !== '' && $validated['selectedProductCode'] !== '') {
-                $targetProduct = Produto::query()
-                    ->where('empresa_id', $empresaId)
-                    ->where('CODIGO', $validated['selectedProductCode'])
-                    ->first();
-
-                if (! $targetProduct) {
-                    return redirect()
-                        ->back()
-                        ->withErrors([
-                            'selectedProductCode' => 'Produto não encontrado para o código informado na empresa logada.',
-                        ])
-                        ->withInput();
-                }
-
-                $targetProduct->update(['IMG' => $selectedProductImageUrl]);
-            }
         }
 
         if (! Schema::hasColumn('configuracoes', 'rightSidebarImageSchedules')) {
@@ -477,7 +514,7 @@ class WebScreenConfigController extends Controller
             $validated['rightSidebarImageUrls'] = null;
         }
 
-        unset($validated['suggestedProductImageSource'], $validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['selectedProductCode'], $validated['companyGalleryUpload']);
+        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload']);
 
         $embedStatuses = [];
         $embedWarnings = [];
@@ -546,6 +583,15 @@ class WebScreenConfigController extends Controller
         $scalarFields = [
             'showVideoPanel',
             'showRightSidebarPanel',
+            'showRightSidebarLogo',
+            'rightSidebarLogoPosition',
+            'showLeftVerticalLogo',
+            'rightSidebarLogoUrl',
+            'rightSidebarLogoWidth',
+            'rightSidebarLogoHeight',
+            'leftVerticalLogoUrl',
+            'leftVerticalLogoWidth',
+            'leftVerticalLogoHeight',
             'isMainBorderEnabled',
             'isRoundedCornersEnabled',
             'mainBorderColor',
@@ -607,8 +653,8 @@ class WebScreenConfigController extends Controller
             'pageSize',
             'paginationInterval',
             'videoMuted',
-            'selectedProductCode',
-            'suggestedProductImageSource',
+                'rightSidebarLogoBackgroundColor',
+                'isRightSidebarLogoBackgroundTransparent',
         ];
 
         $merge = [];
@@ -661,6 +707,26 @@ class WebScreenConfigController extends Controller
         return $upload->storeAs('empresas/'.$document.'/galeria', $fileName, 'public');
     }
 
+    private function storeRightSidebarLogo(Request $request): string
+    {
+        $document = $this->resolveCompanyStorageDocument();
+        $upload = $request->file('rightSidebarLogoUpload');
+        $extension = strtolower((string) $upload->getClientOriginalExtension());
+        $fileName = 'tv_logo_'.time().($extension ? '.'.$extension : '');
+
+        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
+    }
+
+    private function storeLeftVerticalLogo(Request $request): string
+    {
+        $document = $this->resolveCompanyStorageDocument();
+        $upload = $request->file('leftVerticalLogoUpload');
+        $extension = strtolower((string) $upload->getClientOriginalExtension());
+        $fileName = 'tv_left_logo_'.time().($extension ? '.'.$extension : '');
+
+        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
+    }
+
     private function listCompanyGalleryImages(): array
     {
         $documents = $this->resolveCompanyStorageDocuments();
@@ -686,6 +752,25 @@ class WebScreenConfigController extends Controller
         $relativePath = ltrim($path, '/');
 
         return '/storage/'.$relativePath;
+    }
+
+    private function extractStoragePathFromPublicUrl(string $url): string
+    {
+        $value = trim($url);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (str_starts_with($value, '/storage/')) {
+            return ltrim(substr($value, 9), '/');
+        }
+
+        if (str_starts_with($value, 'storage/')) {
+            return ltrim(substr($value, 8), '/');
+        }
+
+        return '';
     }
 
     private function normalizeImageUrlsList(string $raw): string

@@ -18,6 +18,28 @@ use Illuminate\View\View;
 
 class GlobalImageGalleryController extends Controller
 {
+    public function searchByName(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+
+        if ($query === '' || mb_strlen($query) < 2) {
+            return response()->json(['items' => []]);
+        }
+
+        $items = GlobalImageGallery::query()
+            ->where('name', 'like', '%'.$query.'%')
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['code', 'name'])
+            ->map(fn (GlobalImageGallery $gallery) => [
+                'code' => (string) $gallery->code,
+                'name' => (string) $gallery->name,
+            ])
+            ->values();
+
+        return response()->json(['items' => $items]);
+    }
+
     public function lookupByCode(string $code): JsonResponse
     {
         $normalizedCode = substr(preg_replace('/\D/', '', $code) ?? '', 0, 14);
