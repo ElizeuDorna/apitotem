@@ -633,6 +633,31 @@
                                             Tamanho recomendado para arte da lateral (TV Full HD 1920x1080): <strong>600x920 px</strong>.
                                             <span class="block">Proporcao sugerida: <strong>9:14</strong> (largura x altura).</span>
                                         </div>
+
+                                        <div class="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+                                            <h5 class="text-sm font-semibold text-amber-900">Ajuste da lateral no Android</h5>
+                                            <p class="text-xs text-amber-800 mt-1">Use para ajustar somente no Android. Se deixar <strong>0</strong>, o sistema usa tamanho automatico responsivo.</p>
+
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Altura lateral Android (px)</label>
+                                                    <input type="number" id="rightSidebarAndroidHeight" name="rightSidebarAndroidHeight" min="0" max="1500" value="{{ old('rightSidebarAndroidHeight', $config->rightSidebarAndroidHeight ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                                    @error('rightSidebarAndroidHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 mb-1">Largura lateral Android (px)</label>
+                                                    <input type="number" id="rightSidebarAndroidWidth" name="rightSidebarAndroidWidth" min="0" max="1000" value="{{ old('rightSidebarAndroidWidth', $config->rightSidebarAndroidWidth ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                                    @error('rightSidebarAndroidWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Deslocamento vertical Android (px)</label>
+                                                <input type="number" id="rightSidebarAndroidVerticalOffset" name="rightSidebarAndroidVerticalOffset" min="-300" max="300" value="{{ old('rightSidebarAndroidVerticalOffset', $config->rightSidebarAndroidVerticalOffset ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                                @error('rightSidebarAndroidVerticalOffset')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                                <p class="text-xs text-gray-500 mt-1">Use 0 para padrao. Valor negativo sobe a lateral e valor positivo desce.</p>
+                                            </div>
+                                        </div>
                                     </div>
 
                                 <label class="inline-flex items-center gap-2">

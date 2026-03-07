@@ -119,8 +119,11 @@ class WebScreenConfigController extends Controller
 
         $validated = $request->validate([
             'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,imageSizeConfigSection,paginationConfigSection'],
-                        'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
-                        'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarAndroidHeight' => ['nullable', 'integer', 'min:0', 'max:1500'],
+            'rightSidebarAndroidWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarAndroidVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
             'videoUrl' => ['nullable', 'string', 'max:10000'],
             'videoPlaylist' => ['nullable', 'array', 'max:10'],
             'videoPlaylist.*.url' => ['nullable', 'url', 'max:1000'],
@@ -322,6 +325,9 @@ class WebScreenConfigController extends Controller
         $validated['rowBorderWidth'] = (int) ($validated['rowBorderWidth'] ?? 1);
         $validated['rightSidebarImageHeight'] = (int) ($validated['rightSidebarImageHeight'] ?? 96);
         $validated['rightSidebarImageWidth'] = (int) ($validated['rightSidebarImageWidth'] ?? 0);
+        $validated['rightSidebarAndroidHeight'] = (int) ($validated['rightSidebarAndroidHeight'] ?? 0);
+        $validated['rightSidebarAndroidWidth'] = (int) ($validated['rightSidebarAndroidWidth'] ?? 0);
+        $validated['rightSidebarAndroidVerticalOffset'] = (int) ($validated['rightSidebarAndroidVerticalOffset'] ?? 0);
         $validated['rowVerticalPadding'] = (int) ($validated['rowVerticalPadding'] ?? 9);
         $validated['listFontSize'] = (int) ($validated['listFontSize'] ?? 16);
         $validated['groupLabelFontSize'] = (int) ($validated['groupLabelFontSize'] ?? 14);
@@ -611,6 +617,9 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageFit',
             'rightSidebarImageHeight',
             'rightSidebarImageWidth',
+            'rightSidebarAndroidHeight',
+            'rightSidebarAndroidWidth',
+            'rightSidebarAndroidVerticalOffset',
             'rightSidebarHybridVideoDuration',
             'rightSidebarHybridImageDuration',
             'productListType',

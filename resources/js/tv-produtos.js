@@ -67,6 +67,9 @@ const visualConfig = {
     rightSidebarImageSchedules: [],
     rightSidebarImageInterval: 8,
     rightSidebarImageFit: 'scale-down',
+    rightSidebarAndroidHeight: 0,
+    rightSidebarAndroidWidth: 0,
+    rightSidebarAndroidVerticalOffset: 0,
     rightSidebarHybridVideoDuration: 120,
     rightSidebarHybridImageDuration: 120,
     productListType: '1',
@@ -146,6 +149,7 @@ let forceMuteOnFirstPlayback = true;
 let autoFullscreenGestureListenerAttached = false;
 let autoFullscreenRetryTimer = null;
 let fullscreenWarningShown = false;
+let compactLayoutRefreshRaf = null;
 
 function isFullscreenSupported() {
     const element = document.documentElement;
@@ -163,6 +167,131 @@ function isFullscreenSupported() {
 
 function getCurrentFullscreenElement() {
     return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+}
+
+function isCompactViewport() {
+    try {
+        const byWidth = window.matchMedia('(max-width: 1023px)').matches;
+        const byTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+        const byAndroidUa = /android/i.test(String(navigator.userAgent || ''));
+        return byWidth || byTouch || byAndroidUa;
+    } catch (_error) {
+        return false;
+    }
+}
+
+function isAndroidDevice() {
+    try {
+        return /android/i.test(String(navigator.userAgent || ''));
+    } catch (_error) {
+        return false;
+    }
+}
+
+function isCompactSidebarActive() {
+    return isCompactViewport() && toBoolean(visualConfig.showRightSidebarPanel, true);
+}
+
+function getCompactListScale() {
+    if (isCompactSidebarActive()) {
+        return 0.72;
+    }
+
+    if (isCompactViewport()) {
+        return 0.85;
+    }
+
+    return 1;
+}
+
+function getRightSidebarLayoutDimensions() {
+    if (!isCompactViewport()) {
+        return {
+            compactWidthPx: 0,
+            compactMinHeightPx: 0,
+            compactMaxHeightPx: 0,
+        };
+    }
+
+    const compactBaseWidth = Math.round(window.innerWidth * 0.36);
+    let compactWidth = Math.max(110, Math.min(420, compactBaseWidth));
+    const visualViewportHeight = Number(window.visualViewport?.height || 0);
+    const innerViewportHeight = Number(window.innerHeight || 0);
+    const viewportHeight = Math.max(320, visualViewportHeight || innerViewportHeight);
+
+    const shellPaddingTop = tvShell ? Number.parseFloat(window.getComputedStyle(tvShell).paddingTop || '0') : 0;
+    const shellPaddingBottom = tvShell ? Number.parseFloat(window.getComputedStyle(tvShell).paddingBottom || '0') : 0;
+    const mainGap = tvMain ? Number.parseFloat(window.getComputedStyle(tvMain).rowGap || window.getComputedStyle(tvMain).gap || '0') : 0;
+    const headerHeight = tvHeader && tvHeader.offsetParent !== null ? tvHeader.getBoundingClientRect().height : 0;
+    const footerHeight = tvFooter && tvFooter.offsetParent !== null ? tvFooter.getBoundingClientRect().height : 0;
+    const availablePanelHeight = Math.max(
+        220,
+        Math.round(viewportHeight - shellPaddingTop - shellPaddingBottom - headerHeight - footerHeight - mainGap - 12)
+    );
+
+    let compactMaxHeight = Math.max(260, Math.min(980, Math.round(availablePanelHeight * 0.96)));
+    let compactMinHeight = Math.max(180, Math.min(compactMaxHeight - 48, Math.round(availablePanelHeight * 0.74)));
+
+    if (isAndroidDevice()) {
+        const configuredAndroidWidth = Math.max(0, Number(visualConfig.rightSidebarAndroidWidth || 0));
+        const configuredAndroidHeight = Math.max(0, Number(visualConfig.rightSidebarAndroidHeight || 0));
+
+        if (configuredAndroidWidth > 0) {
+            compactWidth = Math.max(90, Math.min(700, Math.round(configuredAndroidWidth)));
+        }
+
+        if (configuredAndroidHeight > 0) {
+            compactMaxHeight = Math.max(140, Math.min(1400, Math.round(configuredAndroidHeight)));
+            compactMinHeight = Math.max(120, Math.min(compactMaxHeight, compactMaxHeight - 24));
+        }
+    }
+
+    return {
+        compactWidthPx: compactWidth,
+        compactMinHeightPx: compactMinHeight,
+        compactMaxHeightPx: compactMaxHeight,
+    };
+}
+
+function refreshCompactResponsiveLayout() {
+    applyCompactRightSidebarLayout();
+    applyLeftVerticalLogoVisibility();
+}
+
+function scheduleCompactResponsiveLayoutRefresh() {
+    if (compactLayoutRefreshRaf !== null) {
+        return;
+    }
+
+    compactLayoutRefreshRaf = window.requestAnimationFrame(() => {
+        compactLayoutRefreshRaf = null;
+        refreshCompactResponsiveLayout();
+    });
+}
+
+function resolveSafeProductsApiEndpoint() {
+    const fallbackEndpoint = '/api/tv/produtos';
+    const configuredEndpoint = String(apiEndpoint || '').trim();
+
+    if (configuredEndpoint === '') {
+        return fallbackEndpoint;
+    }
+
+    try {
+        const resolved = new URL(configuredEndpoint, window.location.href);
+        const current = new URL(window.location.href);
+        const isLoopbackTarget = /^(localhost|127\.0\.0\.1)$/i.test(resolved.hostname);
+        const isDifferentLoopback = isLoopbackTarget && resolved.hostname !== current.hostname;
+        const isCrossOrigin = resolved.origin !== current.origin;
+
+        if (isDifferentLoopback || isCrossOrigin) {
+            return fallbackEndpoint;
+        }
+
+        return resolved.pathname + resolved.search;
+    } catch (_error) {
+        return fallbackEndpoint;
+    }
 }
 
 function requestDocumentFullscreen() {
@@ -420,6 +549,8 @@ function applyConfiguredSlideImageLayout() {
         return;
     }
 
+    const compactViewport = isCompactViewport();
+
     const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
     const fit = configuredFit === 'cover'
         ? 'cover'
@@ -433,6 +564,25 @@ function applyConfiguredSlideImageLayout() {
     const imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 96;
     const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
     const imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
+
+    if (compactViewport) {
+        const sidebarLayout = getRightSidebarLayoutDimensions();
+        const compactMaxHeight = Math.max(
+            140,
+            Math.min(
+                sidebarLayout.compactMaxHeightPx || 620,
+                Math.round(window.innerHeight * 0.9)
+            )
+        );
+        const compactMaxWidth = Math.max(140, Math.min(320, Math.round(window.innerWidth * 0.92)));
+
+        tvImageSlide.style.width = '100%';
+        tvImageSlide.style.height = '100%';
+        tvImageSlide.style.maxWidth = `${compactMaxWidth}px`;
+        tvImageSlide.style.maxHeight = `${compactMaxHeight}px`;
+        tvImageSlide.style.objectFit = 'contain';
+        return;
+    }
 
     // Auto mode: keep natural image size and only downscale when needed.
     if (imgHeight === 0 && imgWidth === 0) {
@@ -1609,7 +1759,7 @@ async function loadVideoPlaylist(token) {
 if (initialToken) {
     localStorage.setItem('tv_device_token', initialToken);
 } else if (window.location.pathname !== configPageUrl) {
-    window.location.replace(configPageUrl);
+    redirectToConfigPage();
 }
 
 if (tokenInput) {
@@ -1634,6 +1784,64 @@ function updateStatus(message, isError = false) {
 
     statusMessage.textContent = message;
     statusMessage.className = `tv-status-floating text-xs ${isError ? 'text-red-400' : 'text-slate-400'}`;
+}
+
+function redirectToConfigPage() {
+    try {
+        window.location.replace(configPageUrl);
+        return;
+    } catch (_error) {
+    }
+
+    try {
+        window.location.assign(configPageUrl);
+        return;
+    } catch (_error) {
+    }
+
+    window.location.href = configPageUrl;
+}
+
+function clearDeviceTokenAndRedirectToConfig(reason = 'Token invalido. Informe um novo token.') {
+    try {
+        localStorage.removeItem('tv_device_token');
+    } catch (_error) {
+    }
+
+    updateStatus(reason, true);
+
+    setTimeout(() => {
+        redirectToConfigPage();
+    }, 200);
+}
+
+async function enforceValidTokenOrRedirect() {
+    const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+
+    if (!token) {
+        clearPaginationTimer();
+        redirectToConfigPage();
+        return false;
+    }
+
+    try {
+        const response = await fetch(configEndpoint, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (response.status === 401) {
+            clearDeviceTokenAndRedirectToConfig('Token da TV invalido ou removido. Configure um novo token.');
+            return false;
+        }
+    } catch (_error) {
+        // Keep the current screen when API is temporarily unavailable.
+    }
+
+    return true;
 }
 
 function setFullscreenTestButtonState() {
@@ -1819,15 +2027,26 @@ function applyGroupLabelStyles(element) {
         return;
     }
 
+    const compactViewport = isCompactViewport();
+    const compactScale = getCompactListScale();
     const groupLabelFontSize = Math.min(60, Math.max(10, Number(visualConfig.groupLabelFontSize || 14)));
-    element.style.fontSize = `${groupLabelFontSize}px`;
+    const effectiveGroupLabelFontSize = compactViewport
+        ? Math.max(10, Math.round(groupLabelFontSize * compactScale))
+        : groupLabelFontSize;
+    element.style.fontSize = `${effectiveGroupLabelFontSize}px`;
     element.style.color = visualConfig.groupLabelColor || '#cbd5e1';
     element.style.fontFamily = resolveGroupLabelFontFamily();
+    element.style.lineHeight = compactViewport ? '1.25' : '1.35';
+    element.style.whiteSpace = 'normal';
+    element.style.wordBreak = 'break-word';
+    element.style.overflowWrap = 'anywhere';
 
     if (toBoolean(visualConfig.showGroupLabelBadge, false)) {
         element.style.display = 'inline-block';
         element.style.backgroundColor = visualConfig.groupLabelBadgeColor || '#0f172a';
-        element.style.padding = '4px 10px';
+        const badgeVerticalPadding = compactViewport ? 3 : 4;
+        const badgeHorizontalPadding = compactViewport ? 8 : 10;
+        element.style.padding = `${badgeVerticalPadding}px ${badgeHorizontalPadding}px`;
         element.style.borderRadius = '6px';
     } else {
         element.style.display = '';
@@ -1921,14 +2140,114 @@ function applyRightSidebarPanelVisibility() {
         stopImageSlideMode();
         stopVideoPlaybackForImageMode();
         tvVideoPanel.style.display = 'none';
-        tvMain.style.gridTemplateColumns = '1fr';
+        tvMain.style.gridTemplateColumns = 'minmax(0, 1fr)';
+        tvMain.style.gridTemplateRows = '1fr';
+        if (tvProductsPanel) {
+            tvProductsPanel.style.width = '100%';
+            tvProductsPanel.style.maxWidth = '100%';
+        }
         applyRightSidebarLogoVisibility();
         return;
     }
 
     tvVideoPanel.style.display = '';
     tvMain.style.gridTemplateColumns = '';
+    tvMain.style.gridTemplateRows = '';
+    if (tvProductsPanel) {
+        tvProductsPanel.style.width = '';
+        tvProductsPanel.style.maxWidth = '';
+    }
+    applyCompactRightSidebarLayout();
     applyRightSidebarLogoVisibility();
+}
+
+function applyCompactRightSidebarLayout() {
+    const compactViewport = isCompactViewport();
+    const compactSidebarActive = isCompactSidebarActive();
+    const isAndroid = isAndroidDevice();
+    const sidebarLayout = getRightSidebarLayoutDimensions();
+
+    if (!tvMain || !tvVideoPanel || !tvRightSidebarMediaWrap || !tvProductsPanel) {
+        return;
+    }
+
+    if (!compactViewport) {
+        tvMain.style.gridTemplateColumns = '';
+        tvMain.style.gridTemplateRows = '';
+        tvVideoPanel.style.order = '';
+        tvVideoPanel.style.padding = '';
+        tvVideoPanel.style.gap = '';
+        tvVideoPanel.style.marginTop = '';
+        tvVideoPanel.style.width = '';
+        tvVideoPanel.style.maxWidth = '';
+        tvVideoPanel.style.minHeight = '';
+        tvVideoPanel.style.maxHeight = '';
+        tvVideoPanel.style.height = '';
+        tvRightSidebarMediaWrap.style.minHeight = '';
+        tvRightSidebarMediaWrap.style.maxHeight = '';
+        tvRightSidebarMediaWrap.style.height = '';
+        tvProductsPanel.style.padding = '';
+        tvProductsPanel.style.width = '';
+        tvProductsPanel.style.maxWidth = '';
+
+        [tvVideo, tvEmbed, tvImageSlide].forEach((element) => {
+            if (!element) {
+                return;
+            }
+
+            element.style.minHeight = '';
+            element.style.maxHeight = '';
+            element.style.height = '';
+        });
+
+        return;
+    }
+
+    if (compactSidebarActive) {
+        tvMain.style.gridTemplateColumns = `minmax(0, 1fr) ${sidebarLayout.compactWidthPx}px`;
+        tvMain.style.gridTemplateRows = '1fr';
+    } else {
+        tvMain.style.gridTemplateColumns = '1fr';
+        tvMain.style.gridTemplateRows = 'auto auto';
+    }
+    tvVideoPanel.style.order = '';
+    tvVideoPanel.style.padding = '10px';
+    tvVideoPanel.style.gap = isAndroid ? '6px' : '10px';
+    const androidVerticalOffset = isAndroid
+        ? Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidVerticalOffset || 0)))
+        : 0;
+    tvVideoPanel.style.marginTop = compactSidebarActive && androidVerticalOffset !== 0
+        ? `${androidVerticalOffset}px`
+        : '';
+    tvVideoPanel.style.width = compactSidebarActive ? `${sidebarLayout.compactWidthPx}px` : '100%';
+    tvVideoPanel.style.maxWidth = compactSidebarActive ? `${sidebarLayout.compactWidthPx}px` : '100%';
+    tvVideoPanel.style.minHeight = compactSidebarActive ? `${sidebarLayout.compactMaxHeightPx}px` : '';
+    tvVideoPanel.style.maxHeight = compactSidebarActive ? `${sidebarLayout.compactMaxHeightPx}px` : '';
+    tvVideoPanel.style.height = compactSidebarActive ? `${sidebarLayout.compactMaxHeightPx}px` : '';
+    tvRightSidebarMediaWrap.style.height = '';
+    tvRightSidebarMediaWrap.style.minHeight = `${sidebarLayout.compactMinHeightPx}px`;
+    tvRightSidebarMediaWrap.style.maxHeight = `${sidebarLayout.compactMaxHeightPx}px`;
+
+    [tvVideo, tvEmbed, tvImageSlide].forEach((element) => {
+        if (!element) {
+            return;
+        }
+
+        element.style.minHeight = `${sidebarLayout.compactMinHeightPx}px`;
+        element.style.maxHeight = `${sidebarLayout.compactMaxHeightPx}px`;
+        element.style.height = '100%';
+    });
+
+    if (compactSidebarActive) {
+        tvProductsPanel.style.padding = '10px';
+        tvProductsPanel.style.width = '';
+        tvProductsPanel.style.maxWidth = '';
+        return;
+    }
+
+    tvProductsPanel.style.padding = '';
+    tvProductsPanel.style.width = '';
+    tvProductsPanel.style.maxWidth = '';
 }
 
 function applyRightSidebarLogoVisibility() {
@@ -1939,9 +2258,12 @@ function applyRightSidebarLogoVisibility() {
     const shouldShowLogo = toBoolean(visualConfig.showRightSidebarPanel, true)
         && toBoolean(visualConfig.showRightSidebarLogo, false);
     const shouldShowSidebarSlot = shouldShowLogo;
+    const compactViewport = isCompactViewport();
 
-    const logoWidth = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidth || 220)));
-    const logoHeight = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeight || 58)));
+    const rawLogoWidth = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidth || 220)));
+    const rawLogoHeight = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeight || 58)));
+    const logoWidth = compactViewport ? Math.min(rawLogoWidth, 180) : rawLogoWidth;
+    const logoHeight = compactViewport ? Math.min(rawLogoHeight, 36) : rawLogoHeight;
     const logoBackgroundColor = String(visualConfig.rightSidebarLogoBackgroundColor || '#0f172a');
     const logoBackgroundTransparent = toBoolean(visualConfig.isRightSidebarLogoBackgroundTransparent, false);
     if (tvRightSidebarLogoSlot) {
@@ -1981,6 +2303,29 @@ function applyLeftVerticalLogoVisibility() {
     const logoUrl = String(visualConfig.leftVerticalLogoUrl || '').trim();
     const logoWidth = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidth || 120)));
     const logoHeight = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeight || 220)));
+    const logoOffset = logoWidth + 1;
+    const compactViewport = isCompactViewport();
+
+    if (tvProductsPanel) {
+        if (shouldShowLogo && !compactViewport) {
+            // Reserve horizontal space so the left logo does not overlap the product list.
+            tvProductsPanel.style.marginLeft = `${logoOffset}px`;
+            tvProductsPanel.style.width = `calc(100% - ${logoOffset}px)`;
+        } else {
+            tvProductsPanel.style.marginLeft = '';
+            tvProductsPanel.style.width = '';
+        }
+    }
+
+    if (compactViewport) {
+        tvLeftVerticalLogoSlot.style.left = '8px';
+        tvLeftVerticalLogoSlot.style.top = '8px';
+        tvLeftVerticalLogoSlot.style.transform = 'none';
+    } else {
+        tvLeftVerticalLogoSlot.style.left = '';
+        tvLeftVerticalLogoSlot.style.top = '';
+        tvLeftVerticalLogoSlot.style.transform = '';
+    }
 
     tvLeftVerticalLogoSlot.style.width = `${logoWidth}px`;
     tvLeftVerticalLogoSlot.style.height = `${logoHeight}px`;
@@ -2128,8 +2473,13 @@ function renderProducts(produtos) {
         row.style.borderWidth = shouldShowRowBorder ? `${rowBorderWidth}px` : '0';
         row.style.borderColor = shouldShowRowBorder ? (visualConfig.borderColor || '#334155') : 'transparent';
         row.style.backgroundColor = visualConfig.rowBackgroundColor;
+        const compactSidebarActive = isCompactSidebarActive();
         const rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
-        row.style.padding = `${rowVerticalPadding}px 16px`;
+        const effectiveRowVerticalPadding = compactSidebarActive
+            ? Math.min(rowVerticalPadding, 8)
+            : rowVerticalPadding;
+        const rowHorizontalPadding = compactSidebarActive ? 10 : 16;
+        row.style.padding = `${effectiveRowVerticalPadding}px ${rowHorizontalPadding}px`;
         if (visualConfig.useGradient) {
             row.style.backgroundImage = `linear-gradient(to bottom, ${visualConfig.gradientStartColor}, ${visualConfig.gradientEndColor})`;
         } else {
@@ -2139,19 +2489,25 @@ function renderProducts(produtos) {
         const ofertaValue = Number(item.oferta);
         const hasOferta = Number.isFinite(ofertaValue) && ofertaValue >= 1;
         const price = hasOferta ? ofertaValue : item.preco;
+        const compactViewport = isCompactViewport();
+        const compactScale = getCompactListScale();
         const baseFontSize = Math.min(60, Math.max(10, Number(visualConfig.listFontSize || 16)));
+        const effectiveFontSize = compactViewport ? Math.max(10, Math.round(baseFontSize * compactScale)) : baseFontSize;
         const imageUrl = String(item.imagem || '').trim();
         const imageWidth = Math.min(400, Math.max(20, Number(visualConfig.imageWidth || 56)));
         const imageHeight = Math.min(400, Math.max(20, Number(visualConfig.imageHeight || 56)));
+        const imageScale = compactSidebarActive ? 0.65 : (compactViewport ? 0.8 : 1);
+        const effectiveImageWidth = compactViewport ? Math.max(20, Math.round(imageWidth * imageScale)) : imageWidth;
+        const effectiveImageHeight = compactViewport ? Math.max(20, Math.round(imageHeight * imageScale)) : imageHeight;
         const imageMarkup = visualConfig.showImage && imageUrl
-            ? `<img src="${imageUrl}" alt="${item.nome ?? 'Produto'}" class="rounded object-cover shrink-0" style="width:${imageWidth}px;height:${imageHeight}px" loading="lazy" onerror="this.style.display='none'">`
+            ? `<img src="${imageUrl}" alt="${item.nome ?? 'Produto'}" class="rounded object-cover shrink-0" style="width:${effectiveImageWidth}px;height:${effectiveImageHeight}px" loading="lazy" onerror="this.style.display='none'">`
             : '';
 
         row.innerHTML = `
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3 min-w-0">
                 ${imageMarkup}
-                <h3 class="font-semibold flex-1" style="color:${visualConfig.priceColor};font-size:${baseFontSize}px">${item.nome ?? 'Sem nome'}</h3>
-                <p class="font-semibold" style="color:${visualConfig.priceColor};font-size:${baseFontSize}px">${formatPrice(price)}</p>
+                <h3 class="font-semibold flex-1 min-w-0 break-words" style="color:${visualConfig.priceColor};font-size:${effectiveFontSize}px">${item.nome ?? 'Sem nome'}</h3>
+                <p class="font-semibold whitespace-nowrap" style="color:${visualConfig.priceColor};font-size:${effectiveFontSize}px">${formatPrice(price)}</p>
             </div>
         `;
 
@@ -2160,8 +2516,25 @@ function renderProducts(produtos) {
 
     const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
 
+    const applyTwoListGridLayout = () => {
+        productsGrid.className = 'grid gap-3';
+        productsGrid.style.display = 'grid';
+        productsGrid.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr)';
+        productsGrid.style.columnGap = '12px';
+        productsGrid.style.rowGap = '12px';
+        productsGrid.style.alignItems = 'start';
+    };
+
+    const applySingleListGridLayout = () => {
+        productsGrid.className = 'grid grid-cols-1 gap-3';
+        productsGrid.style.display = '';
+        productsGrid.style.gridTemplateColumns = '';
+        productsGrid.style.columnGap = '';
+        productsGrid.style.rowGap = '';
+    };
+
     if (isTwoListMode) {
-        productsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+        applyTwoListGridLayout();
 
         if (productsGroupLabel) {
             productsGroupLabel.textContent = '';
@@ -2169,9 +2542,13 @@ function renderProducts(produtos) {
 
         const leftColumn = document.createElement('div');
         leftColumn.className = 'space-y-3';
+        leftColumn.style.minWidth = '0';
+        leftColumn.style.width = '100%';
 
         const rightColumn = document.createElement('div');
         rightColumn.className = 'space-y-3';
+        rightColumn.style.minWidth = '0';
+        rightColumn.style.width = '100%';
 
         const { leftItems, rightItems } = splitTwoListItemsBySide(produtos);
 
@@ -2196,7 +2573,7 @@ function renderProducts(produtos) {
         return;
     }
 
-    productsGrid.className = 'grid grid-cols-1 gap-3';
+    applySingleListGridLayout();
     produtos.forEach((item) => productsGrid.appendChild(createProductRow(item)));
 }
 
@@ -2279,8 +2656,13 @@ function renderProductsWithPagination(produtos) {
             row.style.borderWidth = shouldShowRowBorder ? `${rowBorderWidth}px` : '0';
             row.style.borderColor = shouldShowRowBorder ? (visualConfig.borderColor || '#334155') : 'transparent';
             row.style.backgroundColor = visualConfig.rowBackgroundColor;
+            const compactSidebarActive = isCompactSidebarActive();
             const rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
-            row.style.padding = `${rowVerticalPadding}px 16px`;
+            const effectiveRowVerticalPadding = compactSidebarActive
+                ? Math.min(rowVerticalPadding, 8)
+                : rowVerticalPadding;
+            const rowHorizontalPadding = compactSidebarActive ? 10 : 16;
+            row.style.padding = `${effectiveRowVerticalPadding}px ${rowHorizontalPadding}px`;
             if (visualConfig.useGradient) {
                 row.style.backgroundImage = `linear-gradient(to bottom, ${visualConfig.gradientStartColor}, ${visualConfig.gradientEndColor})`;
             } else {
@@ -2290,19 +2672,25 @@ function renderProductsWithPagination(produtos) {
             const ofertaValue = Number(item.oferta);
             const hasOferta = Number.isFinite(ofertaValue) && ofertaValue >= 1;
             const price = hasOferta ? ofertaValue : item.preco;
+            const compactViewport = isCompactViewport();
+            const compactScale = getCompactListScale();
             const baseFontSize = Math.min(60, Math.max(10, Number(visualConfig.listFontSize || 16)));
+            const effectiveFontSize = compactViewport ? Math.max(10, Math.round(baseFontSize * compactScale)) : baseFontSize;
             const imageUrl = String(item.imagem || '').trim();
             const imageWidth = Math.min(400, Math.max(20, Number(visualConfig.imageWidth || 56)));
             const imageHeight = Math.min(400, Math.max(20, Number(visualConfig.imageHeight || 56)));
+            const imageScale = compactSidebarActive ? 0.65 : (compactViewport ? 0.8 : 1);
+            const effectiveImageWidth = compactViewport ? Math.max(20, Math.round(imageWidth * imageScale)) : imageWidth;
+            const effectiveImageHeight = compactViewport ? Math.max(20, Math.round(imageHeight * imageScale)) : imageHeight;
             const imageMarkup = visualConfig.showImage && imageUrl
-                ? `<img src="${imageUrl}" alt="${item.nome ?? 'Produto'}" class="rounded object-cover shrink-0" style="width:${imageWidth}px;height:${imageHeight}px" loading="lazy" onerror="this.style.display='none'">`
+                ? `<img src="${imageUrl}" alt="${item.nome ?? 'Produto'}" class="rounded object-cover shrink-0" style="width:${effectiveImageWidth}px;height:${effectiveImageHeight}px" loading="lazy" onerror="this.style.display='none'">`
                 : '';
 
             row.innerHTML = `
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3 min-w-0">
                     ${imageMarkup}
-                    <h3 class="font-semibold flex-1" style="color:${visualConfig.priceColor};font-size:${baseFontSize}px">${item.nome ?? 'Sem nome'}</h3>
-                    <p class="font-semibold" style="color:${visualConfig.priceColor};font-size:${baseFontSize}px">${formatPrice(price)}</p>
+                    <h3 class="font-semibold flex-1 min-w-0 break-words" style="color:${visualConfig.priceColor};font-size:${effectiveFontSize}px">${item.nome ?? 'Sem nome'}</h3>
+                    <p class="font-semibold whitespace-nowrap" style="color:${visualConfig.priceColor};font-size:${effectiveFontSize}px">${formatPrice(price)}</p>
                 </div>
             `;
 
@@ -2311,7 +2699,12 @@ function renderProductsWithPagination(produtos) {
 
         const renderTwoListColumns = (pageLeftItems, pageRightItems) => {
             productsGrid.innerHTML = '';
-            productsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+            productsGrid.className = 'grid gap-3';
+            productsGrid.style.display = 'grid';
+            productsGrid.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr)';
+            productsGrid.style.columnGap = '12px';
+            productsGrid.style.rowGap = '12px';
+            productsGrid.style.alignItems = 'start';
 
             if (productsGroupLabel) {
                 productsGroupLabel.textContent = '';
@@ -2319,6 +2712,8 @@ function renderProductsWithPagination(produtos) {
 
             const leftColumn = document.createElement('div');
             leftColumn.className = 'space-y-3';
+            leftColumn.style.minWidth = '0';
+            leftColumn.style.width = '100%';
             const leftTitle = document.createElement('p');
             leftTitle.className = 'text-sm font-medium';
             applyGroupLabelStyles(leftTitle);
@@ -2328,6 +2723,8 @@ function renderProductsWithPagination(produtos) {
 
             const rightColumn = document.createElement('div');
             rightColumn.className = 'space-y-3';
+            rightColumn.style.minWidth = '0';
+            rightColumn.style.width = '100%';
             const rightTitle = document.createElement('p');
             rightTitle.className = 'text-sm font-medium';
             applyGroupLabelStyles(rightTitle);
@@ -2384,6 +2781,12 @@ function renderProductsWithPagination(produtos) {
         return;
     }
 
+    productsGrid.style.display = '';
+    productsGrid.style.gridTemplateColumns = '';
+    productsGrid.style.columnGap = '';
+    productsGrid.style.rowGap = '';
+    productsGrid.style.alignItems = '';
+
     if (!visualConfig.isPaginationEnabled || list.length === 0) {
         renderProducts(list);
         return;
@@ -2413,7 +2816,7 @@ function renderProductsWithPagination(produtos) {
 
 async function loadVisualConfig(token) {
     if (!token) {
-        return;
+        return false;
     }
 
     try {
@@ -2425,10 +2828,20 @@ async function loadVisualConfig(token) {
             },
         });
 
-        const payload = await response.json();
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (response.status === 401) {
+            clearDeviceTokenAndRedirectToConfig('Token da TV invalido ou removido. Configure um novo token.');
+            return false;
+        }
 
         if (!response.ok || !payload?.success) {
-            return;
+            return false;
         }
 
         Object.assign(visualConfig, payload.data || {});
@@ -2479,6 +2892,9 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarImageSchedules = Array.isArray(visualConfig.rightSidebarImageSchedules)
             ? visualConfig.rightSidebarImageSchedules
             : [];
+        visualConfig.rightSidebarAndroidHeight = Math.max(0, Math.min(1500, Number(visualConfig.rightSidebarAndroidHeight || 0)));
+        visualConfig.rightSidebarAndroidWidth = Math.max(0, Math.min(1000, Number(visualConfig.rightSidebarAndroidWidth || 0)));
+        visualConfig.rightSidebarAndroidVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidVerticalOffset || 0)));
         visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
         visualConfig.groupLabelFontFamily = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
         visualConfig.showGroupLabelBadge = toBoolean(visualConfig.showGroupLabelBadge, false);
@@ -2508,10 +2924,13 @@ async function loadVisualConfig(token) {
         applyRightSidebarBorder();
         applyGeneralBorder();
         applyRightSidebarPanelVisibility();
+        applyCompactRightSidebarLayout();
         applyLeftVerticalLogoVisibility();
         applyTitleVisibility();
         await applyAutoFullscreenPreference();
+        return true;
     } catch (_error) {
+        return false;
     }
 }
 
@@ -2520,17 +2939,24 @@ async function loadProducts() {
 
     if (!token) {
         clearPaginationTimer();
-        window.location.replace(configPageUrl);
+        redirectToConfigPage();
         return;
     }
 
     updateStatus('Carregando produtos...');
 
-    await loadVisualConfig(token);
+    const productsEndpoint = resolveSafeProductsApiEndpoint();
+
+    const visualConfigLoaded = await loadVisualConfig(token);
+    if (!visualConfigLoaded) {
+        clearDeviceTokenAndRedirectToConfig('Token da TV nao encontrado/valido. Configure um novo token.');
+        return;
+    }
+
     await applyRightSidebarMediaMode(token);
 
     try {
-        const response = await fetch(apiEndpoint, {
+        let response = await fetch(productsEndpoint, {
             method: 'GET',
             headers: {
                 Accept: 'application/json',
@@ -2538,18 +2964,49 @@ async function loadProducts() {
             },
         });
 
-        const payload = await response.json();
+        if (!response.ok && productsEndpoint !== '/api/tv/produtos') {
+            // If a custom endpoint fails, retry once using local default endpoint.
+            response = await fetch('/api/tv/produtos', {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+        }
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (response.status === 401) {
+            clearDeviceTokenAndRedirectToConfig('Token da TV invalido ou removido. Configure um novo token.');
+            return;
+        }
 
         if (!response.ok || !payload?.success) {
+            clearDeviceTokenAndRedirectToConfig('Token da TV nao encontrado/valido. Configure um novo token.');
             throw new Error('Falha ao consultar API de produtos da TV.');
         }
 
         const produtos = payload?.data?.produtos ?? [];
         renderProductsWithPagination(produtos);
+        try {
+            window.__tvProdutosBooted = true;
+        } catch (_error) {
+        }
         updateStatus(`Atualizado em ${new Date().toLocaleTimeString('pt-BR')}.`);
     } catch (error) {
         clearPaginationTimer();
         renderProducts([]);
+        if (token) {
+            clearDeviceTokenAndRedirectToConfig('Token da TV nao encontrado/valido. Configure um novo token.');
+            return;
+        }
+
         updateStatus(error.message || 'Erro ao carregar produtos.', true);
     }
 }
@@ -2582,12 +3039,21 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('resize', () => {
-    applyLeftVerticalLogoVisibility();
+    scheduleCompactResponsiveLayoutRefresh();
 });
 
 window.addEventListener('orientationchange', () => {
-    applyLeftVerticalLogoVisibility();
+    scheduleCompactResponsiveLayoutRefresh();
 });
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        scheduleCompactResponsiveLayoutRefresh();
+    });
+    window.visualViewport.addEventListener('scroll', () => {
+        scheduleCompactResponsiveLayoutRefresh();
+    });
+}
 
 if (fullscreenTestButton) {
     fullscreenTestButton.addEventListener('click', async () => {
@@ -2624,9 +3090,13 @@ window.addEventListener('keydown', async (event) => {
     await toggleFullscreenByUserAction();
 });
 
-if (initialToken) {
+enforceValidTokenOrRedirect().then((isTokenValid) => {
+    if (!isTokenValid) {
+        return;
+    }
+
     loadProducts();
-}
+});
 
 if (refreshSeconds > 0) {
     setInterval(() => {

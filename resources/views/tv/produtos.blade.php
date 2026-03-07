@@ -8,23 +8,32 @@
     <title>TV Produtos</title>
     @vite(['resources/css/app.css', 'resources/js/tv-produtos.js'])
     <style>
+        .hidden {
+            display: none !important;
+        }
+
         html, body {
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             width: 100%;
-            height: 100%;
+            min-height: 100%;
+            height: auto;
             background: #000;
         }
 
         body {
             font-size: clamp(14px, 1.1vw, 20px);
+            -webkit-text-size-adjust: 100%;
         }
 
         .tv-shell {
             box-sizing: border-box;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            height: auto;
             padding: clamp(8px, 1.2vw, 20px);
             display: flex;
             flex-direction: column;
@@ -33,9 +42,10 @@
         .tv-main {
             display: grid;
             grid-template-columns: 1fr;
+            grid-template-rows: auto auto;
             gap: clamp(10px, 1.2vw, 20px);
             flex: 1;
-            min-height: 0;
+            min-height: auto;
         }
 
         @media (min-width: 1024px) {
@@ -45,10 +55,42 @@
         }
 
         .tv-panel {
-            min-height: 0;
-            height: 100%;
+            min-height: auto;
+            height: auto;
             max-height: none;
-            overflow: hidden;
+            overflow: visible;
+        }
+
+        #tvHeader,
+        #tvFooter,
+        #tvProductsPanel,
+        #tvVideoPanel {
+            border: 1px solid #1e293b;
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        #productsGrid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        #productsGroupLabel {
+            color: #cbd5e1;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #emptyState {
+            border: 1px solid #334155;
+            background: #020617;
+            border-radius: 8px;
+            padding: 12px;
+            color: #cbd5e1;
+            font-size: 13px;
         }
 
         #tvVideoPanel {
@@ -89,7 +131,7 @@
 
         #tvRightSidebarMediaWrap {
             flex: 1;
-            min-height: 0;
+            min-height: clamp(180px, 32vh, 420px);
             display: flex;
             align-items: stretch;
             justify-content: center;
@@ -109,6 +151,150 @@
             justify-content: center;
             overflow: hidden;
             padding: 4px;
+        }
+
+        @media (min-width: 1024px) {
+            html, body {
+                overflow: hidden;
+                height: 100%;
+            }
+
+            .tv-shell {
+                width: 100vw;
+                height: 100vh;
+                min-height: 0;
+            }
+
+            .tv-main {
+                grid-template-rows: 1fr;
+                min-height: 0;
+            }
+
+            .tv-panel {
+                min-height: 0;
+                height: 100%;
+                overflow: hidden;
+            }
+
+            #tvRightSidebarMediaWrap {
+                min-height: 0;
+            }
+        }
+
+        @media (max-width: 1023px) {
+            #tvLeftVerticalLogoSlot {
+                left: 8px;
+                top: 8px;
+                transform: none;
+                max-width: min(28vw, 140px);
+                max-height: min(28vw, 140px);
+                z-index: 46;
+            }
+
+            .tv-fullscreen-test-btn {
+                width: 24px;
+                height: 24px;
+                font-size: 14px;
+            }
+
+            .tv-status-floating {
+                left: 8px;
+                right: 8px;
+                max-width: none;
+                bottom: 44px;
+            }
+
+            .tv-main {
+                grid-template-columns: minmax(0, 1fr) minmax(110px, 36vw);
+                grid-template-rows: 1fr;
+            }
+
+            #tvProductsPanel,
+            #tvVideoPanel {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            #tvVideoPanel {
+                padding: 10px;
+            }
+
+            #tvRightSidebarMediaWrap {
+                min-height: clamp(140px, 34vh, 420px);
+                max-height: none;
+            }
+
+            #tvRightSidebarLogoSlot {
+                height: 36px !important;
+                min-height: 36px !important;
+            }
+
+            #tvRightSidebarLogo {
+                max-height: 28px !important;
+                max-width: min(50vw, 180px) !important;
+            }
+
+            #tvVideo,
+            #tvEmbed,
+            #tvImageSlide {
+                height: 100%;
+                min-height: 140px;
+                max-height: none;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            html,
+            body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                height: auto;
+            }
+
+            .tv-shell {
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+
+            .tv-main {
+                grid-template-columns: minmax(0, 1fr) minmax(110px, 36vw);
+                grid-template-rows: 1fr;
+                min-height: auto;
+            }
+
+            .tv-panel {
+                min-height: auto;
+                height: auto;
+                overflow: visible;
+            }
+
+            #tvRightSidebarMediaWrap {
+                min-height: clamp(140px, 34vh, 420px);
+                max-height: none;
+            }
+
+            #tvRightSidebarLogoSlot {
+                height: 36px !important;
+                min-height: 36px !important;
+            }
+
+            #tvRightSidebarLogo {
+                max-height: 28px !important;
+                max-width: min(50vw, 180px) !important;
+            }
+
+            #tvVideoPanel {
+                padding: 10px;
+            }
+
+            #tvVideo,
+            #tvEmbed,
+            #tvImageSlide {
+                min-height: 140px;
+                max-height: none;
+            }
         }
 
         #tvLeftVerticalLogoSlot.is-placeholder::after {
@@ -131,7 +317,7 @@
         #tvImageSlide {
             width: 100%;
             height: 100%;
-            min-height: 0;
+            min-height: 160px;
             object-fit: contain;
             object-position: center top;
         }
@@ -158,6 +344,52 @@
             animation-name: tv-title-marquee;
             animation-timing-function: linear;
             animation-iteration-count: infinite;
+        }
+
+        #productsGrid article > div {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        #productsGrid article h3 {
+            flex: 1 1 160px;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #productsGrid article p {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        #productsGrid article img {
+            max-width: min(22vw, 72px);
+            height: auto;
+        }
+
+        #productsGroupLabel {
+            display: block;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.25;
+        }
+
+        @media (max-width: 1023px) {
+            #productsGroupLabel {
+                font-size: clamp(10px, 2.9vw, 13px) !important;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #productsGrid article img {
+                max-width: none;
+            }
         }
 
         @keyframes tv-title-marquee {
@@ -280,6 +512,68 @@
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
+    <script>
+        (function ensureTokenBeforeTvBoot() {
+            var configPath = '/tv/totemweb/configuracao';
+            var currentPath = window.location.pathname || '';
+            if (currentPath === configPath) {
+                return;
+            }
+
+            function redirectToConfig() {
+                try {
+                    window.location.replace(configPath);
+                    return;
+                } catch (_error) {}
+
+                try {
+                    window.location.assign(configPath);
+                    return;
+                } catch (_error) {}
+
+                window.location.href = configPath;
+            }
+
+            function readToken() {
+                try {
+                    var params = new URLSearchParams(window.location.search || '');
+                    var byQuery = (params.get('token') || '').trim();
+                    if (byQuery) {
+                        localStorage.setItem('tv_device_token', byQuery);
+                        return byQuery;
+                    }
+
+                    return (localStorage.getItem('tv_device_token') || '').trim();
+                } catch (_error) {
+                    return '';
+                }
+            }
+
+            var token = readToken();
+            if (!token) {
+                redirectToConfig();
+                return;
+            }
+
+            // Validate token early to avoid staying on products screen with stale token in mobile browsers.
+            fetch('/api/tv/totemweb/config', {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: 'Bearer ' + token,
+                },
+            }).then(function (response) {
+                if (response.status === 401) {
+                    try {
+                        localStorage.removeItem('tv_device_token');
+                    } catch (_error) {}
+                    redirectToConfig();
+                }
+            }).catch(function () {
+                // Keep current screen on transient network errors.
+            });
+        })();
+    </script>
     <div id="tvShell" class="tv-shell">
         <header id="tvHeader" class="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
             <div id="tvHeaderTitleContainer" class="tv-title-container">
@@ -536,11 +830,37 @@
                 var rightLogoHeight = Math.max(30, Math.min(300, Number(data.rightSidebarLogoHeight || 58)));
                 var rightLogoBackgroundColor = String(data.rightSidebarLogoBackgroundColor || '#0f172a');
                 var rightLogoBackgroundTransparent = Boolean(data.isRightSidebarLogoBackgroundTransparent);
+                var isCompactViewport = false;
+                try {
+                    var byWidth = window.matchMedia && window.matchMedia('(max-width: 1023px)').matches;
+                    var byTouch = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+                    var byAndroidUa = /android/i.test(String(navigator.userAgent || ''));
+                    isCompactViewport = Boolean(byWidth || byTouch || byAndroidUa);
+                } catch (_error) {
+                    isCompactViewport = false;
+                }
+
+                if (isCompactViewport) {
+                    rightLogoWidth = Math.min(rightLogoWidth, 180);
+                    rightLogoHeight = Math.min(rightLogoHeight, 36);
+                }
 
                 var showLeftLogo = Boolean(data.showLeftVerticalLogo);
                 var leftLogoUrl = data.leftVerticalLogoUrl || '';
                 var leftLogoWidth = Math.max(40, Math.min(1000, Number(data.leftVerticalLogoWidth || 120)));
                 var leftLogoHeight = Math.max(40, Math.min(1000, Number(data.leftVerticalLogoHeight || 220)));
+                var logoOffset = leftLogoWidth + 1;
+                var productsPanel = document.getElementById('tvProductsPanel');
+
+                if (productsPanel) {
+                    if (showLeftLogo && !isCompactViewport) {
+                        productsPanel.style.marginLeft = logoOffset + 'px';
+                        productsPanel.style.width = 'calc(100% - ' + logoOffset + 'px)';
+                    } else {
+                        productsPanel.style.marginLeft = '';
+                        productsPanel.style.width = '';
+                    }
+                }
 
                 if (slot) {
                     slot.style.background = rightLogoBackgroundTransparent ? 'transparent' : rightLogoBackgroundColor;
@@ -585,6 +905,107 @@
                 .catch(function () {
                     hideAllLogoSlots();
                 });
+        })();
+
+        (function setupAndroidProductsFallback() {
+            function getToken() {
+                try {
+                    var params = new URLSearchParams(window.location.search || '');
+                    return (params.get('token') || localStorage.getItem('tv_device_token') || '').trim();
+                } catch (_error) {
+                    return '';
+                }
+            }
+
+            function renderFallbackProducts(items) {
+                var grid = document.getElementById('productsGrid');
+                var empty = document.getElementById('emptyState');
+                if (!grid) {
+                    return;
+                }
+
+                grid.innerHTML = '';
+
+                if (!Array.isArray(items) || items.length === 0) {
+                    if (empty) {
+                        empty.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                if (empty) {
+                    empty.classList.add('hidden');
+                }
+
+                for (var i = 0; i < items.length; i += 1) {
+                    var item = items[i] || {};
+                    var card = document.createElement('article');
+                    card.style.border = '1px solid #334155';
+                    card.style.background = '#020617';
+                    card.style.borderRadius = '10px';
+                    card.style.padding = '10px 12px';
+                    card.style.color = '#e2e8f0';
+
+                    var nome = String(item.nome || item.NOME || 'Produto').trim();
+                    var rawPriceValue = (item.preco !== undefined && item.preco !== null)
+                        ? item.preco
+                        : ((item.PRECO !== undefined && item.PRECO !== null) ? item.PRECO : 0);
+                    var precoRaw = Number(rawPriceValue);
+                    var preco = isFinite(precoRaw)
+                        ? precoRaw.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        : '-';
+
+                    card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'
+                        + '<h3 style="font-weight:600;font-size:14px;line-height:1.25;color:#f1f5f9;margin:0">' + nome + '</h3>'
+                        + '<p style="font-weight:700;font-size:14px;color:#a5b4fc;margin:0;white-space:nowrap">' + preco + '</p>'
+                        + '</div>';
+
+                    grid.appendChild(card);
+                }
+            }
+
+            function runFallbackLoad() {
+                var token = getToken();
+                if (!token) {
+                    return;
+                }
+
+                fetch('/api/tv/produtos', {
+                    method: 'GET',
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: 'Bearer ' + token,
+                    },
+                }).then(function (response) {
+                    if (response.status === 401) {
+                        try {
+                            localStorage.removeItem('tv_device_token');
+                        } catch (_error) {}
+                        window.location.replace('/tv/totemweb/configuracao');
+                        return null;
+                    }
+
+                    return response.json();
+                }).then(function (payload) {
+                    if (!payload || payload.success !== true) {
+                        return;
+                    }
+
+                    var list = (payload.data && payload.data.produtos) ? payload.data.produtos : [];
+                    renderFallbackProducts(list);
+                }).catch(function () {
+                });
+            }
+
+            window.setTimeout(function () {
+                var grid = document.getElementById('productsGrid');
+                var alreadyRendered = Boolean(grid && grid.children && grid.children.length > 0);
+                if (window.__tvProdutosBooted === true && alreadyRendered) {
+                    return;
+                }
+
+                runFallbackLoad();
+            }, 1800);
         })();
 
         document.addEventListener('fullscreenchange', function () {
