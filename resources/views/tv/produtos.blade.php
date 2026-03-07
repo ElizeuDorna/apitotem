@@ -908,6 +908,26 @@
         })();
 
         (function setupAndroidProductsFallback() {
+            function normalizeRowLineSpacing(value) {
+                var parsed = Number(value);
+                if (!isFinite(parsed)) {
+                    return 12;
+                }
+
+                return Math.max(0, Math.min(40, Math.round(parsed)));
+            }
+
+            function applyFallbackRowLineSpacing(lineSpacing) {
+                var grid = document.getElementById('productsGrid');
+                if (!grid) {
+                    return;
+                }
+
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = '1fr';
+                grid.style.rowGap = String(lineSpacing) + 'px';
+            }
+
             function getToken() {
                 try {
                     var params = new URLSearchParams(window.location.search || '');
@@ -970,13 +990,39 @@
                     return;
                 }
 
-                fetch('/api/tv/produtos', {
+                fetch('/api/tv/totemweb/config', {
                     method: 'GET',
                     headers: {
                         Accept: 'application/json',
                         Authorization: 'Bearer ' + token,
                     },
                 }).then(function (response) {
+                    if (response.status === 401) {
+                        try {
+                            localStorage.removeItem('tv_device_token');
+                        } catch (_error) {}
+                        window.location.replace('/tv/totemweb/configuracao');
+                        return null;
+                    }
+
+                    return response.json();
+                }).then(function (configPayload) {
+                    var configData = configPayload && configPayload.data ? configPayload.data : {};
+                    var lineSpacing = normalizeRowLineSpacing(configData.rowLineSpacing);
+                    applyFallbackRowLineSpacing(lineSpacing);
+
+                    return fetch('/api/tv/produtos', {
+                        method: 'GET',
+                        headers: {
+                            Accept: 'application/json',
+                            Authorization: 'Bearer ' + token,
+                        },
+                    });
+                }).then(function (response) {
+                    if (!response) {
+                        return null;
+                    }
+
                     if (response.status === 401) {
                         try {
                             localStorage.removeItem('tv_device_token');

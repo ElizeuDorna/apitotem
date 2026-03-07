@@ -939,6 +939,12 @@
                                 </div>
 
                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Espacamento entre linhas (px)</label>
+                                    <input type="number" name="rowLineSpacing" min="0" max="40" value="{{ old('rowLineSpacing', $config->rowLineSpacing ?? 12) }}" class="w-full border rounded px-3 py-2">
+                                    @error('rowLineSpacing')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da linha (px)</label>
                                     <input type="number" id="rowBorderWidth" name="rowBorderWidth" min="0" max="20" value="{{ old('rowBorderWidth', $config->rowBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
                                     @error('rowBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror

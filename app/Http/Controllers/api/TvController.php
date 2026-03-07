@@ -525,6 +525,7 @@ class TvController extends Controller
                 'imageWidth' => (int) ($config->imageWidth ?? 56),
                 'imageHeight' => (int) ($config->imageHeight ?? 56),
                 'rowVerticalPadding' => (int) ($config->rowVerticalPadding ?? 9),
+                'rowLineSpacing' => (int) ($config->rowLineSpacing ?? 12),
                 'listFontSize' => (int) ($config->listFontSize ?? 16),
                 'groupLabelFontSize' => (int) ($config->groupLabelFontSize ?? 14),
                 'groupLabelFontFamily' => (string) ($config->groupLabelFontFamily ?? 'arial'),

@@ -103,6 +103,7 @@ const visualConfig = {
     imageWidth: 56,
     imageHeight: 56,
     rowVerticalPadding: 9,
+    rowLineSpacing: 12,
     listFontSize: 16,
     groupLabelFontSize: 14,
     groupLabelFontFamily: 'arial',
@@ -2423,6 +2424,8 @@ async function handleUserGestureForAutoFullscreen() {
 function renderProducts(produtos) {
     productsGrid.innerHTML = '';
 
+    const getRowLineSpacing = () => Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
+
     if (!Array.isArray(produtos) || produtos.length === 0) {
         emptyState.classList.remove('hidden');
         if (productsGroupLabel) {
@@ -2517,20 +2520,22 @@ function renderProducts(produtos) {
     const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
 
     const applyTwoListGridLayout = () => {
+        const lineSpacing = getRowLineSpacing();
         productsGrid.className = 'grid gap-3';
         productsGrid.style.display = 'grid';
         productsGrid.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr)';
         productsGrid.style.columnGap = '12px';
-        productsGrid.style.rowGap = '12px';
+        productsGrid.style.rowGap = `${lineSpacing}px`;
         productsGrid.style.alignItems = 'start';
     };
 
     const applySingleListGridLayout = () => {
+        const lineSpacing = getRowLineSpacing();
         productsGrid.className = 'grid grid-cols-1 gap-3';
         productsGrid.style.display = '';
         productsGrid.style.gridTemplateColumns = '';
         productsGrid.style.columnGap = '';
-        productsGrid.style.rowGap = '';
+        productsGrid.style.rowGap = `${lineSpacing}px`;
     };
 
     if (isTwoListMode) {
@@ -2544,11 +2549,15 @@ function renderProducts(produtos) {
         leftColumn.className = 'space-y-3';
         leftColumn.style.minWidth = '0';
         leftColumn.style.width = '100%';
+        leftColumn.style.display = 'grid';
+        leftColumn.style.rowGap = `${getRowLineSpacing()}px`;
 
         const rightColumn = document.createElement('div');
         rightColumn.className = 'space-y-3';
         rightColumn.style.minWidth = '0';
         rightColumn.style.width = '100%';
+        rightColumn.style.display = 'grid';
+        rightColumn.style.rowGap = `${getRowLineSpacing()}px`;
 
         const { leftItems, rightItems } = splitTwoListItemsBySide(produtos);
 
@@ -2617,6 +2626,7 @@ function renderProductsWithPagination(produtos) {
     clearPaginationTimer();
 
     const list = Array.isArray(produtos) ? produtos : [];
+    const rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
     const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
 
     if (isTwoListMode) {
@@ -2703,7 +2713,7 @@ function renderProductsWithPagination(produtos) {
             productsGrid.style.display = 'grid';
             productsGrid.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr)';
             productsGrid.style.columnGap = '12px';
-            productsGrid.style.rowGap = '12px';
+            productsGrid.style.rowGap = `${rowLineSpacing}px`;
             productsGrid.style.alignItems = 'start';
 
             if (productsGroupLabel) {
@@ -2714,6 +2724,8 @@ function renderProductsWithPagination(produtos) {
             leftColumn.className = 'space-y-3';
             leftColumn.style.minWidth = '0';
             leftColumn.style.width = '100%';
+            leftColumn.style.display = 'grid';
+            leftColumn.style.rowGap = `${rowLineSpacing}px`;
             const leftTitle = document.createElement('p');
             leftTitle.className = 'text-sm font-medium';
             applyGroupLabelStyles(leftTitle);
@@ -2725,6 +2737,8 @@ function renderProductsWithPagination(produtos) {
             rightColumn.className = 'space-y-3';
             rightColumn.style.minWidth = '0';
             rightColumn.style.width = '100%';
+            rightColumn.style.display = 'grid';
+            rightColumn.style.rowGap = `${rowLineSpacing}px`;
             const rightTitle = document.createElement('p');
             rightTitle.className = 'text-sm font-medium';
             applyGroupLabelStyles(rightTitle);
@@ -2784,7 +2798,7 @@ function renderProductsWithPagination(produtos) {
     productsGrid.style.display = '';
     productsGrid.style.gridTemplateColumns = '';
     productsGrid.style.columnGap = '';
-    productsGrid.style.rowGap = '';
+    productsGrid.style.rowGap = `${rowLineSpacing}px`;
     productsGrid.style.alignItems = '';
 
     if (!visualConfig.isPaginationEnabled || list.length === 0) {
@@ -2896,6 +2910,7 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarAndroidWidth = Math.max(0, Math.min(1000, Number(visualConfig.rightSidebarAndroidWidth || 0)));
         visualConfig.rightSidebarAndroidVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidVerticalOffset || 0)));
         visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
+        visualConfig.rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
         visualConfig.groupLabelFontFamily = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
         visualConfig.showGroupLabelBadge = toBoolean(visualConfig.showGroupLabelBadge, false);
         visualConfig.groupLabelBadgeColor = String(visualConfig.groupLabelBadgeColor || '#0f172a');

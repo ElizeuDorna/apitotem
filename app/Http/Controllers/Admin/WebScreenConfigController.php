@@ -215,6 +215,7 @@ class WebScreenConfigController extends Controller
             'imageWidth' => ['nullable', 'integer', 'min:20', 'max:400'],
             'imageHeight' => ['nullable', 'integer', 'min:20', 'max:400'],
             'rowVerticalPadding' => ['nullable', 'integer', 'min:0', 'max:40'],
+            'rowLineSpacing' => ['nullable', 'integer', 'min:0', 'max:40'],
             'listFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
             'groupLabelFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
             'groupLabelFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
@@ -329,6 +330,7 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarAndroidWidth'] = (int) ($validated['rightSidebarAndroidWidth'] ?? 0);
         $validated['rightSidebarAndroidVerticalOffset'] = (int) ($validated['rightSidebarAndroidVerticalOffset'] ?? 0);
         $validated['rowVerticalPadding'] = (int) ($validated['rowVerticalPadding'] ?? 9);
+        $validated['rowLineSpacing'] = (int) ($validated['rowLineSpacing'] ?? 12);
         $validated['listFontSize'] = (int) ($validated['listFontSize'] ?? 16);
         $validated['groupLabelFontSize'] = (int) ($validated['groupLabelFontSize'] ?? 14);
         $validated['groupLabelFontFamily'] = (string) ($validated['groupLabelFontFamily'] ?? 'arial');
@@ -652,6 +654,7 @@ class WebScreenConfigController extends Controller
             'imageWidth',
             'imageHeight',
             'rowVerticalPadding',
+            'rowLineSpacing',
             'listFontSize',
             'groupLabelFontSize',
             'groupLabelFontFamily',
