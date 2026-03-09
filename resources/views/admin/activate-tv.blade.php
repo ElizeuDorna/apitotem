@@ -82,6 +82,7 @@
                                 <tr>
                                     <th class="px-3 py-2 text-left">Nome</th>
                                     <th class="px-3 py-2 text-left">Local</th>
+                                    <th class="px-3 py-2 text-left">Token</th>
                                     <th class="px-3 py-2 text-left">Empresa</th>
                                     <th class="px-3 py-2 text-left">Status</th>
                                     <th class="px-3 py-2 text-left">Última comunicação</th>
@@ -101,16 +102,32 @@
                                             <input form="update-device-{{ $device->id }}" name="local" type="text" value="{{ old('local', $device->local) }}" class="w-full rounded-md border-gray-300 shadow-sm">
                                         </td>
                                         <td class="px-3 py-2">
+                                            <input type="text" value="{{ $device->token }}" class="w-full rounded-md border-gray-200 bg-gray-50 font-mono text-xs text-gray-700" readonly>
+                                        </td>
+                                        <td class="px-3 py-2">
                                             @if ($isDefaultAdmin)
                                                 <select form="update-device-{{ $device->id }}" name="empresa_id" class="w-full rounded-md border-gray-300 shadow-sm" required>
                                                     @foreach ($empresas as $empresa)
+                                                        @php
+                                                            $empresaNome = $empresa->NOME ?? $empresa->nome ?? '';
+                                                            $empresaCnpj = $empresa->CNPJ_CPF ?? $empresa->cnpj_cpf ?? '';
+                                                        @endphp
                                                         <option value="{{ $empresa->id }}" @selected((string) $device->empresa_id === (string) $empresa->id)>
-                                                            {{ $empresa->NOME }}
+                                                            {{ $empresaNome }}{{ $empresaCnpj ? ' - ' . $empresaCnpj : '' }}
                                                         </option>
                                                     @endforeach
                                                 </select>
                                             @else
-                                                <span>{{ $device->empresa?->NOME }}</span>
+                                                @php
+                                                    $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
+                                                    $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
+                                                @endphp
+                                                <span>
+                                                    {{ $empresaNome ?? 'Empresa nao vinculada' }}
+                                                    @if ($empresaCnpj)
+                                                        - {{ $empresaCnpj }}
+                                                    @endif
+                                                </span>
                                             @endif
                                         </td>
                                         <td class="px-3 py-2">
@@ -141,7 +158,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-3 py-8 text-center text-gray-500">Nenhuma TV ativa encontrada.</td>
+                                        <td colspan="7" class="px-3 py-8 text-center text-gray-500">Nenhuma TV ativa encontrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

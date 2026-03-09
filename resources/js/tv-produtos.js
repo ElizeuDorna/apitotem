@@ -15,6 +15,7 @@ const tvFooter = document.getElementById('tvFooter');
 const tvFooterTitle = document.getElementById('tvFooterTitle');
 const tvProductsPanel = document.getElementById('tvProductsPanel');
 const tvVideoPanel = document.getElementById('tvVideoPanel');
+const tvRightSidebarMediaWrap = document.getElementById('tvRightSidebarMediaWrap');
 const tvRightSidebarLogoSlot = document.getElementById('tvRightSidebarLogoSlot');
 const tvRightSidebarLogo = document.getElementById('tvRightSidebarLogo');
 const tvLeftVerticalLogoSlot = document.getElementById('tvLeftVerticalLogoSlot');
@@ -24,13 +25,71 @@ const tvShell = document.getElementById('tvShell');
 const fullscreenTestButton = document.getElementById('fullscreenTestButton');
 
 const queryParams = new URLSearchParams(window.location.search);
-const initialToken = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+const TOKEN_HISTORY_KEY = 'tv_device_token_history_v1';
+const TOKEN_BACKUP_KEY = 'tv_device_token_backup';
+
+function readTokenHistory() {
+    try {
+        const raw = localStorage.getItem(TOKEN_HISTORY_KEY);
+        if (!raw) {
+            return [];
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed
+            .map((item) => String(item || '').trim())
+            .filter((item) => item !== '');
+    } catch (_error) {
+        return [];
+    }
+}
+
+function persistReliableDeviceToken(token) {
+    const normalized = String(token || '').trim();
+    if (!normalized) {
+        return;
+    }
+
+    localStorage.setItem('tv_device_token', normalized);
+    localStorage.setItem('tv_last_device_token', normalized);
+    localStorage.setItem(TOKEN_BACKUP_KEY, normalized);
+
+    try {
+        const history = readTokenHistory().filter((item) => item !== normalized);
+        history.unshift(normalized);
+        localStorage.setItem(TOKEN_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+    } catch (_error) {
+    }
+}
+
+function getReliableDeviceToken() {
+    const fromQuery = String(queryParams.get('token') || '').trim();
+    const fromPrimary = String(localStorage.getItem('tv_device_token') || '').trim();
+    const fromLast = String(localStorage.getItem('tv_last_device_token') || '').trim();
+    const fromBackup = String(localStorage.getItem(TOKEN_BACKUP_KEY) || '').trim();
+    const fromHistory = readTokenHistory()[0] || '';
+    const token = fromQuery || fromPrimary || fromLast || fromBackup || fromHistory;
+
+    if (token) {
+        persistReliableDeviceToken(token);
+    }
+
+    return token;
+}
+
+const initialToken = getReliableDeviceToken();
 const apiEndpoint = localStorage.getItem('tv_api_endpoint') || queryParams.get('api') || '/api/tv/produtos';
 const configEndpoint = '/api/tv/totemweb/config';
 const mediaEndpoint = '/api/tv/midias';
 const configPageUrl = '/tv/totemweb/configuracao';
 const refreshSeconds = Number(localStorage.getItem('tv_refresh_seconds') || queryParams.get('refresh') || 30);
 const AUDIO_UNLOCK_STORAGE_KEY = 'tv_audio_autoplay_unlocked';
+const VISUAL_CONFIG_CACHE_KEY = 'tv_cached_visual_config_v1';
+const PRODUCTS_CACHE_KEY = 'tv_cached_products_v1';
 
 const visualConfig = {
     videoUrl: '',
@@ -41,12 +100,22 @@ const visualConfig = {
     showRightSidebarLogo: false,
     showLeftVerticalLogo: false,
     rightSidebarLogoPosition: 'sidebar_top',
+    rightSidebarLogoPositionWindows: 'sidebar_top',
+    rightSidebarLogoPositionAndroid: 'sidebar_top',
     rightSidebarLogoUrl: '',
     leftVerticalLogoUrl: '',
     leftVerticalLogoWidth: 120,
     leftVerticalLogoHeight: 220,
+    leftVerticalLogoWidthWindows: 120,
+    leftVerticalLogoHeightWindows: 220,
+    leftVerticalLogoWidthAndroid: 120,
+    leftVerticalLogoHeightAndroid: 220,
     rightSidebarLogoWidth: 220,
     rightSidebarLogoHeight: 58,
+    rightSidebarLogoWidthWindows: 220,
+    rightSidebarLogoHeightWindows: 58,
+    rightSidebarLogoWidthAndroid: 220,
+    rightSidebarLogoHeightAndroid: 58,
     rightSidebarLogoBackgroundColor: '#0f172a',
     isRightSidebarLogoBackgroundTransparent: false,
     isMainBorderEnabled: false,
@@ -72,6 +141,21 @@ const visualConfig = {
     rightSidebarAndroidVerticalOffset: 0,
     rightSidebarHybridVideoDuration: 120,
     rightSidebarHybridImageDuration: 120,
+    rightSidebarProductCarouselEnabled: false,
+    rightSidebarProductDisplayMode: 'all',
+    rightSidebarProductTransitionMode: 'products_only',
+    rightSidebarProductInterval: 8,
+    rightSidebarProductShowImage: true,
+    rightSidebarProductShowName: true,
+    rightSidebarProductShowPrice: true,
+    rightSidebarProductNamePosition: 'top',
+    rightSidebarProductPricePosition: 'bottom',
+    rightSidebarProductNameColor: '#FFFFFF',
+    rightSidebarProductPriceColor: '#FDE68A',
+    rightSidebarProductNameBadgeEnabled: true,
+    rightSidebarProductNameBadgeColor: '#0F172A',
+    rightSidebarProductPriceBadgeEnabled: true,
+    rightSidebarProductPriceBadgeColor: '#0F172A',
     productListType: '1',
     productListLeftGroupIds: [],
     productListRightGroupIds: [],
@@ -104,8 +188,10 @@ const visualConfig = {
     imageHeight: 56,
     rowVerticalPadding: 9,
     rowLineSpacing: 12,
+    productListVerticalOffset: 0,
     listFontSize: 16,
     groupLabelFontSize: 14,
+    groupLabelVerticalOffset: 0,
     groupLabelFontFamily: 'arial',
     groupLabelColor: '#cbd5e1',
     showGroupLabelBadge: false,
@@ -132,10 +218,14 @@ let youTubeStartupMuteRetryDone = false;
 let currentYouTubeVideoId = '';
 let currentVideoPlaylistSignature = '';
 let lastVideoAdvanceAt = 0;
+let lastNonCriticalAuthWarningAt = 0;
 let videoFallbackTimer = null;
 let initialVideoAutoplayRetryTimer = null;
 let imageSlideTimer = null;
 let imageSlideUrls = [];
+let imageSlideSettingsByUrl = new Map();
+let slideNameOverlay = null;
+let slidePriceOverlay = null;
 let currentImageSlideIndex = 0;
 let rightSidebarHybridPhase = 'video';
 let rightSidebarHybridVideoCountInPhase = 0;
@@ -151,6 +241,23 @@ let autoFullscreenGestureListenerAttached = false;
 let autoFullscreenRetryTimer = null;
 let fullscreenWarningShown = false;
 let compactLayoutRefreshRaf = null;
+let offlineIndicatorEl = null;
+let sidebarProductTimer = null;
+let sidebarProductCardEl = null;
+let sidebarProductItems = [];
+let sidebarProductIndex = 0;
+let sidebarProductPassedBeforeImages = false;
+let sidebarMixedImageUrls = [];
+let sidebarMixedImageIndex = 0;
+let sidebarMixedVideoItems = [];
+let sidebarMixedVideoIndex = 0;
+let sidebarMixedTurnIndex = 0;
+let sidebarMixedModeSignature = '';
+let sidebarMixedVideoTurnActive = false;
+let sidebarMixedVideoTurnExpiresAt = 0;
+let sidebarMixedCurrentVideoItem = null;
+let sidebarMixedOnVideoFinished = null;
+let lastSlideImageErrorAt = 0;
 
 function isFullscreenSupported() {
     const element = document.documentElement;
@@ -414,6 +521,65 @@ function toBoolean(value, fallback = false) {
     return fallback;
 }
 
+function escapeHtmlAttribute(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function resolveRenderableImageUrl(rawUrl) {
+    const value = String(rawUrl || '').trim();
+    if (!value) {
+        return '';
+    }
+
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i.test(value)) {
+        return value.replace(/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i, '/storage/');
+    }
+
+    if (/^storage\//i.test(value)) {
+        return `/${value.replace(/^\/+/, '')}`;
+    }
+
+    if (/^\/storage\//i.test(value)) {
+        return value;
+    }
+
+    if (/^\/\//.test(value)) {
+        return `${window.location.protocol}${value}`;
+    }
+
+    return value;
+}
+
+function resolveAlternateRenderableImageUrl(rawUrl, currentResolvedUrl = '') {
+    const original = String(rawUrl || '').trim();
+    if (!original) {
+        return '';
+    }
+
+    const current = String(currentResolvedUrl || '').trim();
+    const isHttpsPage = String(window.location.protocol || '').toLowerCase() === 'https:';
+
+    if (isHttpsPage && /^http:\/\//i.test(original)) {
+        const httpsCandidate = original.replace(/^http:\/\//i, 'https://');
+        if (httpsCandidate !== current) {
+            return httpsCandidate;
+        }
+    }
+
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i.test(original)) {
+        const storageCandidate = original.replace(/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i, '/storage/');
+        if (storageCandidate !== current) {
+            return storageCandidate;
+        }
+    }
+
+    return '';
+}
+
 function markAudioAutoplayUnlocked() {
     if (audioAutoplayUnlocked) {
         return;
@@ -457,32 +623,147 @@ function parseConfiguredImageSlideUrls() {
             return '';
         }
 
+        const stripQueryAndHash = (input) => String(input || '').split('#')[0].split('?')[0].trim();
+
         if (/^https?:\/\/localhost\/storage\//i.test(url)) {
-            return url.replace(/^https?:\/\/localhost\/storage\//i, '/storage/');
+            return stripQueryAndHash(url.replace(/^https?:\/\/localhost\/storage\//i, '/storage/'));
         }
 
         if (/^storage\//i.test(url)) {
-            return `/${url.replace(/^\/+/, '')}`;
+            return stripQueryAndHash(`/${url.replace(/^\/+/, '')}`);
         }
 
-        return url;
+        if (/^https?:\/\//i.test(url)) {
+            try {
+                const parsed = new URL(url);
+                const normalizedPath = stripQueryAndHash(parsed.pathname || '');
+                if (/^\/storage\//i.test(normalizedPath)) {
+                    return normalizedPath;
+                }
+            } catch (_error) {
+                // Ignore URL parse failures and keep original value path.
+            }
+        }
+
+        return stripQueryAndHash(url);
     };
 
     const schedules = Array.isArray(visualConfig.rightSidebarImageSchedules)
         ? visualConfig.rightSidebarImageSchedules
         : [];
+    const isAndroidRuntime = isAndroidDevice();
+    const parsePlatformEnabled = (value, defaultValue = true) => {
+        if (value === undefined || value === null || value === '') {
+            return defaultValue;
+        }
+
+        if (typeof value === 'boolean') {
+            return value;
+        }
+
+        if (typeof value === 'number') {
+            return value === 1;
+        }
+
+        const normalized = String(value).trim().toLowerCase();
+        return normalized === '1' || normalized === 'true' || normalized === 'on' || normalized === 'yes';
+    };
 
     const scheduleByUrl = new Map();
+    const scheduleByLooseUrl = new Map();
+    const scheduleByFileName = new Map();
+    const toLooseUrlKey = (value) => normalizeSlideUrl(value).replace(/\/$/, '');
+    const toFileNameKey = (value) => {
+        const normalized = normalizeSlideUrl(value);
+        if (!normalized) {
+            return '';
+        }
+
+        const clean = normalized.split('/').pop() || '';
+        try {
+            return decodeURIComponent(clean).trim().toLowerCase();
+        } catch (_error) {
+            return clean.trim().toLowerCase();
+        }
+    };
+
+    const resolveScheduleForUrl = (value) => {
+        const exact = scheduleByUrl.get(normalizeSlideUrl(value));
+        if (exact) {
+            return exact;
+        }
+
+        const loose = scheduleByLooseUrl.get(toLooseUrlKey(value));
+        if (loose) {
+            return loose;
+        }
+
+        const fileNameKey = toFileNameKey(value);
+        if (!fileNameKey) {
+            return null;
+        }
+
+        return scheduleByFileName.get(fileNameKey) || null;
+    };
+
     schedules.forEach((entry) => {
         const normalizedUrl = normalizeSlideUrl(entry?.url);
         if (!normalizedUrl) {
             return;
         }
 
-        scheduleByUrl.set(normalizedUrl, {
+        const legacyImageHeight = Math.max(0, Number(entry?.imageHeight || 0) || 0);
+        const legacyImageWidth = Math.max(0, Number(entry?.imageWidth || 0) || 0);
+        const legacyVerticalOffset = Math.max(-300, Math.min(300, Number(entry?.verticalOffset || 0) || 0));
+
+        const normalizedSchedule = {
+            name: String(entry?.name || '').trim(),
             startDate: String(entry?.startDate || '').trim(),
             endDate: String(entry?.endDate || '').trim(),
-        });
+            enabledForWindows: parsePlatformEnabled(entry?.enabledForWindows, true),
+            enabledForAndroid: parsePlatformEnabled(entry?.enabledForAndroid, parsePlatformEnabled(entry?.enabledForWindows, true)),
+            windowsImageHeight: Math.max(0, Number(entry?.windowsImageHeight ?? legacyImageHeight) || 0),
+            windowsImageWidth: Math.max(0, Number(entry?.windowsImageWidth ?? legacyImageWidth) || 0),
+            windowsVerticalOffset: Math.max(-300, Math.min(300, Number(entry?.windowsVerticalOffset ?? legacyVerticalOffset) || 0)),
+            windowsShowName: parsePlatformEnabled(entry?.windowsShowName, false),
+            windowsShowPrice: parsePlatformEnabled(entry?.windowsShowPrice, false),
+            windowsPriceText: String(entry?.windowsPriceText || '').trim(),
+            windowsNameFontSize: Math.max(8, Math.min(120, Number(entry?.windowsNameFontSize || 18) || 18)),
+            windowsPriceFontSize: Math.max(8, Math.min(120, Number(entry?.windowsPriceFontSize || 22) || 22)),
+            windowsTextFontFamily: String(entry?.windowsTextFontFamily || 'arial').toLowerCase(),
+            windowsNamePosition: String(entry?.windowsNamePosition || 'top').toLowerCase(),
+            windowsPricePosition: String(entry?.windowsPricePosition || 'bottom').toLowerCase(),
+            windowsNameColor: String(entry?.windowsNameColor || '#FFFFFF').trim(),
+            windowsNameBadgeEnabled: parsePlatformEnabled(entry?.windowsNameBadgeEnabled, true),
+            windowsNameBadgeColor: String(entry?.windowsNameBadgeColor || '#0F172A').trim(),
+            windowsPriceColor: String(entry?.windowsPriceColor || '#FDE68A').trim(),
+            windowsPriceBadgeEnabled: parsePlatformEnabled(entry?.windowsPriceBadgeEnabled, true),
+            windowsPriceBadgeColor: String(entry?.windowsPriceBadgeColor || '#0F172A').trim(),
+            androidImageHeight: Math.max(0, Number(entry?.androidImageHeight ?? legacyImageHeight) || 0),
+            androidImageWidth: Math.max(0, Number(entry?.androidImageWidth ?? legacyImageWidth) || 0),
+            androidVerticalOffset: Math.max(-300, Math.min(300, Number(entry?.androidVerticalOffset ?? legacyVerticalOffset) || 0)),
+            androidShowName: parsePlatformEnabled(entry?.androidShowName, parsePlatformEnabled(entry?.windowsShowName, false)),
+            androidShowPrice: parsePlatformEnabled(entry?.androidShowPrice, parsePlatformEnabled(entry?.windowsShowPrice, false)),
+            androidPriceText: String(entry?.androidPriceText || entry?.windowsPriceText || '').trim(),
+            androidNameFontSize: Math.max(8, Math.min(120, Number(entry?.androidNameFontSize ?? entry?.windowsNameFontSize ?? 18) || 18)),
+            androidPriceFontSize: Math.max(8, Math.min(120, Number(entry?.androidPriceFontSize ?? entry?.windowsPriceFontSize ?? 22) || 22)),
+            androidTextFontFamily: String(entry?.androidTextFontFamily || entry?.windowsTextFontFamily || 'arial').toLowerCase(),
+            androidNamePosition: String(entry?.androidNamePosition || entry?.windowsNamePosition || 'top').toLowerCase(),
+            androidPricePosition: String(entry?.androidPricePosition || entry?.windowsPricePosition || 'bottom').toLowerCase(),
+            androidNameColor: String(entry?.androidNameColor || entry?.windowsNameColor || '#FFFFFF').trim(),
+            androidNameBadgeEnabled: parsePlatformEnabled(entry?.androidNameBadgeEnabled, parsePlatformEnabled(entry?.windowsNameBadgeEnabled, true)),
+            androidNameBadgeColor: String(entry?.androidNameBadgeColor || entry?.windowsNameBadgeColor || '#0F172A').trim(),
+            androidPriceColor: String(entry?.androidPriceColor || entry?.windowsPriceColor || '#FDE68A').trim(),
+            androidPriceBadgeEnabled: parsePlatformEnabled(entry?.androidPriceBadgeEnabled, parsePlatformEnabled(entry?.windowsPriceBadgeEnabled, true)),
+            androidPriceBadgeColor: String(entry?.androidPriceBadgeColor || entry?.windowsPriceBadgeColor || '#0F172A').trim(),
+        };
+
+        scheduleByUrl.set(normalizedUrl, normalizedSchedule);
+        scheduleByLooseUrl.set(toLooseUrlKey(normalizedUrl), normalizedSchedule);
+        const fileNameKey = toFileNameKey(normalizedUrl);
+        if (fileNameKey && !scheduleByFileName.has(fileNameKey)) {
+            scheduleByFileName.set(fileNameKey, normalizedSchedule);
+        }
     });
 
     const localToday = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
@@ -490,7 +771,7 @@ function parseConfiguredImageSlideUrls() {
         .slice(0, 10);
 
     const shouldShowByDate = (url) => {
-        const schedule = scheduleByUrl.get(normalizeSlideUrl(url));
+        const schedule = resolveScheduleForUrl(url);
         if (!schedule) {
             return true;
         }
@@ -506,13 +787,58 @@ function parseConfiguredImageSlideUrls() {
             return false;
         }
 
+        if (isAndroidRuntime && schedule.enabledForAndroid === false) {
+            return false;
+        }
+
+        if (!isAndroidRuntime && schedule.enabledForWindows === false) {
+            return false;
+        }
+
         return true;
     };
 
-    return raw
+    const filteredUrls = raw
         .split(/\r?\n|,|;\s*/)
         .map((item) => extractVideoUrl(item.trim()))
         .filter((url) => Boolean(url) && shouldShowByDate(url));
+
+    const nextSettingsMap = new Map();
+    filteredUrls.forEach((url) => {
+        const normalized = normalizeSlideUrl(url);
+        const schedule = resolveScheduleForUrl(normalized);
+        if (!schedule) {
+            return;
+        }
+
+        const selectedHeight = isAndroidRuntime ? schedule.androidImageHeight : schedule.windowsImageHeight;
+        const selectedWidth = isAndroidRuntime ? schedule.androidImageWidth : schedule.windowsImageWidth;
+        const selectedOffset = isAndroidRuntime ? schedule.androidVerticalOffset : schedule.windowsVerticalOffset;
+
+        nextSettingsMap.set(url, {
+            imageHeight: Math.max(0, Number(selectedHeight || 0) || 0),
+            imageWidth: Math.max(0, Number(selectedWidth || 0) || 0),
+            verticalOffset: Math.max(-300, Math.min(300, Number(selectedOffset || 0) || 0)),
+            showName: isAndroidRuntime ? Boolean(schedule.androidShowName) : Boolean(schedule.windowsShowName),
+            showPrice: isAndroidRuntime ? Boolean(schedule.androidShowPrice) : Boolean(schedule.windowsShowPrice),
+            priceText: String(isAndroidRuntime ? (schedule.androidPriceText || '') : (schedule.windowsPriceText || '')).trim(),
+            nameFontSize: Math.max(8, Math.min(120, Number(isAndroidRuntime ? schedule.androidNameFontSize : schedule.windowsNameFontSize) || 18)),
+            priceFontSize: Math.max(8, Math.min(120, Number(isAndroidRuntime ? schedule.androidPriceFontSize : schedule.windowsPriceFontSize) || 22)),
+            textFontFamily: String(isAndroidRuntime ? (schedule.androidTextFontFamily || 'arial') : (schedule.windowsTextFontFamily || 'arial')).toLowerCase(),
+            namePosition: String(isAndroidRuntime ? (schedule.androidNamePosition || 'top') : (schedule.windowsNamePosition || 'top')).toLowerCase(),
+            pricePosition: String(isAndroidRuntime ? (schedule.androidPricePosition || 'bottom') : (schedule.windowsPricePosition || 'bottom')).toLowerCase(),
+            nameColor: String(isAndroidRuntime ? (schedule.androidNameColor || '#FFFFFF') : (schedule.windowsNameColor || '#FFFFFF')).trim(),
+            nameBadgeEnabled: isAndroidRuntime ? Boolean(schedule.androidNameBadgeEnabled) : Boolean(schedule.windowsNameBadgeEnabled),
+            nameBadgeColor: String(isAndroidRuntime ? (schedule.androidNameBadgeColor || '#0F172A') : (schedule.windowsNameBadgeColor || '#0F172A')).trim(),
+            priceColor: String(isAndroidRuntime ? (schedule.androidPriceColor || '#FDE68A') : (schedule.windowsPriceColor || '#FDE68A')).trim(),
+            priceBadgeEnabled: isAndroidRuntime ? Boolean(schedule.androidPriceBadgeEnabled) : Boolean(schedule.windowsPriceBadgeEnabled),
+            priceBadgeColor: String(isAndroidRuntime ? (schedule.androidPriceBadgeColor || '#0F172A') : (schedule.windowsPriceBadgeColor || '#0F172A')).trim(),
+            nameText: String(schedule.name || '').trim(),
+        });
+    });
+    imageSlideSettingsByUrl = nextSettingsMap;
+
+    return filteredUrls;
 }
 
 function stopVideoPlaybackForImageMode() {
@@ -542,10 +868,202 @@ function showImageSlideAt(index) {
     }
 
     currentImageSlideIndex = (index + imageSlideUrls.length) % imageSlideUrls.length;
-    tvImageSlide.src = imageSlideUrls[currentImageSlideIndex];
+    const currentSlideUrl = imageSlideUrls[currentImageSlideIndex];
+    const resolvedSlideUrl = resolveRenderableImageUrl(currentSlideUrl);
+    const fallbackSlideUrl = resolveAlternateRenderableImageUrl(currentSlideUrl, resolvedSlideUrl);
+    tvImageSlide.dataset.fallbackSrc = fallbackSlideUrl || '';
+    tvImageSlide.dataset.fallbackTried = '0';
+    tvImageSlide.src = resolvedSlideUrl || currentSlideUrl;
+    applyConfiguredSlideImageLayout(currentSlideUrl);
+    applyConfiguredSlideTextOverlay(currentSlideUrl);
 }
 
-function applyConfiguredSlideImageLayout() {
+function handleCurrentSlideImageLoadError() {
+    if (!tvImageSlide || imageSlideUrls.length === 0) {
+        return;
+    }
+
+    const now = Date.now();
+    if (now - lastSlideImageErrorAt < 500) {
+        return;
+    }
+
+    if (tvImageSlide.dataset.fallbackTried !== '1' && tvImageSlide.dataset.fallbackSrc) {
+        tvImageSlide.dataset.fallbackTried = '1';
+        tvImageSlide.src = tvImageSlide.dataset.fallbackSrc;
+        return;
+    }
+
+    lastSlideImageErrorAt = now;
+
+    if (imageSlideUrls.length === 1) {
+        tvImageSlide.classList.add('hidden');
+        tvImageSlide.removeAttribute('src');
+        hideSlideTextOverlays();
+        return;
+    }
+
+    // Skip broken image and continue the slide sequence.
+    showImageSlideAt(currentImageSlideIndex + 1);
+}
+
+function ensureSlideTextOverlays() {
+    if (!tvRightSidebarMediaWrap) {
+        return;
+    }
+
+    if (!(slideNameOverlay instanceof HTMLDivElement)) {
+        slideNameOverlay = document.createElement('div');
+        slideNameOverlay.id = 'tvImageSlideNameOverlay';
+        slideNameOverlay.className = 'hidden';
+        slideNameOverlay.style.position = 'absolute';
+        slideNameOverlay.style.left = '8px';
+        slideNameOverlay.style.right = '8px';
+        slideNameOverlay.style.zIndex = '20';
+        slideNameOverlay.style.pointerEvents = 'none';
+        slideNameOverlay.style.fontWeight = '700';
+        slideNameOverlay.style.textAlign = 'center';
+        slideNameOverlay.style.color = '#ffffff';
+        slideNameOverlay.style.textShadow = '0 2px 6px rgba(0, 0, 0, 0.85)';
+        slideNameOverlay.style.letterSpacing = '0.01em';
+        slideNameOverlay.style.lineHeight = '1.15';
+        slideNameOverlay.style.whiteSpace = 'normal';
+        slideNameOverlay.style.wordBreak = 'break-word';
+        slideNameOverlay.style.background = 'rgba(15, 23, 42, 0.45)';
+        slideNameOverlay.style.borderRadius = '8px';
+        slideNameOverlay.style.padding = '4px 8px';
+        tvRightSidebarMediaWrap.appendChild(slideNameOverlay);
+    }
+
+    if (!(slidePriceOverlay instanceof HTMLDivElement)) {
+        slidePriceOverlay = document.createElement('div');
+        slidePriceOverlay.id = 'tvImageSlidePriceOverlay';
+        slidePriceOverlay.className = 'hidden';
+        slidePriceOverlay.style.position = 'absolute';
+        slidePriceOverlay.style.left = '8px';
+        slidePriceOverlay.style.right = '8px';
+        slidePriceOverlay.style.zIndex = '20';
+        slidePriceOverlay.style.pointerEvents = 'none';
+        slidePriceOverlay.style.fontWeight = '800';
+        slidePriceOverlay.style.textAlign = 'center';
+        slidePriceOverlay.style.color = '#fef08a';
+        slidePriceOverlay.style.textShadow = '0 2px 6px rgba(0, 0, 0, 0.9)';
+        slidePriceOverlay.style.letterSpacing = '0.01em';
+        slidePriceOverlay.style.lineHeight = '1.1';
+        slidePriceOverlay.style.whiteSpace = 'normal';
+        slidePriceOverlay.style.wordBreak = 'break-word';
+        slidePriceOverlay.style.background = 'rgba(15, 23, 42, 0.5)';
+        slidePriceOverlay.style.borderRadius = '8px';
+        slidePriceOverlay.style.padding = '4px 8px';
+        tvRightSidebarMediaWrap.appendChild(slidePriceOverlay);
+    }
+
+    tvRightSidebarMediaWrap.style.position = 'relative';
+}
+
+function hideSlideTextOverlays() {
+    if (slideNameOverlay) {
+        slideNameOverlay.classList.add('hidden');
+        slideNameOverlay.textContent = '';
+    }
+
+    if (slidePriceOverlay) {
+        slidePriceOverlay.classList.add('hidden');
+        slidePriceOverlay.textContent = '';
+    }
+}
+
+function applyOverlayBlockPosition(element, position, defaultPosition) {
+    if (!element) {
+        return;
+    }
+
+    const resolved = position === 'bottom' || position === 'top' ? position : defaultPosition;
+    if (resolved === 'bottom') {
+        element.style.top = '';
+        element.style.bottom = '8px';
+    } else {
+        element.style.top = '8px';
+        element.style.bottom = '';
+    }
+}
+
+function applyConfiguredSlideTextOverlay(currentSlideUrl = '') {
+    ensureSlideTextOverlays();
+
+    if (!currentSlideUrl) {
+        hideSlideTextOverlays();
+        return;
+    }
+
+    const perImageSettings = imageSlideSettingsByUrl.get(currentSlideUrl) || null;
+    if (!perImageSettings) {
+        hideSlideTextOverlays();
+        return;
+    }
+
+    const fallbackNameFromUrl = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return '';
+        }
+
+        const withoutQuery = raw.split('#')[0].split('?')[0];
+        const fileName = withoutQuery.split('/').pop() || '';
+        if (!fileName) {
+            return '';
+        }
+
+        const withoutExtension = fileName.replace(/\.[a-z0-9]+$/i, '');
+        try {
+            return decodeURIComponent(withoutExtension).replace(/[-_]+/g, ' ').trim();
+        } catch (_error) {
+            return withoutExtension.replace(/[-_]+/g, ' ').trim();
+        }
+    };
+
+    const fontFamily = resolveTitleFontFamily(String(perImageSettings.textFontFamily || 'arial'));
+    const showName = Boolean(perImageSettings.showName);
+    const showPrice = Boolean(perImageSettings.showPrice);
+    const nameText = String(perImageSettings.nameText || '').trim() || fallbackNameFromUrl(currentSlideUrl);
+    const priceText = String(perImageSettings.priceText || '').trim();
+
+    if (slideNameOverlay) {
+        if (showName && nameText !== '') {
+            slideNameOverlay.textContent = nameText;
+            slideNameOverlay.style.fontFamily = fontFamily;
+            slideNameOverlay.style.fontSize = `${Math.max(8, Math.min(120, Number(perImageSettings.nameFontSize || 18) || 18))}px`;
+            slideNameOverlay.style.color = String(perImageSettings.nameColor || '#FFFFFF');
+            slideNameOverlay.style.background = perImageSettings.nameBadgeEnabled === false
+                ? 'transparent'
+                : String(perImageSettings.nameBadgeColor || '#0F172A');
+            applyOverlayBlockPosition(slideNameOverlay, String(perImageSettings.namePosition || 'top').toLowerCase(), 'top');
+            slideNameOverlay.classList.remove('hidden');
+        } else {
+            slideNameOverlay.classList.add('hidden');
+            slideNameOverlay.textContent = '';
+        }
+    }
+
+    if (slidePriceOverlay) {
+        if (showPrice && priceText !== '') {
+            slidePriceOverlay.textContent = priceText;
+            slidePriceOverlay.style.fontFamily = fontFamily;
+            slidePriceOverlay.style.fontSize = `${Math.max(8, Math.min(120, Number(perImageSettings.priceFontSize || 22) || 22))}px`;
+            slidePriceOverlay.style.color = String(perImageSettings.priceColor || '#FDE68A');
+            slidePriceOverlay.style.background = perImageSettings.priceBadgeEnabled === false
+                ? 'transparent'
+                : String(perImageSettings.priceBadgeColor || '#0F172A');
+            applyOverlayBlockPosition(slidePriceOverlay, String(perImageSettings.pricePosition || 'bottom').toLowerCase(), 'bottom');
+            slidePriceOverlay.classList.remove('hidden');
+        } else {
+            slidePriceOverlay.classList.add('hidden');
+            slidePriceOverlay.textContent = '';
+        }
+    }
+}
+
+function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     if (!tvImageSlide) {
         return;
     }
@@ -562,9 +1080,26 @@ function applyConfiguredSlideImageLayout() {
     tvImageSlide.style.maxHeight = '100%';
 
     const parsedHeight = Number(visualConfig.rightSidebarImageHeight);
-    const imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 96;
+    let imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 96;
     const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
-    const imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
+    let imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
+
+    const perImageSettings = imageSlideSettingsByUrl.get(currentSlideUrl) || null;
+    const perImageHeight = Math.max(0, Number(perImageSettings?.imageHeight || 0) || 0);
+    const perImageWidth = Math.max(0, Number(perImageSettings?.imageWidth || 0) || 0);
+    const perImageVerticalOffset = Math.max(-300, Math.min(300, Number(perImageSettings?.verticalOffset || 0) || 0));
+
+    if (perImageHeight > 0) {
+        imgHeight = perImageHeight;
+    }
+
+    if (perImageWidth > 0) {
+        imgWidth = perImageWidth;
+    }
+
+    if (perImageVerticalOffset !== 0) {
+        tvImageSlide.style.objectPosition = `center calc(50% + ${perImageVerticalOffset}px)`;
+    }
 
     if (compactViewport) {
         const sidebarLayout = getRightSidebarLayoutDimensions();
@@ -579,8 +1114,10 @@ function applyConfiguredSlideImageLayout() {
 
         tvImageSlide.style.width = '100%';
         tvImageSlide.style.height = '100%';
-        tvImageSlide.style.maxWidth = `${compactMaxWidth}px`;
-        tvImageSlide.style.maxHeight = `${compactMaxHeight}px`;
+        const compactConfiguredWidth = imgWidth > 0 ? Math.max(80, Math.min(compactMaxWidth, imgWidth)) : compactMaxWidth;
+        const compactConfiguredHeight = imgHeight > 0 ? Math.max(80, Math.min(compactMaxHeight, imgHeight)) : compactMaxHeight;
+        tvImageSlide.style.maxWidth = `${compactConfiguredWidth}px`;
+        tvImageSlide.style.maxHeight = `${compactConfiguredHeight}px`;
         tvImageSlide.style.objectFit = 'contain';
         return;
     }
@@ -621,6 +1158,7 @@ function startImageSlideMode() {
     if (imageSlideUrls.length === 0) {
         tvImageSlide.classList.add('hidden');
         tvImageSlide.removeAttribute('src');
+        hideSlideTextOverlays();
         return;
     }
 
@@ -638,12 +1176,474 @@ function startImageSlideMode() {
 function stopImageSlideMode() {
     clearImageSlideTimer();
     imageSlideUrls = [];
+    imageSlideSettingsByUrl = new Map();
     currentImageSlideIndex = 0;
 
     if (tvImageSlide) {
         tvImageSlide.classList.add('hidden');
         tvImageSlide.removeAttribute('src');
     }
+
+    hideSlideTextOverlays();
+}
+
+function clearSidebarProductTimer() {
+    if (!sidebarProductTimer) {
+        return;
+    }
+
+    clearInterval(sidebarProductTimer);
+    sidebarProductTimer = null;
+}
+
+function ensureSidebarProductCard() {
+    if (sidebarProductCardEl) {
+        return sidebarProductCardEl;
+    }
+
+    if (!tvRightSidebarMediaWrap) {
+        return null;
+    }
+
+    const card = document.createElement('div');
+    card.id = 'tvRightSidebarProductCard';
+    card.className = 'hidden';
+    card.style.position = 'absolute';
+    card.style.inset = '0';
+    card.style.display = 'none';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'stretch';
+    card.style.justifyContent = 'space-between';
+    card.style.padding = '10px';
+    card.style.gap = '8px';
+    card.style.zIndex = '22';
+    card.style.pointerEvents = 'none';
+
+    tvRightSidebarMediaWrap.style.position = 'relative';
+    tvRightSidebarMediaWrap.appendChild(card);
+    sidebarProductCardEl = card;
+    return card;
+}
+
+function hideSidebarProductCard() {
+    if (!sidebarProductCardEl) {
+        return;
+    }
+
+    sidebarProductCardEl.style.display = 'none';
+    sidebarProductCardEl.classList.add('hidden');
+}
+
+function normalizeSidebarProductItems(items) {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    const displayMode = String(visualConfig.rightSidebarProductDisplayMode || 'all').toLowerCase();
+
+    return items.filter((item) => {
+        if (displayMode !== 'offers_only') {
+            return true;
+        }
+
+        const oferta = Number(item?.oferta || 0);
+        return Number.isFinite(oferta) && oferta > 0;
+    });
+}
+
+function renderSidebarProductItem(item) {
+    const card = ensureSidebarProductCard();
+    if (!card || !item) {
+        return;
+    }
+
+    const showName = toBoolean(visualConfig.rightSidebarProductShowName, true);
+    const showPrice = toBoolean(visualConfig.rightSidebarProductShowPrice, true);
+    const showImage = toBoolean(visualConfig.rightSidebarProductShowImage, true);
+    const namePosition = String(visualConfig.rightSidebarProductNamePosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
+    const pricePosition = String(visualConfig.rightSidebarProductPricePosition || 'bottom').toLowerCase() === 'top' ? 'top' : 'bottom';
+
+    const nome = String(item?.nome || 'Produto').trim() || 'Produto';
+    const precoNormal = Number(item?.preco || 0);
+    const oferta = Number(item?.oferta || 0);
+    const hasOferta = Number.isFinite(oferta) && oferta > 0;
+    const valorFinal = hasOferta ? oferta : precoNormal;
+    const precoTexto = Number.isFinite(valorFinal)
+        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorFinal)
+        : '-';
+    const imagem = String(item?.imagem || '').trim();
+
+    const nameBadgeBackground = toBoolean(visualConfig.rightSidebarProductNameBadgeEnabled, true)
+        ? String(visualConfig.rightSidebarProductNameBadgeColor || '#0F172A')
+        : 'transparent';
+    const priceBadgeBackground = toBoolean(visualConfig.rightSidebarProductPriceBadgeEnabled, true)
+        ? String(visualConfig.rightSidebarProductPriceBadgeColor || '#0F172A')
+        : 'transparent';
+
+    const nameBlock = showName
+        ? `<div style="padding:6px 8px;border-radius:8px;background:${nameBadgeBackground};color:${String(visualConfig.rightSidebarProductNameColor || '#FFFFFF')};font-weight:700;text-align:center;line-height:1.2;word-break:break-word;">${nome}</div>`
+        : '';
+
+    const priceBlock = showPrice
+        ? `<div style="padding:6px 8px;border-radius:8px;background:${priceBadgeBackground};color:${String(visualConfig.rightSidebarProductPriceColor || '#FDE68A')};font-weight:800;text-align:center;line-height:1.2;">${precoTexto}</div>`
+        : '';
+
+    const imagemSrc = resolveRenderableImageUrl(imagem);
+    const imagemFallbackSrc = resolveAlternateRenderableImageUrl(imagem, imagemSrc);
+
+    const imageBlock = showImage && imagem !== ''
+        ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:96px;"><img src="${escapeHtmlAttribute(imagemSrc || imagem)}" data-fallback-src="${escapeHtmlAttribute(imagemFallbackSrc)}" alt="${escapeHtmlAttribute(nome)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" loading="lazy" onerror="if(this.dataset.fallbackSrc&&this.dataset.fallbackTried!=='1'){this.dataset.fallbackTried='1';this.src=this.dataset.fallbackSrc;return;}this.style.display='none'"/></div>`
+        : '<div style="flex:1"></div>';
+
+    const topBlock = namePosition === 'top' ? nameBlock : (pricePosition === 'top' ? priceBlock : '');
+    const bottomBlock = pricePosition === 'bottom' ? priceBlock : (namePosition === 'bottom' ? nameBlock : '');
+
+    card.innerHTML = `${topBlock}${imageBlock}${bottomBlock}`;
+    card.style.display = 'flex';
+    card.classList.remove('hidden');
+}
+
+function startSidebarProductsOnlyMode(items) {
+    clearSidebarProductTimer();
+    sidebarMixedModeSignature = '';
+    sidebarMixedVideoItems = [];
+    sidebarMixedVideoIndex = 0;
+    sidebarMixedTurnIndex = 0;
+    sidebarMixedVideoTurnActive = false;
+    sidebarMixedVideoTurnExpiresAt = 0;
+    sidebarMixedCurrentVideoItem = null;
+    sidebarMixedOnVideoFinished = null;
+    stopVideoPlaybackForImageMode();
+    stopImageSlideMode();
+
+    sidebarProductItems = normalizeSidebarProductItems(items);
+    sidebarProductIndex = 0;
+
+    if (sidebarProductItems.length === 0) {
+        hideSidebarProductCard();
+        return;
+    }
+
+    renderSidebarProductItem(sidebarProductItems[0]);
+    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarProductInterval || 8));
+    if (sidebarProductItems.length > 1) {
+        sidebarProductTimer = setInterval(() => {
+            sidebarProductIndex = (sidebarProductIndex + 1) % sidebarProductItems.length;
+            renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
+        }, intervalSeconds * 1000);
+    }
+}
+
+function startSidebarProductsBeforeImagesMode(items) {
+    clearSidebarProductTimer();
+    sidebarMixedModeSignature = '';
+    sidebarMixedVideoItems = [];
+    sidebarMixedVideoIndex = 0;
+    sidebarMixedTurnIndex = 0;
+    sidebarMixedVideoTurnActive = false;
+    sidebarMixedVideoTurnExpiresAt = 0;
+    sidebarMixedCurrentVideoItem = null;
+    sidebarMixedOnVideoFinished = null;
+    stopVideoPlaybackForImageMode();
+    stopImageSlideMode();
+
+    sidebarProductItems = normalizeSidebarProductItems(items);
+    sidebarProductIndex = 0;
+
+    if (sidebarProductItems.length === 0) {
+        hideSidebarProductCard();
+        startImageSlideMode();
+        return;
+    }
+
+    renderSidebarProductItem(sidebarProductItems[0]);
+    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarProductInterval || 8));
+    if (sidebarProductItems.length === 1) {
+        setTimeout(() => {
+            hideSidebarProductCard();
+            startImageSlideMode();
+        }, intervalSeconds * 1000);
+        return;
+    }
+
+    let shown = 1;
+    sidebarProductTimer = setInterval(() => {
+        sidebarProductIndex = (sidebarProductIndex + 1) % sidebarProductItems.length;
+        shown += 1;
+        renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
+
+        if (shown >= sidebarProductItems.length) {
+            clearSidebarProductTimer();
+            hideSidebarProductCard();
+            startImageSlideMode();
+        }
+    }, intervalSeconds * 1000);
+}
+
+function startSidebarProductsMixedWithImagesMode(items) {
+    startSidebarProductsMixedMode(items, false);
+}
+
+function startSidebarProductsMixedWithMediaMode(items) {
+    startSidebarProductsMixedMode(items, true);
+}
+
+function startSidebarProductsMixedMode(items, includeVideos) {
+    const nextProductItems = normalizeSidebarProductItems(items);
+    const nextImageUrls = parseConfiguredImageSlideUrls();
+    const nextVideoItems = includeVideos && toBoolean(visualConfig.showVideoPanel, true)
+        ? parseConfiguredVideoUrls()
+        : [];
+    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarProductInterval || 8));
+    const nextSignature = JSON.stringify({
+        intervalSeconds,
+        transition: String(visualConfig.rightSidebarProductTransitionMode || (includeVideos ? 'mixed_with_media' : 'mixed_with_images')).toLowerCase(),
+        displayMode: String(visualConfig.rightSidebarProductDisplayMode || 'all').toLowerCase(),
+        products: nextProductItems.map((item) => ({
+            id: Number(item?.id || 0),
+            nome: String(item?.nome || ''),
+            preco: Number(item?.preco || 0),
+            oferta: Number(item?.oferta || 0),
+            imagem: String(item?.imagem || ''),
+        })),
+        images: nextImageUrls,
+        videos: nextVideoItems.map((item) => ({
+            url: String(item?.url || ''),
+            muted: toBoolean(item?.muted, false),
+            fullscreen: toBoolean(item?.fullscreen, false),
+            durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
+            heightPx: Math.max(0, Number(item?.heightPx || 0)),
+        })),
+    });
+
+    const isSameMixedSessionRunning = sidebarMixedModeSignature !== ''
+        && sidebarMixedModeSignature === nextSignature
+        && (Boolean(sidebarProductTimer) || sidebarMixedVideoTurnActive);
+
+    sidebarProductItems = nextProductItems;
+    sidebarMixedImageUrls = nextImageUrls;
+    imageSlideUrls = sidebarMixedImageUrls;
+    sidebarMixedVideoItems = nextVideoItems;
+
+    if (isSameMixedSessionRunning) {
+        // Keep current turn/index so refresh polling does not restart in product turn only.
+        return;
+    }
+
+    clearSidebarProductTimer();
+    stopVideoPlaybackForImageMode();
+    stopImageSlideMode();
+
+    sidebarMixedModeSignature = nextSignature;
+    sidebarProductIndex = 0;
+    sidebarMixedImageIndex = 0;
+    sidebarMixedVideoIndex = 0;
+    sidebarMixedTurnIndex = 0;
+
+    if (sidebarProductItems.length === 0 && sidebarMixedImageUrls.length === 0 && sidebarMixedVideoItems.length === 0) {
+        hideSidebarProductCard();
+        return;
+    }
+
+    const turnSequence = [];
+    if (sidebarProductItems.length > 0) {
+        turnSequence.push('product');
+    }
+    if (sidebarMixedImageUrls.length > 0) {
+        turnSequence.push('image');
+    }
+    if (sidebarMixedVideoItems.length > 0) {
+        turnSequence.push('video');
+    }
+
+    if (turnSequence.length === 0) {
+        hideSidebarProductCard();
+        return;
+    }
+
+    sidebarMixedOnVideoFinished = () => {
+        if (!sidebarMixedVideoTurnActive || sidebarMixedVideoItems.length === 0) {
+            return false;
+        }
+
+        clearSidebarProductTimer();
+
+        if (sidebarMixedVideoIndex < sidebarMixedVideoItems.length - 1) {
+            sidebarMixedVideoIndex += 1;
+            renderMixedTurn();
+            return true;
+        }
+
+        sidebarMixedVideoIndex = 0;
+        sidebarMixedVideoTurnActive = false;
+        sidebarMixedVideoTurnExpiresAt = 0;
+        sidebarMixedCurrentVideoItem = null;
+        sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
+        renderMixedTurn();
+        return true;
+    };
+
+    const scheduleNextMixedTurn = (delaySeconds = intervalSeconds) => {
+        clearSidebarProductTimer();
+        sidebarProductTimer = setTimeout(() => {
+            renderMixedTurn();
+        }, Math.max(1, Number(delaySeconds) || intervalSeconds) * 1000);
+    };
+
+    const renderMixedTurn = () => {
+        const turn = turnSequence[sidebarMixedTurnIndex % turnSequence.length] || 'product';
+
+        // mixed_with_media: run full batches in sequence (all products -> all images -> all videos).
+        if (includeVideos) {
+            if (turn === 'product' && sidebarProductItems.length > 0) {
+                sidebarMixedVideoTurnActive = false;
+                sidebarMixedVideoTurnExpiresAt = 0;
+                sidebarMixedCurrentVideoItem = null;
+                stopVideoPlaybackForImageMode();
+                if (tvImageSlide) {
+                    tvImageSlide.classList.add('hidden');
+                }
+                hideSlideTextOverlays();
+
+                renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
+                sidebarProductIndex += 1;
+                if (sidebarProductIndex >= sidebarProductItems.length) {
+                    sidebarProductIndex = 0;
+                    sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
+                }
+
+                scheduleNextMixedTurn(intervalSeconds);
+                return;
+            }
+
+            if (turn === 'image' && sidebarMixedImageUrls.length > 0) {
+                sidebarMixedVideoTurnActive = false;
+                sidebarMixedVideoTurnExpiresAt = 0;
+                sidebarMixedCurrentVideoItem = null;
+                stopVideoPlaybackForImageMode();
+                hideSidebarProductCard();
+                if (tvImageSlide) {
+                    tvImageSlide.classList.remove('hidden');
+                    showImageSlideAt(sidebarMixedImageIndex);
+                }
+
+                sidebarMixedImageIndex += 1;
+                if (sidebarMixedImageIndex >= sidebarMixedImageUrls.length) {
+                    sidebarMixedImageIndex = 0;
+                    sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
+                }
+
+                scheduleNextMixedTurn(intervalSeconds);
+                return;
+            }
+
+            if (turn === 'video' && sidebarMixedVideoItems.length > 0) {
+                hideSidebarProductCard();
+                hideSlideTextOverlays();
+                if (tvImageSlide) {
+                    tvImageSlide.classList.add('hidden');
+                }
+
+                const nextVideo = sidebarMixedVideoItems[sidebarMixedVideoIndex % sidebarMixedVideoItems.length] || null;
+                if (nextVideo?.url) {
+                    applyVideoSource(nextVideo);
+                }
+
+                const currentUrl = String(nextVideo?.url || '').trim();
+                const isYouTube = Boolean(getYouTubeVideoId(currentUrl));
+                const isDirectVideoFile = /\.(mp4|webm|ogg|m3u8)([?#].*)?$/i.test(currentUrl);
+                const hasEmbedUrl = Boolean(resolveEmbedUrl(currentUrl, toBoolean(nextVideo?.muted, false)));
+                const needsFallbackTimer = hasEmbedUrl && !isYouTube && !isDirectVideoFile;
+
+                sidebarMixedVideoTurnActive = true;
+                sidebarMixedVideoTurnExpiresAt = 0;
+                sidebarMixedCurrentVideoItem = nextVideo || null;
+
+                if (needsFallbackTimer) {
+                    // Non-YouTube embeds usually do not emit reliable ended events.
+                    const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
+                    const fallbackSeconds = Math.max(configuredVideoSeconds, 30);
+                    clearSidebarProductTimer();
+                    sidebarProductTimer = setTimeout(() => {
+                        if (typeof sidebarMixedOnVideoFinished === 'function') {
+                            sidebarMixedOnVideoFinished();
+                        }
+                    }, fallbackSeconds * 1000);
+                } else {
+                    clearSidebarProductTimer();
+                }
+
+                return;
+            }
+
+            // If current phase has no items, skip to next phase.
+            sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
+            scheduleNextMixedTurn(intervalSeconds);
+            return;
+        }
+
+        sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
+
+        if (turn === 'product' && sidebarProductItems.length > 0) {
+            sidebarMixedVideoTurnActive = false;
+            sidebarMixedVideoTurnExpiresAt = 0;
+            sidebarMixedCurrentVideoItem = null;
+            stopVideoPlaybackForImageMode();
+            if (tvImageSlide) {
+                tvImageSlide.classList.add('hidden');
+            }
+            hideSlideTextOverlays();
+            renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
+            sidebarProductIndex = (sidebarProductIndex + 1) % sidebarProductItems.length;
+            scheduleNextMixedTurn(intervalSeconds);
+            return;
+        }
+
+        if (turn === 'image' && sidebarMixedImageUrls.length > 0) {
+            sidebarMixedVideoTurnActive = false;
+            sidebarMixedVideoTurnExpiresAt = 0;
+            sidebarMixedCurrentVideoItem = null;
+            stopVideoPlaybackForImageMode();
+            hideSidebarProductCard();
+            if (tvImageSlide) {
+                tvImageSlide.classList.remove('hidden');
+                showImageSlideAt(sidebarMixedImageIndex);
+            }
+            sidebarMixedImageIndex = (sidebarMixedImageIndex + 1) % sidebarMixedImageUrls.length;
+            scheduleNextMixedTurn(intervalSeconds);
+            return;
+        }
+
+        if (turn === 'video' && sidebarMixedVideoItems.length > 0) {
+            hideSidebarProductCard();
+            hideSlideTextOverlays();
+            if (tvImageSlide) {
+                tvImageSlide.classList.add('hidden');
+            }
+
+            const nextVideo = sidebarMixedVideoItems[sidebarMixedVideoIndex % sidebarMixedVideoItems.length] || null;
+            sidebarMixedVideoIndex = (sidebarMixedVideoIndex + 1) % sidebarMixedVideoItems.length;
+            if (nextVideo?.url) {
+                applyVideoSource(nextVideo);
+            }
+
+            // Keep video visible for a minimum duration in mixed mode.
+            const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
+            const videoTurnSeconds = Math.max(intervalSeconds, configuredVideoSeconds, 4);
+            sidebarMixedVideoTurnActive = true;
+            sidebarMixedVideoTurnExpiresAt = Date.now() + (videoTurnSeconds * 1000);
+            sidebarMixedCurrentVideoItem = nextVideo || null;
+            scheduleNextMixedTurn(videoTurnSeconds);
+            return;
+        }
+
+        sidebarMixedVideoTurnActive = false;
+        sidebarMixedVideoTurnExpiresAt = 0;
+        sidebarMixedCurrentVideoItem = null;
+        scheduleNextMixedTurn(intervalSeconds);
+    };
+
+    renderMixedTurn();
 }
 
 function getRightSidebarMediaType() {
@@ -798,12 +1798,54 @@ function startHybridImagePhase(token) {
     }
 }
 
-async function applyRightSidebarMediaMode(token) {
+async function applyRightSidebarMediaMode(token, productsForSidebar = null) {
+    const isProductCarouselEnabled = toBoolean(visualConfig.rightSidebarProductCarouselEnabled, false);
+    const transitionMode = String(visualConfig.rightSidebarProductTransitionMode || 'products_only').toLowerCase();
+
     if (!toBoolean(visualConfig.showRightSidebarPanel, true)) {
+        clearSidebarProductTimer();
+        sidebarMixedModeSignature = '';
+        hideSidebarProductCard();
         stopImageSlideMode();
         stopVideoPlaybackForImageMode();
         return;
     }
+
+    if (isProductCarouselEnabled) {
+        const sourceItems = Array.isArray(productsForSidebar) ? productsForSidebar : sidebarProductItems;
+
+        if (transitionMode === 'before_images') {
+            startSidebarProductsBeforeImagesMode(sourceItems);
+            return;
+        }
+
+        if (transitionMode === 'mixed_with_images') {
+            startSidebarProductsMixedWithImagesMode(sourceItems);
+            return;
+        }
+
+        if (transitionMode === 'mixed_with_media') {
+            startSidebarProductsMixedWithMediaMode(sourceItems);
+            return;
+        }
+
+        startSidebarProductsOnlyMode(sourceItems);
+        return;
+    }
+
+    clearSidebarProductTimer();
+    sidebarMixedModeSignature = '';
+    hideSidebarProductCard();
+    sidebarProductPassedBeforeImages = false;
+    sidebarMixedImageUrls = [];
+    sidebarMixedImageIndex = 0;
+    sidebarMixedVideoItems = [];
+    sidebarMixedVideoIndex = 0;
+    sidebarMixedTurnIndex = 0;
+    sidebarMixedVideoTurnActive = false;
+    sidebarMixedVideoTurnExpiresAt = 0;
+    sidebarMixedCurrentVideoItem = null;
+    sidebarMixedOnVideoFinished = null;
 
     const mode = getRightSidebarMediaType();
 
@@ -1662,7 +2704,7 @@ function playNextVideoInPlaylist() {
     lastVideoAdvanceAt = now;
     clearVideoFallbackTimer();
 
-    const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+    const token = getReliableDeviceToken();
     if (token) {
         handleHybridVideoItemCompleted(token);
 
@@ -1758,7 +2800,7 @@ async function loadVideoPlaylist(token) {
 }
 
 if (initialToken) {
-    localStorage.setItem('tv_device_token', initialToken);
+    persistReliableDeviceToken(initialToken);
 } else if (window.location.pathname !== configPageUrl) {
     redirectToConfigPage();
 }
@@ -1787,6 +2829,153 @@ function updateStatus(message, isError = false) {
     statusMessage.className = `tv-status-floating text-xs ${isError ? 'text-red-400' : 'text-slate-400'}`;
 }
 
+function updateWarningStatus(message) {
+    if (!statusMessage) {
+        return;
+    }
+
+    statusMessage.textContent = message;
+    statusMessage.className = 'tv-status-floating text-xs text-amber-300';
+}
+
+function ensureOfflineIndicator() {
+    if (offlineIndicatorEl) {
+        return offlineIndicatorEl;
+    }
+
+    const indicator = document.createElement('div');
+    indicator.id = 'tvOfflineIndicator';
+    indicator.textContent = '!';
+    indicator.style.position = 'fixed';
+    indicator.style.left = '8px';
+    indicator.style.top = '50%';
+    indicator.style.transform = 'translateY(-50%)';
+    indicator.style.zIndex = '95';
+    indicator.style.width = '22px';
+    indicator.style.height = '22px';
+    indicator.style.borderRadius = '999px';
+    indicator.style.display = 'none';
+    indicator.style.alignItems = 'center';
+    indicator.style.justifyContent = 'center';
+    indicator.style.fontWeight = '900';
+    indicator.style.fontSize = '15px';
+    indicator.style.lineHeight = '1';
+    indicator.style.color = '#fee2e2';
+    indicator.style.background = '#dc2626';
+    indicator.style.border = '1px solid #7f1d1d';
+    indicator.style.boxShadow = '0 0 0 2px rgba(127, 29, 29, 0.25)';
+    indicator.style.pointerEvents = 'none';
+    indicator.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(indicator);
+    offlineIndicatorEl = indicator;
+    return indicator;
+}
+
+function setOfflineIndicatorVisible(visible) {
+    const indicator = ensureOfflineIndicator();
+    indicator.style.display = visible ? 'flex' : 'none';
+}
+
+function readCachedVisualConfig() {
+    try {
+        const raw = localStorage.getItem(VISUAL_CONFIG_CACHE_KEY);
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
+            return null;
+        }
+
+        return parsed.data;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function saveCachedVisualConfig(data) {
+    try {
+        localStorage.setItem(VISUAL_CONFIG_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            data,
+        }));
+    } catch (_error) {
+    }
+}
+
+function readCachedProducts() {
+    try {
+        const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.items)) {
+            return null;
+        }
+
+        return parsed.items;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function saveCachedProducts(items) {
+    try {
+        localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            items: Array.isArray(items) ? items : [],
+        }));
+    } catch (_error) {
+    }
+}
+
+function renderCachedProductsIfAny() {
+    const cachedItems = readCachedProducts();
+    if (!Array.isArray(cachedItems)) {
+        return false;
+    }
+
+    renderProductsWithPagination(cachedItems);
+    return true;
+}
+
+async function applyCachedVisualConfigIfAny() {
+    const cachedConfig = readCachedVisualConfig();
+    if (!cachedConfig) {
+        return false;
+    }
+
+    Object.assign(visualConfig, cachedConfig);
+    document.body.style.backgroundColor = visualConfig.appBackgroundColor || '#020617';
+    const imageUrl = String(visualConfig.backgroundImageUrl || '').trim();
+    if (visualConfig.showBackgroundImage && imageUrl) {
+        document.body.style.backgroundImage = `url("${imageUrl}")`;
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundPosition = 'center center';
+        document.body.style.backgroundSize = 'cover';
+    } else {
+        document.body.style.backgroundImage = 'none';
+        document.body.style.backgroundRepeat = '';
+        document.body.style.backgroundPosition = '';
+        document.body.style.backgroundSize = '';
+    }
+
+    applyProductsPanelBackground();
+    applyProductListVerticalOffset();
+    applyVideoBackground();
+    applyRightSidebarBorder();
+    applyGeneralBorder();
+    applyRightSidebarPanelVisibility();
+    applyCompactRightSidebarLayout();
+    applyLeftVerticalLogoVisibility();
+    applyTitleVisibility();
+    await applyAutoFullscreenPreference();
+    return true;
+}
+
 function redirectToConfigPage() {
     try {
         window.location.replace(configPageUrl);
@@ -1803,9 +2992,13 @@ function redirectToConfigPage() {
     window.location.href = configPageUrl;
 }
 
-function clearDeviceTokenAndRedirectToConfig(reason = 'Token invalido. Informe um novo token.') {
+function redirectToConfigKeepingTokenHistory(reason = 'Token invalido. Informe um novo token.') {
+    // Preserve latest token for quick recovery after network/auth instabilities.
     try {
-        localStorage.removeItem('tv_device_token');
+        const token = String(getReliableDeviceToken() || '').trim();
+        if (token) {
+            persistReliableDeviceToken(token);
+        }
     } catch (_error) {
     }
 
@@ -1816,8 +3009,41 @@ function clearDeviceTokenAndRedirectToConfig(reason = 'Token invalido. Informe u
     }, 200);
 }
 
+function shouldForceReconfigureFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return false;
+    }
+
+    if (payload.forceReconfigure === true) {
+        return true;
+    }
+
+    const reason = String(payload.reason || '').toLowerCase();
+    return reason === 'device_inactive' || reason === 'device_not_found';
+}
+
+function reportNonCriticalAuthWarning(context, payload = null) {
+    const now = Date.now();
+    if (now - lastNonCriticalAuthWarningAt < 15000) {
+        return;
+    }
+
+    lastNonCriticalAuthWarningAt = now;
+    const reason = String(payload?.reason || 'unauthorized').toLowerCase();
+    updateWarningStatus('Aviso: autenticacao temporaria detectada. Mantendo tela ativa.');
+
+    try {
+        console.warn('[TV] 401 nao critico mantido sem reconfigurar token.', {
+            context,
+            reason,
+            payload,
+        });
+    } catch (_error) {
+    }
+}
+
 async function enforceValidTokenOrRedirect() {
-    const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+    const token = getReliableDeviceToken();
 
     if (!token) {
         clearPaginationTimer();
@@ -1834,9 +3060,20 @@ async function enforceValidTokenOrRedirect() {
             },
         });
 
-        if (response.status === 401) {
-            clearDeviceTokenAndRedirectToConfig('Token da TV invalido ou removido. Configure um novo token.');
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (response.status === 401 && shouldForceReconfigureFromPayload(payload)) {
+            redirectToConfigKeepingTokenHistory('Token da TV desativado ou removido no admin. Configure um novo token.');
             return false;
+        }
+
+        if (response.status === 401) {
+            reportNonCriticalAuthWarning('enforceValidTokenOrRedirect', payload);
         }
     } catch (_error) {
         // Keep the current screen when API is temporarily unavailable.
@@ -2041,6 +3278,8 @@ function applyGroupLabelStyles(element) {
     element.style.whiteSpace = 'normal';
     element.style.wordBreak = 'break-word';
     element.style.overflowWrap = 'anywhere';
+    const groupLabelVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.groupLabelVerticalOffset ?? 0)));
+    element.style.marginTop = `${groupLabelVerticalOffset}px`;
 
     if (toBoolean(visualConfig.showGroupLabelBadge, false)) {
         element.style.display = 'inline-block';
@@ -2085,6 +3324,15 @@ function applyProductsPanelBackground() {
     tvProductsPanel.style.setProperty('border-style', 'solid', 'important');
     tvProductsPanel.style.setProperty('border-width', `${listBorderWidth}px`, 'important');
     tvProductsPanel.style.setProperty('border-color', visualConfig.listBorderColor || '#334155', 'important');
+}
+
+function applyProductListVerticalOffset() {
+    if (!tvProductsPanel) {
+        return;
+    }
+
+    const offset = Math.max(-300, Math.min(300, Number(visualConfig.productListVerticalOffset ?? 0)));
+    tvProductsPanel.style.marginTop = `${offset}px`;
 }
 
 function applyVideoBackground() {
@@ -2260,14 +3508,34 @@ function applyRightSidebarLogoVisibility() {
         && toBoolean(visualConfig.showRightSidebarLogo, false);
     const shouldShowSidebarSlot = shouldShowLogo;
     const compactViewport = isCompactViewport();
+    const isAndroidRuntime = isAndroidDevice();
+    const selectedLogoPosition = isAndroidRuntime
+        ? String(visualConfig.rightSidebarLogoPositionAndroid ?? visualConfig.rightSidebarLogoPosition ?? 'sidebar_top')
+        : String(visualConfig.rightSidebarLogoPositionWindows ?? visualConfig.rightSidebarLogoPosition ?? 'sidebar_top');
+    const useScreenRightVertical = selectedLogoPosition === 'screen_right_vertical';
 
-    const rawLogoWidth = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidth || 220)));
-    const rawLogoHeight = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeight || 58)));
+    const configuredLogoWidth = isAndroidRuntime
+        ? (visualConfig.rightSidebarLogoWidthAndroid ?? visualConfig.rightSidebarLogoWidth)
+        : (visualConfig.rightSidebarLogoWidthWindows ?? visualConfig.rightSidebarLogoWidth);
+    const configuredLogoHeight = isAndroidRuntime
+        ? (visualConfig.rightSidebarLogoHeightAndroid ?? visualConfig.rightSidebarLogoHeight)
+        : (visualConfig.rightSidebarLogoHeightWindows ?? visualConfig.rightSidebarLogoHeight);
+
+    const rawLogoWidth = Math.max(60, Math.min(1200, Number(configuredLogoWidth || 220)));
+    const rawLogoHeight = Math.max(30, Math.min(300, Number(configuredLogoHeight || 58)));
     const logoWidth = compactViewport ? Math.min(rawLogoWidth, 180) : rawLogoWidth;
     const logoHeight = compactViewport ? Math.min(rawLogoHeight, 36) : rawLogoHeight;
     const logoBackgroundColor = String(visualConfig.rightSidebarLogoBackgroundColor || '#0f172a');
     const logoBackgroundTransparent = toBoolean(visualConfig.isRightSidebarLogoBackgroundTransparent, false);
     if (tvRightSidebarLogoSlot) {
+        tvRightSidebarLogoSlot.style.position = useScreenRightVertical ? 'fixed' : '';
+        tvRightSidebarLogoSlot.style.right = useScreenRightVertical ? '10px' : '';
+        tvRightSidebarLogoSlot.style.top = useScreenRightVertical ? '50%' : '';
+        tvRightSidebarLogoSlot.style.transform = useScreenRightVertical ? 'translateY(-50%)' : '';
+        tvRightSidebarLogoSlot.style.left = useScreenRightVertical ? '' : '';
+        tvRightSidebarLogoSlot.style.zIndex = useScreenRightVertical ? '45' : '';
+        tvRightSidebarLogoSlot.style.padding = useScreenRightVertical ? '4px' : '';
+        tvRightSidebarLogoSlot.style.width = useScreenRightVertical ? `${logoWidth}px` : '';
         tvRightSidebarLogoSlot.style.height = `${logoHeight}px`;
         tvRightSidebarLogoSlot.style.minHeight = `${logoHeight}px`;
         tvRightSidebarLogoSlot.style.background = logoBackgroundTransparent ? 'transparent' : logoBackgroundColor;
@@ -2302,8 +3570,15 @@ function applyLeftVerticalLogoVisibility() {
 
     const shouldShowLogo = toBoolean(visualConfig.showLeftVerticalLogo, false);
     const logoUrl = String(visualConfig.leftVerticalLogoUrl || '').trim();
-    const logoWidth = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidth || 120)));
-    const logoHeight = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeight || 220)));
+    const isAndroidRuntime = isAndroidDevice();
+    const configuredLogoWidth = isAndroidRuntime
+        ? (visualConfig.leftVerticalLogoWidthAndroid ?? visualConfig.leftVerticalLogoWidth)
+        : (visualConfig.leftVerticalLogoWidthWindows ?? visualConfig.leftVerticalLogoWidth);
+    const configuredLogoHeight = isAndroidRuntime
+        ? (visualConfig.leftVerticalLogoHeightAndroid ?? visualConfig.leftVerticalLogoHeight)
+        : (visualConfig.leftVerticalLogoHeightWindows ?? visualConfig.leftVerticalLogoHeight);
+    const logoWidth = Math.max(40, Math.min(1000, Number(configuredLogoWidth || 120)));
+    const logoHeight = Math.max(40, Math.min(1000, Number(configuredLogoHeight || 220)));
     const logoOffset = logoWidth + 1;
     const compactViewport = isCompactViewport();
 
@@ -2849,13 +4124,19 @@ async function loadVisualConfig(token) {
             payload = null;
         }
 
+        if (response.status === 401 && shouldForceReconfigureFromPayload(payload)) {
+            redirectToConfigKeepingTokenHistory('Token da TV desativado ou removido no admin. Configure um novo token.');
+            return false;
+        }
+
         if (response.status === 401) {
-            clearDeviceTokenAndRedirectToConfig('Token da TV invalido ou removido. Configure um novo token.');
+            reportNonCriticalAuthWarning('loadVisualConfig', payload);
             return false;
         }
 
         if (!response.ok || !payload?.success) {
-            return false;
+            setOfflineIndicatorVisible(!navigator.onLine);
+            return applyCachedVisualConfigIfAny();
         }
 
         Object.assign(visualConfig, payload.data || {});
@@ -2864,13 +4145,23 @@ async function loadVisualConfig(token) {
         visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
         visualConfig.showRightSidebarLogo = toBoolean(visualConfig.showRightSidebarLogo, false);
         visualConfig.showLeftVerticalLogo = toBoolean(visualConfig.showLeftVerticalLogo, false);
-        visualConfig.rightSidebarLogoPosition = 'sidebar_top';
+        visualConfig.rightSidebarLogoPosition = String(visualConfig.rightSidebarLogoPosition || 'sidebar_top');
+        visualConfig.rightSidebarLogoPositionWindows = String(visualConfig.rightSidebarLogoPositionWindows || visualConfig.rightSidebarLogoPosition || 'sidebar_top');
+        visualConfig.rightSidebarLogoPositionAndroid = String(visualConfig.rightSidebarLogoPositionAndroid || visualConfig.rightSidebarLogoPosition || 'sidebar_top');
         visualConfig.rightSidebarLogoUrl = String(visualConfig.rightSidebarLogoUrl || '').trim();
         visualConfig.rightSidebarLogoWidth = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidth || 220)));
         visualConfig.rightSidebarLogoHeight = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeight || 58)));
+        visualConfig.rightSidebarLogoWidthWindows = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidthWindows ?? visualConfig.rightSidebarLogoWidth ?? 220)));
+        visualConfig.rightSidebarLogoHeightWindows = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeightWindows ?? visualConfig.rightSidebarLogoHeight ?? 58)));
+        visualConfig.rightSidebarLogoWidthAndroid = Math.max(60, Math.min(1200, Number(visualConfig.rightSidebarLogoWidthAndroid ?? visualConfig.rightSidebarLogoWidth ?? 220)));
+        visualConfig.rightSidebarLogoHeightAndroid = Math.max(30, Math.min(300, Number(visualConfig.rightSidebarLogoHeightAndroid ?? visualConfig.rightSidebarLogoHeight ?? 58)));
         visualConfig.leftVerticalLogoUrl = String(visualConfig.leftVerticalLogoUrl || '').trim();
         visualConfig.leftVerticalLogoWidth = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidth || 120)));
         visualConfig.leftVerticalLogoHeight = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeight || 220)));
+        visualConfig.leftVerticalLogoWidthWindows = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidthWindows ?? visualConfig.leftVerticalLogoWidth ?? 120)));
+        visualConfig.leftVerticalLogoHeightWindows = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeightWindows ?? visualConfig.leftVerticalLogoHeight ?? 220)));
+        visualConfig.leftVerticalLogoWidthAndroid = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoWidthAndroid ?? visualConfig.leftVerticalLogoWidth ?? 120)));
+        visualConfig.leftVerticalLogoHeightAndroid = Math.max(40, Math.min(1000, Number(visualConfig.leftVerticalLogoHeightAndroid ?? visualConfig.leftVerticalLogoHeight ?? 220)));
         visualConfig.rightSidebarLogoBackgroundColor = String(visualConfig.rightSidebarLogoBackgroundColor || '#0f172a');
         visualConfig.isRightSidebarLogoBackgroundTransparent = toBoolean(visualConfig.isRightSidebarLogoBackgroundTransparent, false);
         visualConfig.showTitle = toBoolean(visualConfig.showTitle, true);
@@ -2911,6 +4202,8 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarAndroidVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidVerticalOffset || 0)));
         visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
         visualConfig.rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
+        visualConfig.productListVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.productListVerticalOffset ?? 0)));
+        visualConfig.groupLabelVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.groupLabelVerticalOffset ?? 0)));
         visualConfig.groupLabelFontFamily = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
         visualConfig.showGroupLabelBadge = toBoolean(visualConfig.showGroupLabelBadge, false);
         visualConfig.groupLabelBadgeColor = String(visualConfig.groupLabelBadgeColor || '#0f172a');
@@ -2935,6 +4228,7 @@ async function loadVisualConfig(token) {
         }
 
         applyProductsPanelBackground();
+        applyProductListVerticalOffset();
         applyVideoBackground();
         applyRightSidebarBorder();
         applyGeneralBorder();
@@ -2943,14 +4237,17 @@ async function loadVisualConfig(token) {
         applyLeftVerticalLogoVisibility();
         applyTitleVisibility();
         await applyAutoFullscreenPreference();
+        saveCachedVisualConfig(visualConfig);
+        setOfflineIndicatorVisible(false);
         return true;
     } catch (_error) {
-        return false;
+        setOfflineIndicatorVisible(true);
+        return applyCachedVisualConfigIfAny();
     }
 }
 
 async function loadProducts() {
-    const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+    const token = getReliableDeviceToken();
 
     if (!token) {
         clearPaginationTimer();
@@ -2964,11 +4261,13 @@ async function loadProducts() {
 
     const visualConfigLoaded = await loadVisualConfig(token);
     if (!visualConfigLoaded) {
-        clearDeviceTokenAndRedirectToConfig('Token da TV nao encontrado/valido. Configure um novo token.');
+        const reusedProducts = renderCachedProductsIfAny();
+        setOfflineIndicatorVisible(true);
+        if (!reusedProducts) {
+            updateStatus('Falha temporaria ao carregar configuracao da TV. Mantendo tela atual.', true);
+        }
         return;
     }
-
-    await applyRightSidebarMediaMode(token);
 
     try {
         let response = await fetch(productsEndpoint, {
@@ -2997,28 +4296,37 @@ async function loadProducts() {
             payload = null;
         }
 
+        if (response.status === 401 && shouldForceReconfigureFromPayload(payload)) {
+            redirectToConfigKeepingTokenHistory('Token da TV desativado ou removido no admin. Configure um novo token.');
+            return;
+        }
+
         if (response.status === 401) {
-            clearDeviceTokenAndRedirectToConfig('Token da TV invalido ou removido. Configure um novo token.');
+            reportNonCriticalAuthWarning('loadProducts', payload);
+            updateWarningStatus('Aviso: autenticacao temporaria nos produtos. Mantendo ultimo conteudo.');
             return;
         }
 
         if (!response.ok || !payload?.success) {
-            clearDeviceTokenAndRedirectToConfig('Token da TV nao encontrado/valido. Configure um novo token.');
             throw new Error('Falha ao consultar API de produtos da TV.');
         }
 
         const produtos = payload?.data?.produtos ?? [];
         renderProductsWithPagination(produtos);
+        await applyRightSidebarMediaMode(token, produtos);
+        saveCachedProducts(produtos);
+        setOfflineIndicatorVisible(false);
         try {
             window.__tvProdutosBooted = true;
         } catch (_error) {
         }
         updateStatus(`Atualizado em ${new Date().toLocaleTimeString('pt-BR')}.`);
     } catch (error) {
-        clearPaginationTimer();
-        renderProducts([]);
-        if (token) {
-            clearDeviceTokenAndRedirectToConfig('Token da TV nao encontrado/valido. Configure um novo token.');
+        const reusedProducts = renderCachedProductsIfAny();
+        setOfflineIndicatorVisible(true);
+        if (reusedProducts) {
+            const cached = readCachedProducts() || [];
+            await applyRightSidebarMediaMode(token, cached);
             return;
         }
 
@@ -3070,6 +4378,18 @@ if (window.visualViewport) {
     });
 }
 
+window.addEventListener('offline', () => {
+    setOfflineIndicatorVisible(true);
+    renderCachedProductsIfAny();
+});
+
+window.addEventListener('online', () => {
+    setOfflineIndicatorVisible(false);
+    loadProducts();
+});
+
+setOfflineIndicatorVisible(!navigator.onLine);
+
 if (fullscreenTestButton) {
     fullscreenTestButton.addEventListener('click', async () => {
         await toggleFullscreenByUserAction();
@@ -3115,7 +4435,7 @@ enforceValidTokenOrRedirect().then((isTokenValid) => {
 
 if (refreshSeconds > 0) {
     setInterval(() => {
-        if (localStorage.getItem('tv_device_token')) {
+        if (getReliableDeviceToken()) {
             loadProducts();
         }
     }, refreshSeconds * 1000);
@@ -3125,7 +4445,12 @@ if (tvVideo) {
     tvVideo.addEventListener('loadedmetadata', () => ensureVideoAudioEnabled(tvVideo.muted));
     tvVideo.addEventListener('play', () => ensureVideoAudioEnabled(tvVideo.muted));
     tvVideo.addEventListener('ended', () => {
-        const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+        if (sidebarMixedVideoTurnActive && typeof sidebarMixedOnVideoFinished === 'function') {
+            sidebarMixedOnVideoFinished();
+            return;
+        }
+
+        const token = getReliableDeviceToken();
 
         if (token) {
             handleHybridVideoItemCompleted(token);
@@ -3149,6 +4474,16 @@ if (tvVideo) {
         if (videoHint) {
             videoHint.textContent = 'Sem vídeo padrão. Coloque um arquivo em public/tv/videos/demo.mp4.';
         }
+    });
+}
+
+if (tvImageSlide) {
+    tvImageSlide.addEventListener('error', () => {
+        handleCurrentSlideImageLoadError();
+    });
+
+    tvImageSlide.addEventListener('load', () => {
+        lastSlideImageErrorAt = 0;
     });
 }
 
@@ -3187,6 +4522,11 @@ window.addEventListener('message', (event) => {
         finished = true;
     }
 
+    if (finished && sidebarMixedVideoTurnActive && typeof sidebarMixedOnVideoFinished === 'function') {
+        sidebarMixedOnVideoFinished();
+        return;
+    }
+
     if (finished && videoPlaylistItems.length > 1) {
         clearVideoFallbackTimer();
         playNextVideoInPlaylist();
@@ -3194,7 +4534,7 @@ window.addEventListener('message', (event) => {
     }
 
     if (finished) {
-        const token = queryParams.get('token') || localStorage.getItem('tv_device_token') || '';
+        const token = getReliableDeviceToken();
         if (token) {
             handleHybridVideoItemCompleted(token);
         }

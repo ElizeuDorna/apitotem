@@ -39,6 +39,12 @@
                 </div>
 
                 <p id="configStatus" class="text-xs text-slate-400">Ajuste as configurações e clique em Salvar.</p>
+
+                <div class="rounded-md border border-slate-800 bg-slate-950/50 p-3">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Historico de tokens</p>
+                    <div id="tokenHistoryList" class="flex flex-wrap gap-2"></div>
+                    <p class="mt-2 text-xs text-slate-500">Quando a internet cair, os tokens salvos continuam disponiveis para restauracao rapida.</p>
+                </div>
             </form>
         </main>
     </div>
