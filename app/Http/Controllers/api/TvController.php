@@ -179,6 +179,8 @@ class TvController extends Controller
         if (! $token) {
             return response()->json([
                 'success' => false,
+                'reason' => 'token_missing',
+                'forceReconfigure' => false,
                 'data' => [
                     'produtos' => [],
                 ],
@@ -190,12 +192,27 @@ class TvController extends Controller
 
         $device = Device::query()
             ->where('token', $token)
-            ->where('ativo', true)
             ->first();
 
         if (! $device) {
             return response()->json([
                 'success' => false,
+                'reason' => 'device_not_found',
+                'forceReconfigure' => true,
+                'data' => [
+                    'produtos' => [],
+                ],
+                'meta' => [
+                    'total_produtos' => 0,
+                ],
+            ], 401);
+        }
+
+        if (! (bool) $device->ativo) {
+            return response()->json([
+                'success' => false,
+                'reason' => 'device_inactive',
+                'forceReconfigure' => true,
                 'data' => [
                     'produtos' => [],
                 ],
@@ -394,18 +411,30 @@ class TvController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Token não informado.',
+                'reason' => 'token_missing',
+                'forceReconfigure' => false,
             ], 401);
         }
 
         $device = Device::query()
             ->where('token', $token)
-            ->where('ativo', true)
             ->first();
 
         if (! $device) {
             return response()->json([
                 'success' => false,
                 'message' => 'Dispositivo inválido.',
+                'reason' => 'device_not_found',
+                'forceReconfigure' => true,
+            ], 401);
+        }
+
+        if (! (bool) $device->ativo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dispositivo desativado.',
+                'reason' => 'device_inactive',
+                'forceReconfigure' => true,
             ], 401);
         }
 
@@ -437,17 +466,14 @@ class TvController extends Controller
 
         $globalGalleryCode = substr(preg_replace('/\D/', '', (string) ($config->rightSidebarGlobalGalleryCode ?? '')) ?? '', 0, 14);
         $configuredImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
-        $resolvedGlobalGalleryUrls = [];
+        $rightSidebarImageUrls = $configuredImageUrls;
 
-        if ($globalGalleryCode !== '' && $configuredImageUrls === '') {
-            $resolvedGlobalGalleryUrls = $this->resolveGlobalGalleryImageUrls($globalGalleryCode);
-        }
-
-        $rightSidebarImageUrls = $configuredImageUrls !== ''
-            ? $configuredImageUrls
-            : (! empty($resolvedGlobalGalleryUrls)
-            ? implode("\n", $resolvedGlobalGalleryUrls)
-            : '');
+        $isAndroidRuntime = preg_match('/android/i', (string) ($request->userAgent() ?? '')) === 1;
+        $rightSidebarImageUrls = $this->filterRightSidebarImageUrlsBySchedule(
+            $rightSidebarImageUrls,
+            (array) ($config->rightSidebarImageSchedules ?? []),
+            $isAndroidRuntime
+        );
 
         return response()->json([
             'success' => true,
@@ -458,13 +484,23 @@ class TvController extends Controller
                 'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
                 'showRightSidebarLogo' => (bool) ($config->showRightSidebarLogo ?? false),
                 'rightSidebarLogoPosition' => 'sidebar_top',
+                'rightSidebarLogoPositionWindows' => (string) ($config->rightSidebarLogoPositionWindows ?? $config->rightSidebarLogoPosition ?? 'sidebar_top'),
+                'rightSidebarLogoPositionAndroid' => (string) ($config->rightSidebarLogoPositionAndroid ?? $config->rightSidebarLogoPosition ?? 'sidebar_top'),
                 'rightSidebarLogoUrl' => $rightSidebarLogoUrl,
                 'rightSidebarLogoWidth' => (int) ($config->rightSidebarLogoWidth ?? 220),
                 'rightSidebarLogoHeight' => (int) ($config->rightSidebarLogoHeight ?? 58),
+                'rightSidebarLogoWidthWindows' => (int) ($config->rightSidebarLogoWidthWindows ?? $config->rightSidebarLogoWidth ?? 220),
+                'rightSidebarLogoHeightWindows' => (int) ($config->rightSidebarLogoHeightWindows ?? $config->rightSidebarLogoHeight ?? 58),
+                'rightSidebarLogoWidthAndroid' => (int) ($config->rightSidebarLogoWidthAndroid ?? $config->rightSidebarLogoWidth ?? 220),
+                'rightSidebarLogoHeightAndroid' => (int) ($config->rightSidebarLogoHeightAndroid ?? $config->rightSidebarLogoHeight ?? 58),
                 'showLeftVerticalLogo' => (bool) ($config->showLeftVerticalLogo ?? false),
                 'leftVerticalLogoUrl' => $leftVerticalLogoUrl,
                 'leftVerticalLogoWidth' => (int) ($config->leftVerticalLogoWidth ?? 120),
                 'leftVerticalLogoHeight' => (int) ($config->leftVerticalLogoHeight ?? 220),
+                'leftVerticalLogoWidthWindows' => (int) ($config->leftVerticalLogoWidthWindows ?? $config->leftVerticalLogoWidth ?? 120),
+                'leftVerticalLogoHeightWindows' => (int) ($config->leftVerticalLogoHeightWindows ?? $config->leftVerticalLogoHeight ?? 220),
+                'leftVerticalLogoWidthAndroid' => (int) ($config->leftVerticalLogoWidthAndroid ?? $config->leftVerticalLogoWidth ?? 120),
+                'leftVerticalLogoHeightAndroid' => (int) ($config->leftVerticalLogoHeightAndroid ?? $config->leftVerticalLogoHeight ?? 220),
                 'rightSidebarLogoBackgroundColor' => (string) ($config->rightSidebarLogoBackgroundColor ?? '#0f172a'),
                 'isRightSidebarLogoBackgroundTransparent' => (bool) ($config->isRightSidebarLogoBackgroundTransparent ?? false),
                 'isMainBorderEnabled' => (bool) ($config->isMainBorderEnabled ?? false),
@@ -493,6 +529,21 @@ class TvController extends Controller
                 'rightSidebarAndroidVerticalOffset' => (int) ($config->rightSidebarAndroidVerticalOffset ?? 0),
                 'rightSidebarHybridVideoDuration' => (int) ($config->rightSidebarHybridVideoDuration ?? 2),
                 'rightSidebarHybridImageDuration' => (int) ($config->rightSidebarHybridImageDuration ?? 4),
+                'rightSidebarProductCarouselEnabled' => (bool) ($config->rightSidebarProductCarouselEnabled ?? false),
+                'rightSidebarProductDisplayMode' => (string) ($config->rightSidebarProductDisplayMode ?? 'all'),
+                'rightSidebarProductTransitionMode' => (string) ($config->rightSidebarProductTransitionMode ?? 'products_only'),
+                'rightSidebarProductInterval' => (int) ($config->rightSidebarProductInterval ?? 8),
+                'rightSidebarProductShowImage' => (bool) ($config->rightSidebarProductShowImage ?? true),
+                'rightSidebarProductShowName' => (bool) ($config->rightSidebarProductShowName ?? true),
+                'rightSidebarProductShowPrice' => (bool) ($config->rightSidebarProductShowPrice ?? true),
+                'rightSidebarProductNamePosition' => (string) ($config->rightSidebarProductNamePosition ?? 'top'),
+                'rightSidebarProductPricePosition' => (string) ($config->rightSidebarProductPricePosition ?? 'bottom'),
+                'rightSidebarProductNameColor' => (string) ($config->rightSidebarProductNameColor ?? '#FFFFFF'),
+                'rightSidebarProductPriceColor' => (string) ($config->rightSidebarProductPriceColor ?? '#FDE68A'),
+                'rightSidebarProductNameBadgeEnabled' => (bool) ($config->rightSidebarProductNameBadgeEnabled ?? true),
+                'rightSidebarProductNameBadgeColor' => (string) ($config->rightSidebarProductNameBadgeColor ?? '#0F172A'),
+                'rightSidebarProductPriceBadgeEnabled' => (bool) ($config->rightSidebarProductPriceBadgeEnabled ?? true),
+                'rightSidebarProductPriceBadgeColor' => (string) ($config->rightSidebarProductPriceBadgeColor ?? '#0F172A'),
                 'productListType' => (string) ($config->productListType ?? '1'),
                 'productListLeftGroupIds' => collect($config->productListLeftGroupIds ?? [])->map(fn ($id) => (int) $id)->values()->all(),
                 'productListRightGroupIds' => collect($config->productListRightGroupIds ?? [])->map(fn ($id) => (int) $id)->values()->all(),
@@ -526,8 +577,10 @@ class TvController extends Controller
                 'imageHeight' => (int) ($config->imageHeight ?? 56),
                 'rowVerticalPadding' => (int) ($config->rowVerticalPadding ?? 9),
                 'rowLineSpacing' => (int) ($config->rowLineSpacing ?? 12),
+                'productListVerticalOffset' => (int) ($config->productListVerticalOffset ?? 0),
                 'listFontSize' => (int) ($config->listFontSize ?? 16),
                 'groupLabelFontSize' => (int) ($config->groupLabelFontSize ?? 14),
+                'groupLabelVerticalOffset' => (int) ($config->groupLabelVerticalOffset ?? 0),
                 'groupLabelFontFamily' => (string) ($config->groupLabelFontFamily ?? 'arial'),
                 'groupLabelColor' => (string) ($config->groupLabelColor ?? '#cbd5e1'),
                 'showGroupLabelBadge' => (bool) ($config->showGroupLabelBadge ?? false),
@@ -587,6 +640,130 @@ class TvController extends Controller
             ->values();
 
         return $normalized->implode("\n");
+    }
+
+    private function filterRightSidebarImageUrlsBySchedule(string $rawUrls, array $schedules, bool $isAndroidRuntime): string
+    {
+        $urlList = collect(preg_split('/\r?\n/', (string) $rawUrls) ?: [])
+            ->map(fn (string $line) => trim($line))
+            ->filter(fn (string $line) => $line !== '')
+            ->values();
+
+        if ($urlList->isEmpty() || empty($schedules)) {
+            return $urlList->implode("\n");
+        }
+
+        $scheduleByKey = [];
+        $scheduleByLooseKey = [];
+
+        foreach ($schedules as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $normalizedUrl = $this->normalizeSlideUrlForCompare((string) ($entry['url'] ?? ''));
+            if ($normalizedUrl === '') {
+                continue;
+            }
+
+            $normalizedSchedule = [
+                'startDate' => trim((string) ($entry['startDate'] ?? '')),
+                'endDate' => trim((string) ($entry['endDate'] ?? '')),
+                'enabledForWindows' => $this->toBooleanFlag($entry['enabledForWindows'] ?? null, true),
+                'enabledForAndroid' => $this->toBooleanFlag($entry['enabledForAndroid'] ?? null, true),
+            ];
+
+            $scheduleByKey[$normalizedUrl] = $normalizedSchedule;
+            $scheduleByLooseKey[$this->toLooseSlideUrlKey($normalizedUrl)] = $normalizedSchedule;
+        }
+
+        $today = now()->toDateString();
+
+        $filteredUrls = $urlList->filter(function (string $url) use ($scheduleByKey, $scheduleByLooseKey, $today, $isAndroidRuntime) {
+            $normalizedUrl = $this->normalizeSlideUrlForCompare($url);
+
+            $schedule = $scheduleByKey[$normalizedUrl]
+                ?? $scheduleByLooseKey[$this->toLooseSlideUrlKey($normalizedUrl)]
+                ?? null;
+
+            if (!is_array($schedule)) {
+                return true;
+            }
+
+            $startDate = (string) ($schedule['startDate'] ?? '');
+            $endDate = (string) ($schedule['endDate'] ?? '');
+
+            if ($startDate !== '' && $today < $startDate) {
+                return false;
+            }
+
+            if ($endDate !== '' && $today > $endDate) {
+                return false;
+            }
+
+            if ($isAndroidRuntime && ($schedule['enabledForAndroid'] ?? true) === false) {
+                return false;
+            }
+
+            if (!$isAndroidRuntime && ($schedule['enabledForWindows'] ?? true) === false) {
+                return false;
+            }
+
+            return true;
+        })->values();
+
+        return $filteredUrls->implode("\n");
+    }
+
+    private function normalizeSlideUrlForCompare(string $raw): string
+    {
+        $value = trim((string) $raw);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = trim((string) preg_replace('/[?#].*$/', '', $value));
+
+        if (preg_match('#^https?://localhost/storage/(.+)$#i', $value, $matches)) {
+            return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
+        }
+
+        if (preg_match('#^storage/#i', $value)) {
+            return '/'.ltrim($value, '/');
+        }
+
+        if (preg_match('#^https?://#i', $value)) {
+            $path = (string) parse_url($value, PHP_URL_PATH);
+            if ($path !== '' && preg_match('#^/storage/#i', $path)) {
+                return $path;
+            }
+        }
+
+        return $value;
+    }
+
+    private function toLooseSlideUrlKey(string $url): string
+    {
+        return rtrim($this->normalizeSlideUrlForCompare($url), '/');
+    }
+
+    private function toBooleanFlag(mixed $value, bool $default = false): bool
+    {
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+
+        return in_array($normalized, ['1', 'true', 'on', 'yes'], true);
     }
 
     private function publicStorageUrl(string $path): string

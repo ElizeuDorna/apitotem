@@ -84,6 +84,9 @@
                     <form id="webConfigForm" method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
                         <input type="hidden" id="saveSection" name="saveSection" value="">
+                        <input type="hidden" id="suggestedSlideSelectionSubmitted" name="suggestedSlideSelectionSubmitted" value="0">
+                        <input type="hidden" id="openCompanyGalleryTarget" name="openCompanyGalleryTarget" value="">
+                        <input type="hidden" id="openRightSidebarImageScheduleUrl" name="openRightSidebarImageScheduleUrl" value="">
 
                         <div class="grid grid-cols-1 gap-4 items-start">
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
@@ -127,8 +130,26 @@
 
                                 <div>
                                     <label for="rightSidebarLogoPosition" class="block text-sm font-medium text-gray-700 mb-1">Local de exibicao da logo</label>
-                                    <input type="hidden" id="rightSidebarLogoPosition" name="rightSidebarLogoPosition" value="sidebar_top">
-                                    <div class="w-full border rounded px-3 py-2 text-sm bg-gray-100 text-gray-700">Lateral direita (no retangulo)</div>
+                                    <input type="hidden" id="rightSidebarLogoPosition" name="rightSidebarLogoPosition" value="{{ old('rightSidebarLogoPosition', $config->rightSidebarLogoPosition ?? 'sidebar_top') }}">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="rightSidebarLogoPositionWindows" class="block text-sm font-medium text-gray-700 mb-1">Windows</label>
+                                            <select id="rightSidebarLogoPositionWindows" name="rightSidebarLogoPositionWindows" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                <option value="sidebar_top" @selected(old('rightSidebarLogoPositionWindows', $config->rightSidebarLogoPositionWindows ?? $config->rightSidebarLogoPosition ?? 'sidebar_top') === 'sidebar_top')>Lateral direita (no retangulo)</option>
+                                                <option value="screen_right_vertical" @selected(old('rightSidebarLogoPositionWindows', $config->rightSidebarLogoPositionWindows ?? $config->rightSidebarLogoPosition ?? 'sidebar_top') === 'screen_right_vertical')>Lateral direita da tela (vertical)</option>
+                                            </select>
+                                            @error('rightSidebarLogoPositionWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="rightSidebarLogoPositionAndroid" class="block text-sm font-medium text-gray-700 mb-1">Android</label>
+                                            <select id="rightSidebarLogoPositionAndroid" name="rightSidebarLogoPositionAndroid" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                <option value="sidebar_top" @selected(old('rightSidebarLogoPositionAndroid', $config->rightSidebarLogoPositionAndroid ?? $config->rightSidebarLogoPosition ?? 'sidebar_top') === 'sidebar_top')>Lateral direita (no retangulo)</option>
+                                                <option value="screen_right_vertical" @selected(old('rightSidebarLogoPositionAndroid', $config->rightSidebarLogoPositionAndroid ?? $config->rightSidebarLogoPosition ?? 'sidebar_top') === 'screen_right_vertical')>Lateral direita da tela (vertical)</option>
+                                            </select>
+                                            @error('rightSidebarLogoPositionAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
                                     @error('rightSidebarLogoPosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
@@ -138,17 +159,32 @@
                                     <input id="rightSidebarLogoUpload" name="rightSidebarLogoUpload" type="file" accept="image/png,image/jpeg,image/webp" class="w-full border rounded px-3 py-2 text-sm bg-white">
                                     <p class="text-xs text-gray-500">Se enviar uma imagem aqui, ela sera usada no topo do retangulo direito da TV.</p>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div>
-                                            <label for="rightSidebarLogoWidth" class="block text-sm font-medium text-gray-700 mb-1">Largura da logo (px)</label>
-                                            <input id="rightSidebarLogoWidth" name="rightSidebarLogoWidth" type="number" min="60" max="1200" value="{{ old('rightSidebarLogoWidth', $config->rightSidebarLogoWidth ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
-                                            @error('rightSidebarLogoWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
+                                    <div class="rounded border border-gray-200 bg-white p-3 space-y-3">
+                                        <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Tamanho da logo por plataforma</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label for="rightSidebarLogoWidthWindows" class="block text-sm font-medium text-gray-700 mb-1">Largura Windows (px)</label>
+                                                <input id="rightSidebarLogoWidthWindows" name="rightSidebarLogoWidthWindows" type="number" min="60" max="1200" value="{{ old('rightSidebarLogoWidthWindows', $config->rightSidebarLogoWidthWindows ?? $config->rightSidebarLogoWidth ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('rightSidebarLogoWidthWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
 
-                                        <div>
-                                            <label for="rightSidebarLogoHeight" class="block text-sm font-medium text-gray-700 mb-1">Altura da logo (px)</label>
-                                            <input id="rightSidebarLogoHeight" name="rightSidebarLogoHeight" type="number" min="30" max="300" value="{{ old('rightSidebarLogoHeight', $config->rightSidebarLogoHeight ?? 58) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
-                                            @error('rightSidebarLogoHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            <div>
+                                                <label for="rightSidebarLogoHeightWindows" class="block text-sm font-medium text-gray-700 mb-1">Altura Windows (px)</label>
+                                                <input id="rightSidebarLogoHeightWindows" name="rightSidebarLogoHeightWindows" type="number" min="30" max="300" value="{{ old('rightSidebarLogoHeightWindows', $config->rightSidebarLogoHeightWindows ?? $config->rightSidebarLogoHeight ?? 58) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('rightSidebarLogoHeightWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label for="rightSidebarLogoWidthAndroid" class="block text-sm font-medium text-gray-700 mb-1">Largura Android (px)</label>
+                                                <input id="rightSidebarLogoWidthAndroid" name="rightSidebarLogoWidthAndroid" type="number" min="60" max="1200" value="{{ old('rightSidebarLogoWidthAndroid', $config->rightSidebarLogoWidthAndroid ?? $config->rightSidebarLogoWidth ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('rightSidebarLogoWidthAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label for="rightSidebarLogoHeightAndroid" class="block text-sm font-medium text-gray-700 mb-1">Altura Android (px)</label>
+                                                <input id="rightSidebarLogoHeightAndroid" name="rightSidebarLogoHeightAndroid" type="number" min="30" max="300" value="{{ old('rightSidebarLogoHeightAndroid', $config->rightSidebarLogoHeightAndroid ?? $config->rightSidebarLogoHeight ?? 58) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('rightSidebarLogoHeightAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
                                         </div>
                                     </div>
 
@@ -193,17 +229,32 @@
                                     <input type="hidden" name="leftVerticalLogoUrl" value="{{ old('leftVerticalLogoUrl', $config->leftVerticalLogoUrl ?? '') }}">
                                     <input id="leftVerticalLogoUpload" name="leftVerticalLogoUpload" type="file" accept="image/png,image/jpeg,image/webp" class="w-full border rounded px-3 py-2 text-sm bg-white">
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div>
-                                            <label for="leftVerticalLogoWidth" class="block text-sm font-medium text-gray-700 mb-1">Largura da logo vertical esquerda (px)</label>
-                                            <input id="leftVerticalLogoWidth" name="leftVerticalLogoWidth" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoWidth', $config->leftVerticalLogoWidth ?? 120) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
-                                            @error('leftVerticalLogoWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
+                                    <div class="rounded border border-gray-200 bg-white p-3 space-y-3">
+                                        <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Tamanho da logo vertical por plataforma</p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label for="leftVerticalLogoWidthWindows" class="block text-sm font-medium text-gray-700 mb-1">Largura Windows (px)</label>
+                                                <input id="leftVerticalLogoWidthWindows" name="leftVerticalLogoWidthWindows" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoWidthWindows', $config->leftVerticalLogoWidthWindows ?? $config->leftVerticalLogoWidth ?? 120) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('leftVerticalLogoWidthWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
 
-                                        <div>
-                                            <label for="leftVerticalLogoHeight" class="block text-sm font-medium text-gray-700 mb-1">Altura da logo vertical esquerda (px)</label>
-                                            <input id="leftVerticalLogoHeight" name="leftVerticalLogoHeight" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoHeight', $config->leftVerticalLogoHeight ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
-                                            @error('leftVerticalLogoHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            <div>
+                                                <label for="leftVerticalLogoHeightWindows" class="block text-sm font-medium text-gray-700 mb-1">Altura Windows (px)</label>
+                                                <input id="leftVerticalLogoHeightWindows" name="leftVerticalLogoHeightWindows" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoHeightWindows', $config->leftVerticalLogoHeightWindows ?? $config->leftVerticalLogoHeight ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('leftVerticalLogoHeightWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label for="leftVerticalLogoWidthAndroid" class="block text-sm font-medium text-gray-700 mb-1">Largura Android (px)</label>
+                                                <input id="leftVerticalLogoWidthAndroid" name="leftVerticalLogoWidthAndroid" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoWidthAndroid', $config->leftVerticalLogoWidthAndroid ?? $config->leftVerticalLogoWidth ?? 120) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('leftVerticalLogoWidthAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label for="leftVerticalLogoHeightAndroid" class="block text-sm font-medium text-gray-700 mb-1">Altura Android (px)</label>
+                                                <input id="leftVerticalLogoHeightAndroid" name="leftVerticalLogoHeightAndroid" type="number" min="40" max="1000" value="{{ old('leftVerticalLogoHeightAndroid', $config->leftVerticalLogoHeightAndroid ?? $config->leftVerticalLogoHeight ?? 220) }}" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                                @error('leftVerticalLogoHeightAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
                                         </div>
                                     </div>
 
@@ -563,18 +614,21 @@
                                 </div>
                                 <p class="text-xs text-gray-600">Quando desativado, a lateral direita e ocultada e a lista de produtos ocupa toda a largura da tela.</p>
 
-                                <label class="inline-flex items-center gap-2 mr-6">
-                                    <input type="radio" id="rightSidebarMediaTypeVideo" name="rightSidebarMediaType" value="video" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'video')>
-                                    <span class="text-sm text-gray-700">Vídeo</span>
-                                </label>
-                                <label class="inline-flex items-center gap-2">
-                                    <input type="radio" id="rightSidebarMediaTypeImage" name="rightSidebarMediaType" value="image" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'image')>
-                                    <span class="text-sm text-gray-700">Slide de imagens (links)</span>
-                                </label>
-                                <label class="inline-flex items-center gap-2 ml-0 md:ml-6">
-                                    <input type="radio" id="rightSidebarMediaTypeHybrid" name="rightSidebarMediaType" value="hybrid" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'hybrid')>
-                                    <span class="text-sm text-gray-700">Híbrido (vídeo + slide)</span>
-                                </label>
+                                <div id="rightSidebarMediaTypeGroup" class="space-x-0 space-y-2 md:space-y-0 md:space-x-4">
+                                    <label class="inline-flex items-center gap-2 mr-6">
+                                        <input type="radio" id="rightSidebarMediaTypeVideo" name="rightSidebarMediaType" value="video" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'video')>
+                                        <span class="text-sm text-gray-700">Vídeo</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="radio" id="rightSidebarMediaTypeImage" name="rightSidebarMediaType" value="image" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'image')>
+                                        <span class="text-sm text-gray-700">Slide de imagens (links)</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 ml-0 md:ml-6">
+                                        <input type="radio" id="rightSidebarMediaTypeHybrid" name="rightSidebarMediaType" value="hybrid" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'hybrid')>
+                                        <span class="text-sm text-gray-700">Híbrido (vídeo + slide)</span>
+                                    </label>
+                                </div>
+                                <p id="rightSidebarMediaTypeDisabledHint" class="hidden mt-2 text-xs text-amber-700">Com o carrossel de produtos ativo, este bloco fica desativado para evitar conflito.</p>
                                 @error('rightSidebarMediaType')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
                             </div>
 
@@ -594,6 +648,116 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de imagens antes de voltar para vídeo</label>
                                         <input type="number" id="rightSidebarHybridImageDuration" name="rightSidebarHybridImageDuration" min="1" max="1000" value="{{ old('rightSidebarHybridImageDuration', $config->rightSidebarHybridImageDuration ?? 4) }}" class="w-full border rounded px-3 py-2">
                                         @error('rightSidebarHybridImageDuration')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-4">
+                                <h4 class="text-sm font-semibold text-gray-800">Lateral direita: carrossel de produtos</h4>
+                                <p class="text-xs text-gray-600">Exibe produtos um por vez dentro do retângulo lateral direito, com nome, imagem e preço.</p>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="rightSidebarProductCarouselEnabled" value="0">
+                                    <input type="checkbox" id="rightSidebarProductCarouselEnabled" name="rightSidebarProductCarouselEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductCarouselEnabled', $config->rightSidebarProductCarouselEnabled ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar carrossel de produtos na lateral direita</span>
+                                </label>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Quais produtos mostrar</label>
+                                        <select name="rightSidebarProductDisplayMode" class="w-full border rounded px-3 py-2">
+                                            <option value="all" @selected(old('rightSidebarProductDisplayMode', $config->rightSidebarProductDisplayMode ?? 'all') === 'all')>Todos os produtos</option>
+                                            <option value="offers_only" @selected(old('rightSidebarProductDisplayMode', $config->rightSidebarProductDisplayMode ?? 'all') === 'offers_only')>Somente produtos em oferta</option>
+                                        </select>
+                                        @error('rightSidebarProductDisplayMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tempo por item (segundos)</label>
+                                        <input type="number" name="rightSidebarProductInterval" min="1" max="300" value="{{ old('rightSidebarProductInterval', $config->rightSidebarProductInterval ?? 8) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarProductInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comportamento com slide de imagens</label>
+                                    <select name="rightSidebarProductTransitionMode" class="w-full border rounded px-3 py-2">
+                                        <option value="products_only" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'products_only')>Somente produtos</option>
+                                        <option value="before_images" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'before_images')>Passar produtos antes das imagens</option>
+                                        <option value="mixed_with_images" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_images')>Misturar produtos + imagens</option>
+                                        <option value="mixed_with_media" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_media')>Misturar produtos + imagens + videos</option>
+                                    </select>
+                                    @error('rightSidebarProductTransitionMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="rightSidebarProductShowName" value="0">
+                                        <input type="checkbox" name="rightSidebarProductShowName" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductShowName', $config->rightSidebarProductShowName ?? true))>
+                                        <span class="text-sm text-gray-700">Mostrar nome</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="rightSidebarProductShowImage" value="0">
+                                        <input type="checkbox" name="rightSidebarProductShowImage" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductShowImage', $config->rightSidebarProductShowImage ?? true))>
+                                        <span class="text-sm text-gray-700">Mostrar imagem</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="rightSidebarProductShowPrice" value="0">
+                                        <input type="checkbox" name="rightSidebarProductShowPrice" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductShowPrice', $config->rightSidebarProductShowPrice ?? true))>
+                                        <span class="text-sm text-gray-700">Mostrar preço</span>
+                                    </label>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Posição do nome</label>
+                                        <select name="rightSidebarProductNamePosition" class="w-full border rounded px-3 py-2">
+                                            <option value="top" @selected(old('rightSidebarProductNamePosition', $config->rightSidebarProductNamePosition ?? 'top') === 'top')>Parte de cima</option>
+                                            <option value="bottom" @selected(old('rightSidebarProductNamePosition', $config->rightSidebarProductNamePosition ?? 'top') === 'bottom')>Parte de baixo</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Posição do preço</label>
+                                        <select name="rightSidebarProductPricePosition" class="w-full border rounded px-3 py-2">
+                                            <option value="bottom" @selected(old('rightSidebarProductPricePosition', $config->rightSidebarProductPricePosition ?? 'bottom') === 'bottom')>Parte de baixo</option>
+                                            <option value="top" @selected(old('rightSidebarProductPricePosition', $config->rightSidebarProductPricePosition ?? 'bottom') === 'top')>Parte de cima</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2 rounded border border-gray-200 bg-gray-50 p-3">
+                                        <h5 class="text-sm font-semibold text-gray-800">Nome</h5>
+                                        <label class="inline-flex items-center gap-2">
+                                            <input type="hidden" name="rightSidebarProductNameBadgeEnabled" value="0">
+                                            <input type="checkbox" name="rightSidebarProductNameBadgeEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductNameBadgeEnabled', $config->rightSidebarProductNameBadgeEnabled ?? true))>
+                                            <span class="text-sm text-gray-700">Usar tarja no nome</span>
+                                        </label>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor do nome</label>
+                                            <input type="color" name="rightSidebarProductNameColor" value="{{ old('rightSidebarProductNameColor', $config->rightSidebarProductNameColor ?? '#FFFFFF') }}" class="w-full h-10 border rounded">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja do nome</label>
+                                            <input type="color" name="rightSidebarProductNameBadgeColor" value="{{ old('rightSidebarProductNameBadgeColor', $config->rightSidebarProductNameBadgeColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2 rounded border border-gray-200 bg-gray-50 p-3">
+                                        <h5 class="text-sm font-semibold text-gray-800">Preço</h5>
+                                        <label class="inline-flex items-center gap-2">
+                                            <input type="hidden" name="rightSidebarProductPriceBadgeEnabled" value="0">
+                                            <input type="checkbox" name="rightSidebarProductPriceBadgeEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductPriceBadgeEnabled', $config->rightSidebarProductPriceBadgeEnabled ?? true))>
+                                            <span class="text-sm text-gray-700">Usar tarja no preço</span>
+                                        </label>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor do preço</label>
+                                            <input type="color" name="rightSidebarProductPriceColor" value="{{ old('rightSidebarProductPriceColor', $config->rightSidebarProductPriceColor ?? '#FDE68A') }}" class="w-full h-10 border rounded">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor da tarja do preço</label>
+                                            <input type="color" name="rightSidebarProductPriceBadgeColor" value="{{ old('rightSidebarProductPriceBadgeColor', $config->rightSidebarProductPriceBadgeColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -722,6 +886,20 @@
                                         <h5 class="text-sm font-semibold text-gray-800">Upload de Imagem Propria</h5>
                                         <input type="file" name="companyGalleryUpload" id="companyGalleryUpload" accept="image/*" class="w-full border rounded px-3 py-2 bg-white">
                                         @error('companyGalleryUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                        <div>
+                                            <label for="companyGalleryDirectUrl" class="block text-sm font-medium text-gray-700 mb-1">Ou use link direto da imagem</label>
+                                            <input
+                                                type="text"
+                                                name="companyGalleryDirectUrl"
+                                                id="companyGalleryDirectUrl"
+                                                value="{{ old('companyGalleryDirectUrl', '') }}"
+                                                placeholder="https://exemplo.com/imagem.jpg"
+                                                class="w-full border rounded px-3 py-2 bg-white"
+                                            >
+                                            <p class="text-xs text-gray-500 mt-1">Se preencher, este link sera adicionado ao slide da lateral direita ao salvar.</p>
+                                            @error('companyGalleryDirectUrl')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
                                     </div>
 
                                     @if (!empty($companyGalleryImages))
@@ -767,25 +945,23 @@
                                 </div>
 
                             <div id="rightSidebarImageConfig" data-company-gallery-name="Configuracao do Slide de Imagens" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
-                                <h4 class="text-sm font-semibold text-gray-800">Configuração do Slide de Imagens</h4>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Links das imagens (um por linha)</label>
-                                    <textarea
-                                        id="rightSidebarImageUrls"
-                                        name="rightSidebarImageUrls"
-                                        rows="5"
-                                        placeholder="https://.../imagem1.jpg\nhttps://.../imagem2.png"
-                                        class="w-full border rounded px-3 py-2"
-                                    >{{ old('rightSidebarImageUrls', $config->rightSidebarImageUrls ?? '') }}</textarea>
-                                    @error('rightSidebarImageUrls')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <div class="flex items-center justify-between gap-2">
+                                    <h4 class="text-sm font-semibold text-gray-800">Configuração do Slide de Imagens</h4>
+                                    <button
+                                        type="button"
+                                        id="addSlideImageFromGalleryBtn"
+                                        class="rounded border border-indigo-600 bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
+                                    >Novo</button>
                                 </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pré-visualização das imagens</label>
-                                    <div id="rightSidebarImagePreview" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
-                                    <p id="rightSidebarImagePreviewHint" class="mt-2 text-xs text-gray-500">Adicione links válidos para visualizar miniaturas.</p>
-                                </div>
+                                <input
+                                    type="hidden"
+                                    id="rightSidebarImageUrls"
+                                    name="rightSidebarImageUrls"
+                                    value="{{ old('rightSidebarImageUrls', $config->rightSidebarImageUrls ?? '') }}"
+                                >
+                                <p class="text-xs text-gray-600">Use o botão <strong>Novo</strong> para abrir a galeria e escolher as imagens do slide.</p>
+                                @error('rightSidebarImageUrls')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Periodo de exibicao por imagem</label>
@@ -945,6 +1121,13 @@
                                 </div>
 
                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Deslocamento vertical da lista (px) [ - sobe | + desce ]</label>
+                                    <input type="number" name="productListVerticalOffset" min="-300" max="300" value="{{ old('productListVerticalOffset', $config->productListVerticalOffset ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                    <p class="text-xs text-gray-500 mt-1">Exemplo: <strong>-20</strong> sobe a lista 20px, <strong>+20</strong> desce a lista 20px.</p>
+                                    @error('productListVerticalOffset')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da linha (px)</label>
                                     <input type="number" id="rowBorderWidth" name="rowBorderWidth" min="0" max="20" value="{{ old('rowBorderWidth', $config->rowBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
                                     @error('rowBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
@@ -965,6 +1148,13 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do grupo (topo) (px)</label>
                                     <input type="number" name="groupLabelFontSize" min="10" max="60" value="{{ old('groupLabelFontSize', $config->groupLabelFontSize ?? 14) }}" class="w-full border rounded px-3 py-2">
                                     @error('groupLabelFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Deslocamento vertical da descrição do grupo (px) [ - sobe | + desce ]</label>
+                                    <input type="number" name="groupLabelVerticalOffset" min="-300" max="300" value="{{ old('groupLabelVerticalOffset', $config->groupLabelVerticalOffset ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                    <p class="text-xs text-gray-500 mt-1">Exemplo: <strong>-20</strong> sobe a descrição 20px, <strong>+20</strong> desce a descrição 20px.</p>
+                                    @error('groupLabelVerticalOffset')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div>
@@ -1080,11 +1270,13 @@
         const rightSidebarMediaTypeVideo = document.getElementById('rightSidebarMediaTypeVideo');
         const rightSidebarMediaTypeImage = document.getElementById('rightSidebarMediaTypeImage');
         const rightSidebarMediaTypeHybrid = document.getElementById('rightSidebarMediaTypeHybrid');
+        const rightSidebarMediaTypeGroup = document.getElementById('rightSidebarMediaTypeGroup');
+        const rightSidebarMediaTypeDisabledHint = document.getElementById('rightSidebarMediaTypeDisabledHint');
+        const rightSidebarProductCarouselEnabled = document.getElementById('rightSidebarProductCarouselEnabled');
         const rightSidebarHybridConfig = document.getElementById('rightSidebarHybridConfig');
         const rightSidebarImageConfig = document.getElementById('rightSidebarImageConfig');
         const rightSidebarImageUrls = document.getElementById('rightSidebarImageUrls');
-        const rightSidebarImagePreview = document.getElementById('rightSidebarImagePreview');
-        const rightSidebarImagePreviewHint = document.getElementById('rightSidebarImagePreviewHint');
+        const addSlideImageFromGalleryBtn = document.getElementById('addSlideImageFromGalleryBtn');
         const rightSidebarImageScheduleEditor = document.getElementById('rightSidebarImageScheduleEditor');
         const rightSidebarImageScheduleHint = document.getElementById('rightSidebarImageScheduleHint');
         const rightSidebarGlobalGalleryCode = document.getElementById('rightSidebarGlobalGalleryCode');
@@ -1108,6 +1300,9 @@
         const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
         const webConfigForm = document.getElementById('webConfigForm');
         const saveSectionInput = document.getElementById('saveSection');
+        const suggestedSlideSelectionSubmittedInput = document.getElementById('suggestedSlideSelectionSubmitted');
+        const openCompanyGalleryTargetInput = document.getElementById('openCompanyGalleryTarget');
+        const openRightSidebarImageScheduleUrlInput = document.getElementById('openRightSidebarImageScheduleUrl');
         const companyGallerySubmenuList = document.getElementById('companyGallerySubmenuList');
         let companyGallerySubmenuButtons = [];
         const companyGalleryNavBlocks = Array.from(document.querySelectorAll('[data-company-gallery-name][id]'));
@@ -1118,10 +1313,30 @@
         let hasUserInteractedWithSlideSelection = false;
         const hasOldSlideSources = @json($hasOldSlideSources);
         const savedSlideUrls = @json($savedSlideUrls->all());
+        const requestedOpenRightSidebarImageScheduleUrl = @json(session('openRightSidebarImageScheduleUrl'));
         let rightSidebarImageScheduleState = {};
+        let openRightSidebarImageScheduleUrl = null;
+        let pendingScheduleRowHighlightUrl = normalizeSlideUrlForCompare(requestedOpenRightSidebarImageScheduleUrl || '');
 
         function getNormalizedScheduleStateFromInitialData() {
             const map = {};
+
+            const parsePlatformEnabled = (value, defaultValue = true) => {
+                if (value === undefined || value === null || value === '') {
+                    return defaultValue;
+                }
+
+                if (typeof value === 'boolean') {
+                    return value;
+                }
+
+                if (typeof value === 'number') {
+                    return value === 1;
+                }
+
+                const normalized = String(value).trim().toLowerCase();
+                return normalized === '1' || normalized === 'true' || normalized === 'on' || normalized === 'yes';
+            };
 
             if (!Array.isArray(initialRightSidebarImageSchedules)) {
                 return map;
@@ -1135,8 +1350,45 @@
                 }
 
                 map[url] = {
+                    name: String(entry?.name || '').trim(),
                     startDate: String(entry?.startDate || '').trim(),
                     endDate: String(entry?.endDate || '').trim(),
+                    enabledForWindows: parsePlatformEnabled(entry?.enabledForWindows, true),
+                    enabledForAndroid: parsePlatformEnabled(entry?.enabledForAndroid, true),
+                    windowsImageHeight: Number(entry?.windowsImageHeight ?? entry?.imageHeight ?? 0) || 0,
+                    windowsImageWidth: Number(entry?.windowsImageWidth ?? entry?.imageWidth ?? 0) || 0,
+                    windowsVerticalOffset: Number(entry?.windowsVerticalOffset ?? entry?.verticalOffset ?? 0) || 0,
+                    windowsShowName: parsePlatformEnabled(entry?.windowsShowName, false),
+                    windowsShowPrice: parsePlatformEnabled(entry?.windowsShowPrice, false),
+                    windowsPriceText: String(entry?.windowsPriceText || '').trim(),
+                    windowsNameFontSize: Number(entry?.windowsNameFontSize ?? 18) || 18,
+                    windowsPriceFontSize: Number(entry?.windowsPriceFontSize ?? 22) || 22,
+                    windowsTextFontFamily: String(entry?.windowsTextFontFamily || 'arial').trim().toLowerCase(),
+                    windowsNamePosition: String(entry?.windowsNamePosition || 'top').trim().toLowerCase(),
+                    windowsPricePosition: String(entry?.windowsPricePosition || 'bottom').trim().toLowerCase(),
+                    windowsNameColor: String(entry?.windowsNameColor || '#FFFFFF').trim(),
+                    windowsNameBadgeEnabled: parsePlatformEnabled(entry?.windowsNameBadgeEnabled, true),
+                    windowsNameBadgeColor: String(entry?.windowsNameBadgeColor || '#0F172A').trim(),
+                    windowsPriceColor: String(entry?.windowsPriceColor || '#FDE68A').trim(),
+                    windowsPriceBadgeEnabled: parsePlatformEnabled(entry?.windowsPriceBadgeEnabled, true),
+                    windowsPriceBadgeColor: String(entry?.windowsPriceBadgeColor || '#0F172A').trim(),
+                    androidImageHeight: Number(entry?.androidImageHeight ?? entry?.imageHeight ?? 0) || 0,
+                    androidImageWidth: Number(entry?.androidImageWidth ?? entry?.imageWidth ?? 0) || 0,
+                    androidVerticalOffset: Number(entry?.androidVerticalOffset ?? entry?.verticalOffset ?? 0) || 0,
+                    androidShowName: parsePlatformEnabled(entry?.androidShowName, false),
+                    androidShowPrice: parsePlatformEnabled(entry?.androidShowPrice, false),
+                    androidPriceText: String(entry?.androidPriceText || '').trim(),
+                    androidNameFontSize: Number(entry?.androidNameFontSize ?? 18) || 18,
+                    androidPriceFontSize: Number(entry?.androidPriceFontSize ?? 22) || 22,
+                    androidTextFontFamily: String(entry?.androidTextFontFamily || 'arial').trim().toLowerCase(),
+                    androidNamePosition: String(entry?.androidNamePosition || 'top').trim().toLowerCase(),
+                    androidPricePosition: String(entry?.androidPricePosition || 'bottom').trim().toLowerCase(),
+                    androidNameColor: String(entry?.androidNameColor || '#FFFFFF').trim(),
+                    androidNameBadgeEnabled: parsePlatformEnabled(entry?.androidNameBadgeEnabled, true),
+                    androidNameBadgeColor: String(entry?.androidNameBadgeColor || '#0F172A').trim(),
+                    androidPriceColor: String(entry?.androidPriceColor || '#FDE68A').trim(),
+                    androidPriceBadgeEnabled: parsePlatformEnabled(entry?.androidPriceBadgeEnabled, true),
+                    androidPriceBadgeColor: String(entry?.androidPriceBadgeColor || '#0F172A').trim(),
                 };
             });
 
@@ -1490,6 +1742,26 @@
             }
         }
 
+        function updateRightSidebarMediaTypeAvailability() {
+            const carouselEnabled = Boolean(rightSidebarProductCarouselEnabled && rightSidebarProductCarouselEnabled.checked);
+            [rightSidebarMediaTypeVideo, rightSidebarMediaTypeImage, rightSidebarMediaTypeHybrid].forEach((input) => {
+                if (!input) {
+                    return;
+                }
+
+                input.disabled = carouselEnabled;
+            });
+
+            if (rightSidebarMediaTypeGroup) {
+                rightSidebarMediaTypeGroup.style.opacity = carouselEnabled ? '0.55' : '1';
+                rightSidebarMediaTypeGroup.style.pointerEvents = carouselEnabled ? 'none' : 'auto';
+            }
+
+            if (rightSidebarMediaTypeDisabledHint) {
+                rightSidebarMediaTypeDisabledHint.classList.toggle('hidden', !carouselEnabled);
+            }
+        }
+
         function parseRightSidebarImageUrls() {
             if (!rightSidebarImageUrls) {
                 return [];
@@ -1499,56 +1771,6 @@
                 .split(/\r?\n|,|;\s*/)
                 .map((value) => value.trim())
                 .filter((value) => /^https?:\/\//i.test(value) || /^\/storage\//i.test(value) || /^storage\//i.test(value));
-        }
-
-        function renderRightSidebarImagePreview() {
-            if (!rightSidebarImagePreview || !rightSidebarImagePreviewHint) {
-                return;
-            }
-
-            const urls = parseRightSidebarImageUrls();
-            rightSidebarImagePreview.innerHTML = '';
-
-            if (urls.length === 0) {
-                rightSidebarImagePreviewHint.textContent = 'Adicione links válidos para visualizar miniaturas.';
-                return;
-            }
-
-            const maxPreviewItems = 20;
-            const previewUrls = urls.slice(0, maxPreviewItems);
-
-            previewUrls.forEach((url) => {
-                const card = document.createElement('div');
-                card.className = 'rounded border border-gray-300 bg-white overflow-hidden';
-
-                const image = document.createElement('img');
-                image.src = url;
-                image.alt = 'Prévia da imagem';
-                image.className = 'w-full h-24 object-cover';
-                image.loading = 'lazy';
-                image.onerror = () => {
-                    image.classList.add('hidden');
-                    const fallback = document.createElement('div');
-                    fallback.className = 'h-24 flex items-center justify-center text-[11px] text-red-600 px-2 text-center';
-                    fallback.textContent = 'Falha ao carregar imagem';
-                    card.appendChild(fallback);
-                };
-
-                const caption = document.createElement('div');
-                caption.className = 'px-2 py-1 text-[11px] text-gray-600 truncate';
-                caption.textContent = url;
-                caption.title = url;
-
-                card.appendChild(image);
-                card.appendChild(caption);
-                rightSidebarImagePreview.appendChild(card);
-            });
-
-            if (urls.length > maxPreviewItems) {
-                rightSidebarImagePreviewHint.textContent = `Mostrando ${maxPreviewItems} de ${urls.length} imagens.`;
-            } else {
-                rightSidebarImagePreviewHint.textContent = `${urls.length} imagem(ns) detectada(s).`;
-            }
         }
 
         function collectScheduleStateFromEditor() {
@@ -1563,11 +1785,85 @@
                     return;
                 }
 
+                const nameInput = row.querySelector('input[data-schedule-name]');
                 const startInput = row.querySelector('input[data-schedule-start]');
                 const endInput = row.querySelector('input[data-schedule-end]');
+                const enabledWindowsInput = row.querySelector('input[data-schedule-enabled-windows]');
+                const enabledAndroidInput = row.querySelector('input[data-schedule-enabled-android]');
+                const windowsHeightInput = row.querySelector('input[data-schedule-height-windows]');
+                const windowsWidthInput = row.querySelector('input[data-schedule-width-windows]');
+                const windowsOffsetInput = row.querySelector('input[data-schedule-offset-windows]');
+                const windowsShowNameInput = row.querySelector('input[data-schedule-show-name-windows]');
+                const windowsShowPriceInput = row.querySelector('input[data-schedule-show-price-windows]');
+                const windowsPriceTextInput = row.querySelector('input[data-schedule-price-text-windows]');
+                const windowsNameFontSizeInput = row.querySelector('input[data-schedule-name-font-size-windows]');
+                const windowsPriceFontSizeInput = row.querySelector('input[data-schedule-price-font-size-windows]');
+                const windowsTextFontFamilyInput = row.querySelector('select[data-schedule-font-family-windows]');
+                const windowsNamePositionInput = row.querySelector('select[data-schedule-name-position-windows]');
+                const windowsPricePositionInput = row.querySelector('select[data-schedule-price-position-windows]');
+                const windowsNameColorInput = row.querySelector('input[data-schedule-name-color-windows]');
+                const windowsNameBadgeEnabledInput = row.querySelector('input[data-schedule-name-badge-enabled-windows]');
+                const windowsNameBadgeColorInput = row.querySelector('input[data-schedule-name-badge-color-windows]');
+                const windowsPriceColorInput = row.querySelector('input[data-schedule-price-color-windows]');
+                const windowsPriceBadgeEnabledInput = row.querySelector('input[data-schedule-price-badge-enabled-windows]');
+                const windowsPriceBadgeColorInput = row.querySelector('input[data-schedule-price-badge-color-windows]');
+                const androidHeightInput = row.querySelector('input[data-schedule-height-android]');
+                const androidWidthInput = row.querySelector('input[data-schedule-width-android]');
+                const androidOffsetInput = row.querySelector('input[data-schedule-offset-android]');
+                const androidShowNameInput = row.querySelector('input[data-schedule-show-name-android]');
+                const androidShowPriceInput = row.querySelector('input[data-schedule-show-price-android]');
+                const androidPriceTextInput = row.querySelector('input[data-schedule-price-text-android]');
+                const androidNameFontSizeInput = row.querySelector('input[data-schedule-name-font-size-android]');
+                const androidPriceFontSizeInput = row.querySelector('input[data-schedule-price-font-size-android]');
+                const androidTextFontFamilyInput = row.querySelector('select[data-schedule-font-family-android]');
+                const androidNamePositionInput = row.querySelector('select[data-schedule-name-position-android]');
+                const androidPricePositionInput = row.querySelector('select[data-schedule-price-position-android]');
+                const androidNameColorInput = row.querySelector('input[data-schedule-name-color-android]');
+                const androidNameBadgeEnabledInput = row.querySelector('input[data-schedule-name-badge-enabled-android]');
+                const androidNameBadgeColorInput = row.querySelector('input[data-schedule-name-badge-color-android]');
+                const androidPriceColorInput = row.querySelector('input[data-schedule-price-color-android]');
+                const androidPriceBadgeEnabledInput = row.querySelector('input[data-schedule-price-badge-enabled-android]');
+                const androidPriceBadgeColorInput = row.querySelector('input[data-schedule-price-badge-color-android]');
                 rightSidebarImageScheduleState[url] = {
+                    name: nameInput instanceof HTMLInputElement ? String(nameInput.value || '').trim() : '',
                     startDate: startInput instanceof HTMLInputElement ? String(startInput.value || '').trim() : '',
                     endDate: endInput instanceof HTMLInputElement ? String(endInput.value || '').trim() : '',
+                    enabledForWindows: enabledWindowsInput instanceof HTMLInputElement ? Boolean(enabledWindowsInput.checked) : true,
+                    enabledForAndroid: enabledAndroidInput instanceof HTMLInputElement ? Boolean(enabledAndroidInput.checked) : true,
+                    windowsImageHeight: windowsHeightInput instanceof HTMLInputElement ? Math.max(0, Number(windowsHeightInput.value || 0) || 0) : 0,
+                    windowsImageWidth: windowsWidthInput instanceof HTMLInputElement ? Math.max(0, Number(windowsWidthInput.value || 0) || 0) : 0,
+                    windowsVerticalOffset: windowsOffsetInput instanceof HTMLInputElement ? Math.max(-300, Math.min(300, Number(windowsOffsetInput.value || 0) || 0)) : 0,
+                    windowsShowName: windowsShowNameInput instanceof HTMLInputElement ? Boolean(windowsShowNameInput.checked) : false,
+                    windowsShowPrice: windowsShowPriceInput instanceof HTMLInputElement ? Boolean(windowsShowPriceInput.checked) : false,
+                    windowsPriceText: windowsPriceTextInput instanceof HTMLInputElement ? String(windowsPriceTextInput.value || '').trim() : '',
+                    windowsNameFontSize: windowsNameFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(windowsNameFontSizeInput.value || 18) || 18)) : 18,
+                    windowsPriceFontSize: windowsPriceFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(windowsPriceFontSizeInput.value || 22) || 22)) : 22,
+                    windowsTextFontFamily: windowsTextFontFamilyInput instanceof HTMLSelectElement ? String(windowsTextFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
+                    windowsNamePosition: windowsNamePositionInput instanceof HTMLSelectElement ? String(windowsNamePositionInput.value || 'top').toLowerCase() : 'top',
+                    windowsPricePosition: windowsPricePositionInput instanceof HTMLSelectElement ? String(windowsPricePositionInput.value || 'bottom').toLowerCase() : 'bottom',
+                    windowsNameColor: windowsNameColorInput instanceof HTMLInputElement ? String(windowsNameColorInput.value || '#FFFFFF').trim() : '#FFFFFF',
+                    windowsNameBadgeEnabled: windowsNameBadgeEnabledInput instanceof HTMLInputElement ? Boolean(windowsNameBadgeEnabledInput.checked) : true,
+                    windowsNameBadgeColor: windowsNameBadgeColorInput instanceof HTMLInputElement ? String(windowsNameBadgeColorInput.value || '#0F172A').trim() : '#0F172A',
+                    windowsPriceColor: windowsPriceColorInput instanceof HTMLInputElement ? String(windowsPriceColorInput.value || '#FDE68A').trim() : '#FDE68A',
+                    windowsPriceBadgeEnabled: windowsPriceBadgeEnabledInput instanceof HTMLInputElement ? Boolean(windowsPriceBadgeEnabledInput.checked) : true,
+                    windowsPriceBadgeColor: windowsPriceBadgeColorInput instanceof HTMLInputElement ? String(windowsPriceBadgeColorInput.value || '#0F172A').trim() : '#0F172A',
+                    androidImageHeight: androidHeightInput instanceof HTMLInputElement ? Math.max(0, Number(androidHeightInput.value || 0) || 0) : 0,
+                    androidImageWidth: androidWidthInput instanceof HTMLInputElement ? Math.max(0, Number(androidWidthInput.value || 0) || 0) : 0,
+                    androidVerticalOffset: androidOffsetInput instanceof HTMLInputElement ? Math.max(-300, Math.min(300, Number(androidOffsetInput.value || 0) || 0)) : 0,
+                    androidShowName: androidShowNameInput instanceof HTMLInputElement ? Boolean(androidShowNameInput.checked) : false,
+                    androidShowPrice: androidShowPriceInput instanceof HTMLInputElement ? Boolean(androidShowPriceInput.checked) : false,
+                    androidPriceText: androidPriceTextInput instanceof HTMLInputElement ? String(androidPriceTextInput.value || '').trim() : '',
+                    androidNameFontSize: androidNameFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(androidNameFontSizeInput.value || 18) || 18)) : 18,
+                    androidPriceFontSize: androidPriceFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(androidPriceFontSizeInput.value || 22) || 22)) : 22,
+                    androidTextFontFamily: androidTextFontFamilyInput instanceof HTMLSelectElement ? String(androidTextFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
+                    androidNamePosition: androidNamePositionInput instanceof HTMLSelectElement ? String(androidNamePositionInput.value || 'top').toLowerCase() : 'top',
+                    androidPricePosition: androidPricePositionInput instanceof HTMLSelectElement ? String(androidPricePositionInput.value || 'bottom').toLowerCase() : 'bottom',
+                    androidNameColor: androidNameColorInput instanceof HTMLInputElement ? String(androidNameColorInput.value || '#FFFFFF').trim() : '#FFFFFF',
+                    androidNameBadgeEnabled: androidNameBadgeEnabledInput instanceof HTMLInputElement ? Boolean(androidNameBadgeEnabledInput.checked) : true,
+                    androidNameBadgeColor: androidNameBadgeColorInput instanceof HTMLInputElement ? String(androidNameBadgeColorInput.value || '#0F172A').trim() : '#0F172A',
+                    androidPriceColor: androidPriceColorInput instanceof HTMLInputElement ? String(androidPriceColorInput.value || '#FDE68A').trim() : '#FDE68A',
+                    androidPriceBadgeEnabled: androidPriceBadgeEnabledInput instanceof HTMLInputElement ? Boolean(androidPriceBadgeEnabledInput.checked) : true,
+                    androidPriceBadgeColor: androidPriceBadgeColorInput instanceof HTMLInputElement ? String(androidPriceBadgeColorInput.value || '#0F172A').trim() : '#0F172A',
                 };
             });
         }
@@ -1593,34 +1889,160 @@
             rightSidebarImageScheduleEditor.innerHTML = '';
 
             if (urls.length === 0) {
+                openRightSidebarImageScheduleUrl = null;
                 rightSidebarImageScheduleHint.textContent = 'Adicione imagens para configurar datas de exibicao.';
                 return;
+            }
+
+            if (openRightSidebarImageScheduleUrl && !urls.includes(openRightSidebarImageScheduleUrl)) {
+                openRightSidebarImageScheduleUrl = null;
             }
 
             const preservedState = {};
 
             urls.forEach((url, index) => {
-                const state = rightSidebarImageScheduleState[url] || { startDate: '', endDate: '' };
+                const state = rightSidebarImageScheduleState[url] || {
+                    name: '',
+                    startDate: '',
+                    endDate: '',
+                    enabledForWindows: true,
+                    enabledForAndroid: true,
+                    windowsImageHeight: 0,
+                    windowsImageWidth: 0,
+                    windowsVerticalOffset: 0,
+                    windowsShowName: false,
+                    windowsShowPrice: false,
+                    windowsPriceText: '',
+                    windowsNameFontSize: 18,
+                    windowsPriceFontSize: 22,
+                    windowsTextFontFamily: 'arial',
+                    windowsNamePosition: 'top',
+                    windowsPricePosition: 'bottom',
+                    windowsNameColor: '#FFFFFF',
+                    windowsNameBadgeEnabled: true,
+                    windowsNameBadgeColor: '#0F172A',
+                    windowsPriceColor: '#FDE68A',
+                    windowsPriceBadgeEnabled: true,
+                    windowsPriceBadgeColor: '#0F172A',
+                    androidImageHeight: 0,
+                    androidImageWidth: 0,
+                    androidVerticalOffset: 0,
+                    androidShowName: false,
+                    androidShowPrice: false,
+                    androidPriceText: '',
+                    androidNameFontSize: 18,
+                    androidPriceFontSize: 22,
+                    androidTextFontFamily: 'arial',
+                    androidNamePosition: 'top',
+                    androidPricePosition: 'bottom',
+                    androidNameColor: '#FFFFFF',
+                    androidNameBadgeEnabled: true,
+                    androidNameBadgeColor: '#0F172A',
+                    androidPriceColor: '#FDE68A',
+                    androidPriceBadgeEnabled: true,
+                    androidPriceBadgeColor: '#0F172A',
+                };
                 preservedState[url] = state;
 
                 const row = document.createElement('div');
-                row.className = 'rounded border border-gray-200 bg-gray-50 p-2 space-y-2';
+                row.className = 'rounded border border-gray-200 bg-gray-50 p-2 space-y-2 transition-colors duration-700';
                 row.setAttribute('data-schedule-row-url', url);
+                row.setAttribute('data-schedule-row', '1');
 
-                const urlText = document.createElement('p');
-                urlText.className = 'text-[11px] text-gray-700 truncate';
-                urlText.textContent = url;
-                urlText.title = url;
-                row.appendChild(urlText);
+                const summaryButton = document.createElement('button');
+                summaryButton.type = 'button';
+                summaryButton.className = 'w-full flex items-center gap-3 rounded border border-gray-200 bg-white px-2 py-2 text-left';
+                summaryButton.setAttribute('data-schedule-summary', url);
+
+                const thumb = document.createElement('img');
+                thumb.src = url;
+                thumb.alt = 'Miniatura';
+                thumb.className = 'w-14 h-10 rounded object-cover border border-gray-200 bg-gray-100 shrink-0';
+                thumb.loading = 'lazy';
+                thumb.onerror = function () {
+                    thumb.style.opacity = '0.35';
+                };
+
+                const summaryTextWrap = document.createElement('div');
+                summaryTextWrap.className = 'min-w-0 flex-1';
+
+                const summaryTitle = document.createElement('p');
+                summaryTitle.className = 'text-xs font-semibold text-gray-800 truncate';
+                summaryTitle.textContent = state.name || `Imagem ${index + 1}`;
+                summaryTitle.title = summaryTitle.textContent;
+
+                const summaryUrl = document.createElement('p');
+                summaryUrl.className = 'text-[11px] text-gray-500 truncate';
+                summaryUrl.textContent = url;
+                summaryUrl.title = url;
+
+                summaryTextWrap.appendChild(summaryTitle);
+                summaryTextWrap.appendChild(summaryUrl);
+
+                const isExpanded = openRightSidebarImageScheduleUrl === url;
+                const summaryHint = document.createElement('span');
+                summaryHint.className = 'text-[11px] text-indigo-600 shrink-0';
+                summaryHint.textContent = 'Editar';
+
+                summaryButton.appendChild(thumb);
+                summaryButton.appendChild(summaryTextWrap);
+                summaryButton.appendChild(summaryHint);
+                row.appendChild(summaryButton);
+
+                const details = document.createElement('div');
+                details.className = `rounded border border-gray-200 bg-white p-2 space-y-2${isExpanded ? '' : ' hidden'}`;
+                details.setAttribute('data-schedule-details', url);
 
                 const hiddenUrl = document.createElement('input');
                 hiddenUrl.type = 'hidden';
                 hiddenUrl.name = `rightSidebarImageSchedules[${index}][url]`;
                 hiddenUrl.value = url;
-                row.appendChild(hiddenUrl);
+                details.appendChild(hiddenUrl);
 
-                const grid = document.createElement('div');
-                grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
+                const legacyHeight = document.createElement('input');
+                legacyHeight.type = 'hidden';
+                legacyHeight.name = `rightSidebarImageSchedules[${index}][imageHeight]`;
+                legacyHeight.value = Number(state.windowsImageHeight || 0);
+                details.appendChild(legacyHeight);
+
+                const legacyWidth = document.createElement('input');
+                legacyWidth.type = 'hidden';
+                legacyWidth.name = `rightSidebarImageSchedules[${index}][imageWidth]`;
+                legacyWidth.value = Number(state.windowsImageWidth || 0);
+                details.appendChild(legacyWidth);
+
+                const legacyOffset = document.createElement('input');
+                legacyOffset.type = 'hidden';
+                legacyOffset.name = `rightSidebarImageSchedules[${index}][verticalOffset]`;
+                legacyOffset.value = Number(state.windowsVerticalOffset || 0);
+                details.appendChild(legacyOffset);
+
+                const nameWrap = document.createElement('label');
+                nameWrap.className = 'block text-[11px] text-gray-600';
+                nameWrap.textContent = 'Nome da imagem';
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.name = `rightSidebarImageSchedules[${index}][name]`;
+                nameInput.value = state.name || '';
+                nameInput.maxLength = 120;
+                nameInput.setAttribute('data-schedule-name', '1');
+                nameInput.className = 'w-full border rounded px-2 py-1 text-xs mt-1';
+                nameWrap.appendChild(nameInput);
+                details.appendChild(nameWrap);
+
+                const linkWrap = document.createElement('label');
+                linkWrap.className = 'block text-[11px] text-gray-600';
+                linkWrap.textContent = 'Link da imagem';
+                const linkInput = document.createElement('input');
+                linkInput.type = 'text';
+                linkInput.value = url;
+                linkInput.className = 'w-full border rounded px-2 py-1 text-xs mt-1';
+                linkInput.setAttribute('data-schedule-link', '1');
+                linkWrap.appendChild(linkInput);
+                details.appendChild(linkWrap);
+
+                const dateGrid = document.createElement('div');
+                dateGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
 
                 const startWrap = document.createElement('label');
                 startWrap.className = 'block text-[11px] text-gray-600';
@@ -1634,49 +2056,785 @@
                 const endInput = createScheduleInput(`rightSidebarImageSchedules[${index}][endDate]`, state.endDate, 'data-schedule-end');
                 endWrap.appendChild(endInput);
 
+                const createPlatformConfigCard = ({
+                    platform,
+                    title,
+                    isEnabled,
+                    imageHeight,
+                    imageWidth,
+                    verticalOffset,
+                    showName,
+                    showPrice,
+                    priceText,
+                    nameFontSize,
+                    priceFontSize,
+                    textFontFamily,
+                    namePosition,
+                    pricePosition,
+                    nameColor,
+                    nameBadgeEnabled,
+                    nameBadgeColor,
+                    priceColor,
+                    priceBadgeEnabled,
+                    priceBadgeColor,
+                }) => {
+                    const keyPrefix = platform === 'android' ? 'android' : 'windows';
+                    const enabledName = platform === 'android' ? 'enabledForAndroid' : 'enabledForWindows';
+                    const enabledData = platform === 'android' ? 'data-schedule-enabled-android' : 'data-schedule-enabled-windows';
+                    const heightData = platform === 'android' ? 'data-schedule-height-android' : 'data-schedule-height-windows';
+                    const widthData = platform === 'android' ? 'data-schedule-width-android' : 'data-schedule-width-windows';
+                    const offsetData = platform === 'android' ? 'data-schedule-offset-android' : 'data-schedule-offset-windows';
+
+                    const wrap = document.createElement('div');
+                    wrap.className = 'rounded border border-gray-200 bg-gray-50 p-2 space-y-2';
+
+                    const header = document.createElement('div');
+                    header.className = 'flex items-center justify-between gap-2';
+
+                    const checkboxLabel = document.createElement('label');
+                    checkboxLabel.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 font-medium';
+
+                    const enabledHidden = document.createElement('input');
+                    enabledHidden.type = 'hidden';
+                    enabledHidden.name = `rightSidebarImageSchedules[${index}][${enabledName}]`;
+                    enabledHidden.value = '0';
+
+                    const enabledInput = document.createElement('input');
+                    enabledInput.type = 'checkbox';
+                    enabledInput.name = `rightSidebarImageSchedules[${index}][${enabledName}]`;
+                    enabledInput.value = '1';
+                    enabledInput.checked = Boolean(isEnabled);
+                    enabledInput.className = 'rounded border-gray-300 text-indigo-600';
+                    enabledInput.setAttribute(enabledData, '1');
+
+                    const checkboxText = document.createElement('span');
+                    checkboxText.textContent = `Ativar ${title}`;
+
+                    checkboxLabel.appendChild(enabledHidden);
+                    checkboxLabel.appendChild(enabledInput);
+                    checkboxLabel.appendChild(checkboxText);
+                    header.appendChild(checkboxLabel);
+
+                    const saveButton = document.createElement('button');
+                    saveButton.type = 'button';
+                    saveButton.className = 'rounded border border-indigo-600 bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700';
+                    saveButton.setAttribute('data-save-section', 'companyGalleryConfigSection');
+                    saveButton.textContent = `Salvar ${title}`;
+                    header.appendChild(saveButton);
+                    wrap.appendChild(header);
+
+                    const platformGrid = document.createElement('div');
+                    platformGrid.className = 'grid grid-cols-1 md:grid-cols-3 gap-2';
+
+                    const heightWrap = document.createElement('label');
+                    heightWrap.className = 'block text-[11px] text-gray-600';
+                    heightWrap.textContent = 'Altura (px)';
+                    const heightInput = document.createElement('input');
+                    heightInput.type = 'number';
+                    heightInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ImageHeight]`;
+                    heightInput.value = Number(imageHeight || 0);
+                    heightInput.min = '0';
+                    heightInput.max = '1000';
+                    heightInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    heightInput.setAttribute(heightData, '1');
+                    heightWrap.appendChild(heightInput);
+
+                    const widthWrap = document.createElement('label');
+                    widthWrap.className = 'block text-[11px] text-gray-600';
+                    widthWrap.textContent = 'Largura (px)';
+                    const widthInput = document.createElement('input');
+                    widthInput.type = 'number';
+                    widthInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ImageWidth]`;
+                    widthInput.value = Number(imageWidth || 0);
+                    widthInput.min = '0';
+                    widthInput.max = '1000';
+                    widthInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    widthInput.setAttribute(widthData, '1');
+                    widthWrap.appendChild(widthInput);
+
+                    const offsetWrap = document.createElement('label');
+                    offsetWrap.className = 'block text-[11px] text-gray-600';
+                    offsetWrap.textContent = 'Subir/Descer (px)';
+                    const offsetInput = document.createElement('input');
+                    offsetInput.type = 'number';
+                    offsetInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}VerticalOffset]`;
+                    offsetInput.value = Number(verticalOffset || 0);
+                    offsetInput.min = '-300';
+                    offsetInput.max = '300';
+                    offsetInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    offsetInput.setAttribute(offsetData, '1');
+                    offsetWrap.appendChild(offsetInput);
+
+                    platformGrid.appendChild(heightWrap);
+                    platformGrid.appendChild(widthWrap);
+                    platformGrid.appendChild(offsetWrap);
+
+                    const showNameWrap = document.createElement('label');
+                    showNameWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-3';
+                    const showNameInput = document.createElement('input');
+                    showNameInput.type = 'checkbox';
+                    showNameInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ShowName]`;
+                    showNameInput.value = '1';
+                    showNameInput.checked = Boolean(showName);
+                    showNameInput.className = 'rounded border-gray-300 text-indigo-600';
+                    showNameInput.setAttribute(platform === 'android' ? 'data-schedule-show-name-android' : 'data-schedule-show-name-windows', '1');
+                    const showNameHidden = document.createElement('input');
+                    showNameHidden.type = 'hidden';
+                    showNameHidden.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ShowName]`;
+                    showNameHidden.value = '0';
+                    const showNameText = document.createElement('span');
+                    showNameText.textContent = 'Ativar mostra nome';
+                    showNameWrap.appendChild(showNameHidden);
+                    showNameWrap.appendChild(showNameInput);
+                    showNameWrap.appendChild(showNameText);
+
+                    const showPriceWrap = document.createElement('label');
+                    showPriceWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-3';
+                    const showPriceInput = document.createElement('input');
+                    showPriceInput.type = 'checkbox';
+                    showPriceInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ShowPrice]`;
+                    showPriceInput.value = '1';
+                    showPriceInput.checked = Boolean(showPrice);
+                    showPriceInput.className = 'rounded border-gray-300 text-indigo-600';
+                    showPriceInput.setAttribute(platform === 'android' ? 'data-schedule-show-price-android' : 'data-schedule-show-price-windows', '1');
+                    const showPriceHidden = document.createElement('input');
+                    showPriceHidden.type = 'hidden';
+                    showPriceHidden.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ShowPrice]`;
+                    showPriceHidden.value = '0';
+                    const showPriceTextNode = document.createElement('span');
+                    showPriceTextNode.textContent = 'Ativar mostra preco';
+                    showPriceWrap.appendChild(showPriceHidden);
+                    showPriceWrap.appendChild(showPriceInput);
+                    showPriceWrap.appendChild(showPriceTextNode);
+
+                    const priceTextWrap = document.createElement('label');
+                    priceTextWrap.className = 'block text-[11px] text-gray-600 md:col-span-3';
+                    priceTextWrap.textContent = 'Preco (texto)';
+                    const priceTextInput = document.createElement('input');
+                    priceTextInput.type = 'text';
+                    priceTextInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceText]`;
+                    priceTextInput.value = String(priceText || '');
+                    priceTextInput.maxLength = 60;
+                    priceTextInput.placeholder = 'Ex.: R$ 9,90';
+                    priceTextInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    priceTextInput.setAttribute(platform === 'android' ? 'data-schedule-price-text-android' : 'data-schedule-price-text-windows', '1');
+                    priceTextWrap.appendChild(priceTextInput);
+
+                    const nameFontSizeWrap = document.createElement('label');
+                    nameFontSizeWrap.className = 'block text-[11px] text-gray-600';
+                    nameFontSizeWrap.textContent = 'Fonte nome (px)';
+                    const nameFontSizeInput = document.createElement('input');
+                    nameFontSizeInput.type = 'number';
+                    nameFontSizeInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameFontSize]`;
+                    nameFontSizeInput.value = Number(nameFontSize || 18);
+                    nameFontSizeInput.min = '8';
+                    nameFontSizeInput.max = '120';
+                    nameFontSizeInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    nameFontSizeInput.setAttribute(platform === 'android' ? 'data-schedule-name-font-size-android' : 'data-schedule-name-font-size-windows', '1');
+                    nameFontSizeWrap.appendChild(nameFontSizeInput);
+
+                    const priceFontSizeWrap = document.createElement('label');
+                    priceFontSizeWrap.className = 'block text-[11px] text-gray-600';
+                    priceFontSizeWrap.textContent = 'Fonte preco (px)';
+                    const priceFontSizeInput = document.createElement('input');
+                    priceFontSizeInput.type = 'number';
+                    priceFontSizeInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceFontSize]`;
+                    priceFontSizeInput.value = Number(priceFontSize || 22);
+                    priceFontSizeInput.min = '8';
+                    priceFontSizeInput.max = '120';
+                    priceFontSizeInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    priceFontSizeInput.setAttribute(platform === 'android' ? 'data-schedule-price-font-size-android' : 'data-schedule-price-font-size-windows', '1');
+                    priceFontSizeWrap.appendChild(priceFontSizeInput);
+
+                    const fontFamilyWrap = document.createElement('label');
+                    fontFamilyWrap.className = 'block text-[11px] text-gray-600';
+                    fontFamilyWrap.textContent = 'Familia da fonte';
+                    const textFontFamilyInput = document.createElement('select');
+                    textFontFamilyInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}TextFontFamily]`;
+                    textFontFamilyInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    textFontFamilyInput.setAttribute(platform === 'android' ? 'data-schedule-font-family-android' : 'data-schedule-font-family-windows', '1');
+                    ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system'].forEach((fontKey) => {
+                        const option = document.createElement('option');
+                        option.value = fontKey;
+                        option.textContent = fontKey === 'system' ? 'System UI' : fontKey;
+                        option.selected = String(textFontFamily || 'arial').toLowerCase() === fontKey;
+                        textFontFamilyInput.appendChild(option);
+                    });
+                    fontFamilyWrap.appendChild(textFontFamilyInput);
+
+                    const namePositionWrap = document.createElement('label');
+                    namePositionWrap.className = 'block text-[11px] text-gray-600';
+                    namePositionWrap.textContent = 'Posicao nome';
+                    const namePositionInput = document.createElement('select');
+                    namePositionInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NamePosition]`;
+                    namePositionInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    namePositionInput.setAttribute(platform === 'android' ? 'data-schedule-name-position-android' : 'data-schedule-name-position-windows', '1');
+                    [
+                        { value: 'top', label: 'Em cima' },
+                        { value: 'bottom', label: 'Embaixo' },
+                    ].forEach((item) => {
+                        const option = document.createElement('option');
+                        option.value = item.value;
+                        option.textContent = item.label;
+                        option.selected = String(namePosition || 'top').toLowerCase() === item.value;
+                        namePositionInput.appendChild(option);
+                    });
+                    namePositionWrap.appendChild(namePositionInput);
+
+                    const pricePositionWrap = document.createElement('label');
+                    pricePositionWrap.className = 'block text-[11px] text-gray-600';
+                    pricePositionWrap.textContent = 'Posicao preco';
+                    const pricePositionInput = document.createElement('select');
+                    pricePositionInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PricePosition]`;
+                    pricePositionInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    pricePositionInput.setAttribute(platform === 'android' ? 'data-schedule-price-position-android' : 'data-schedule-price-position-windows', '1');
+                    [
+                        { value: 'top', label: 'Em cima' },
+                        { value: 'bottom', label: 'Embaixo' },
+                    ].forEach((item) => {
+                        const option = document.createElement('option');
+                        option.value = item.value;
+                        option.textContent = item.label;
+                        option.selected = String(pricePosition || 'bottom').toLowerCase() === item.value;
+                        pricePositionInput.appendChild(option);
+                    });
+                    pricePositionWrap.appendChild(pricePositionInput);
+
+                    const nameColorWrap = document.createElement('label');
+                    nameColorWrap.className = 'block text-[11px] text-gray-600';
+                    nameColorWrap.textContent = 'Cor nome';
+                    const nameColorInput = document.createElement('input');
+                    nameColorInput.type = 'color';
+                    nameColorInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameColor]`;
+                    nameColorInput.value = String(nameColor || '#FFFFFF');
+                    nameColorInput.className = 'w-full h-8 border rounded';
+                    nameColorInput.setAttribute(platform === 'android' ? 'data-schedule-name-color-android' : 'data-schedule-name-color-windows', '1');
+                    nameColorWrap.appendChild(nameColorInput);
+
+                    const priceColorWrap = document.createElement('label');
+                    priceColorWrap.className = 'block text-[11px] text-gray-600';
+                    priceColorWrap.textContent = 'Cor preco';
+                    const priceColorInput = document.createElement('input');
+                    priceColorInput.type = 'color';
+                    priceColorInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceColor]`;
+                    priceColorInput.value = String(priceColor || '#FDE68A');
+                    priceColorInput.className = 'w-full h-8 border rounded';
+                    priceColorInput.setAttribute(platform === 'android' ? 'data-schedule-price-color-android' : 'data-schedule-price-color-windows', '1');
+                    priceColorWrap.appendChild(priceColorInput);
+
+                    const nameBadgeEnabledWrap = document.createElement('label');
+                    nameBadgeEnabledWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-2';
+                    const nameBadgeEnabledHidden = document.createElement('input');
+                    nameBadgeEnabledHidden.type = 'hidden';
+                    nameBadgeEnabledHidden.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameBadgeEnabled]`;
+                    nameBadgeEnabledHidden.value = '0';
+                    const nameBadgeEnabledInput = document.createElement('input');
+                    nameBadgeEnabledInput.type = 'checkbox';
+                    nameBadgeEnabledInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameBadgeEnabled]`;
+                    nameBadgeEnabledInput.value = '1';
+                    nameBadgeEnabledInput.checked = Boolean(nameBadgeEnabled);
+                    nameBadgeEnabledInput.className = 'rounded border-gray-300 text-indigo-600';
+                    nameBadgeEnabledInput.setAttribute(platform === 'android' ? 'data-schedule-name-badge-enabled-android' : 'data-schedule-name-badge-enabled-windows', '1');
+                    const nameBadgeEnabledText = document.createElement('span');
+                    nameBadgeEnabledText.textContent = 'Ativar tarja do nome';
+                    nameBadgeEnabledWrap.appendChild(nameBadgeEnabledHidden);
+                    nameBadgeEnabledWrap.appendChild(nameBadgeEnabledInput);
+                    nameBadgeEnabledWrap.appendChild(nameBadgeEnabledText);
+
+                    const nameBadgeColorWrap = document.createElement('label');
+                    nameBadgeColorWrap.className = 'block text-[11px] text-gray-600';
+                    nameBadgeColorWrap.textContent = 'Cor da tarja do nome';
+                    const nameBadgeColorInput = document.createElement('input');
+                    nameBadgeColorInput.type = 'color';
+                    nameBadgeColorInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameBadgeColor]`;
+                    nameBadgeColorInput.value = String(nameBadgeColor || '#0F172A');
+                    nameBadgeColorInput.className = 'w-full h-8 border rounded';
+                    nameBadgeColorInput.setAttribute(platform === 'android' ? 'data-schedule-name-badge-color-android' : 'data-schedule-name-badge-color-windows', '1');
+                    nameBadgeColorWrap.appendChild(nameBadgeColorInput);
+
+                    const priceBadgeEnabledWrap = document.createElement('label');
+                    priceBadgeEnabledWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-2';
+                    const priceBadgeEnabledHidden = document.createElement('input');
+                    priceBadgeEnabledHidden.type = 'hidden';
+                    priceBadgeEnabledHidden.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceBadgeEnabled]`;
+                    priceBadgeEnabledHidden.value = '0';
+                    const priceBadgeEnabledInput = document.createElement('input');
+                    priceBadgeEnabledInput.type = 'checkbox';
+                    priceBadgeEnabledInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceBadgeEnabled]`;
+                    priceBadgeEnabledInput.value = '1';
+                    priceBadgeEnabledInput.checked = Boolean(priceBadgeEnabled);
+                    priceBadgeEnabledInput.className = 'rounded border-gray-300 text-indigo-600';
+                    priceBadgeEnabledInput.setAttribute(platform === 'android' ? 'data-schedule-price-badge-enabled-android' : 'data-schedule-price-badge-enabled-windows', '1');
+                    const priceBadgeEnabledText = document.createElement('span');
+                    priceBadgeEnabledText.textContent = 'Ativar tarja do preco';
+                    priceBadgeEnabledWrap.appendChild(priceBadgeEnabledHidden);
+                    priceBadgeEnabledWrap.appendChild(priceBadgeEnabledInput);
+                    priceBadgeEnabledWrap.appendChild(priceBadgeEnabledText);
+
+                    const priceBadgeColorWrap = document.createElement('label');
+                    priceBadgeColorWrap.className = 'block text-[11px] text-gray-600';
+                    priceBadgeColorWrap.textContent = 'Cor da tarja do preco';
+                    const priceBadgeColorInput = document.createElement('input');
+                    priceBadgeColorInput.type = 'color';
+                    priceBadgeColorInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceBadgeColor]`;
+                    priceBadgeColorInput.value = String(priceBadgeColor || '#0F172A');
+                    priceBadgeColorInput.className = 'w-full h-8 border rounded';
+                    priceBadgeColorInput.setAttribute(platform === 'android' ? 'data-schedule-price-badge-color-android' : 'data-schedule-price-badge-color-windows', '1');
+                    priceBadgeColorWrap.appendChild(priceBadgeColorInput);
+
+                    platformGrid.appendChild(showNameWrap);
+                    platformGrid.appendChild(showPriceWrap);
+                    platformGrid.appendChild(priceTextWrap);
+                    platformGrid.appendChild(nameFontSizeWrap);
+                    platformGrid.appendChild(priceFontSizeWrap);
+                    platformGrid.appendChild(fontFamilyWrap);
+                    platformGrid.appendChild(namePositionWrap);
+                    platformGrid.appendChild(pricePositionWrap);
+                    platformGrid.appendChild(nameColorWrap);
+                    platformGrid.appendChild(nameBadgeEnabledWrap);
+                    platformGrid.appendChild(nameBadgeColorWrap);
+                    platformGrid.appendChild(priceColorWrap);
+                    platformGrid.appendChild(priceBadgeEnabledWrap);
+                    platformGrid.appendChild(priceBadgeColorWrap);
+                    wrap.appendChild(platformGrid);
+
+                    const previewWrap = document.createElement('div');
+                    previewWrap.className = 'rounded border border-gray-200 bg-white p-2 space-y-1';
+
+                    const previewLabel = document.createElement('p');
+                    previewLabel.className = 'text-[11px] text-gray-600';
+                    previewLabel.textContent = 'Pre-visualizacao';
+
+                    const previewFrame = document.createElement('div');
+                    previewFrame.className = 'relative w-full h-28 rounded overflow-hidden border border-gray-200 bg-gray-100';
+
+                    const previewImage = document.createElement('img');
+                    previewImage.src = url;
+                    previewImage.alt = 'Preview da imagem';
+                    previewImage.className = 'w-full h-full object-cover';
+                    previewImage.loading = 'lazy';
+                    previewImage.onerror = () => {
+                        previewImage.style.opacity = '0.3';
+                    };
+
+                    const previewName = document.createElement('div');
+                    previewName.className = 'absolute left-1 right-1 hidden rounded px-2 py-1 text-white text-center';
+                    previewName.style.textShadow = '0 2px 6px rgba(0, 0, 0, 0.9)';
+                    previewName.style.background = 'rgba(15, 23, 42, 0.45)';
+                    previewName.style.lineHeight = '1.2';
+                    previewName.style.zIndex = '2';
+
+                    const previewPrice = document.createElement('div');
+                    previewPrice.className = 'absolute left-1 right-1 hidden rounded px-2 py-1 text-amber-200 text-center font-semibold';
+                    previewPrice.style.textShadow = '0 2px 6px rgba(0, 0, 0, 0.95)';
+                    previewPrice.style.background = 'rgba(15, 23, 42, 0.55)';
+                    previewPrice.style.lineHeight = '1.2';
+                    previewPrice.style.zIndex = '2';
+
+                    previewFrame.appendChild(previewImage);
+                    previewFrame.appendChild(previewName);
+                    previewFrame.appendChild(previewPrice);
+                    previewWrap.appendChild(previewLabel);
+                    previewWrap.appendChild(previewFrame);
+                    wrap.appendChild(previewWrap);
+
+                    const fontFamilies = {
+                        arial: 'Arial, sans-serif',
+                        verdana: 'Verdana, sans-serif',
+                        tahoma: 'Tahoma, sans-serif',
+                        trebuchet: 'Trebuchet MS, sans-serif',
+                        georgia: 'Georgia, serif',
+                        courier: 'Courier New, monospace',
+                        system: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+                    };
+
+                    const applyVerticalPosition = (element, position, defaultPosition) => {
+                        const resolved = position === 'bottom' || position === 'top' ? position : defaultPosition;
+                        if (resolved === 'bottom') {
+                            element.style.top = '';
+                            element.style.bottom = '4px';
+                        } else {
+                            element.style.top = '4px';
+                            element.style.bottom = '';
+                        }
+                    };
+
+                    const updatePreview = () => {
+                        const selectedFont = String(textFontFamilyInput.value || 'arial').toLowerCase();
+                        const resolvedFont = fontFamilies[selectedFont] || fontFamilies.arial;
+
+                        const currentName = String(nameInput.value || '').trim();
+                        if (showNameInput.checked && currentName !== '' && enabledInput.checked) {
+                            previewName.textContent = currentName;
+                            previewName.style.fontFamily = resolvedFont;
+                            previewName.style.fontSize = `${Math.max(8, Math.min(120, Number(nameFontSizeInput.value || 18) || 18))}px`;
+                            previewName.style.color = String(nameColorInput.value || '#FFFFFF');
+                            previewName.style.background = nameBadgeEnabledInput.checked
+                                ? String(nameBadgeColorInput.value || '#0F172A')
+                                : 'transparent';
+                            applyVerticalPosition(previewName, String(namePositionInput.value || 'top').toLowerCase(), 'top');
+                            previewName.classList.remove('hidden');
+                        } else {
+                            previewName.classList.add('hidden');
+                            previewName.textContent = '';
+                        }
+
+                        const currentPrice = String(priceTextInput.value || '').trim();
+                        if (showPriceInput.checked && currentPrice !== '' && enabledInput.checked) {
+                            previewPrice.textContent = currentPrice;
+                            previewPrice.style.fontFamily = resolvedFont;
+                            previewPrice.style.fontSize = `${Math.max(8, Math.min(120, Number(priceFontSizeInput.value || 22) || 22))}px`;
+                            previewPrice.style.color = String(priceColorInput.value || '#FDE68A');
+                            previewPrice.style.background = priceBadgeEnabledInput.checked
+                                ? String(priceBadgeColorInput.value || '#0F172A')
+                                : 'transparent';
+                            applyVerticalPosition(previewPrice, String(pricePositionInput.value || 'bottom').toLowerCase(), 'bottom');
+                            previewPrice.classList.remove('hidden');
+                        } else {
+                            previewPrice.classList.add('hidden');
+                            previewPrice.textContent = '';
+                        }
+                    };
+
+                    const updatePlatformEnabledState = () => {
+                        const enabled = enabledInput.checked;
+                        platformGrid.style.opacity = enabled ? '1' : '0.45';
+                        heightInput.disabled = !enabled;
+                        widthInput.disabled = !enabled;
+                        offsetInput.disabled = !enabled;
+                        showNameInput.disabled = !enabled;
+                        showPriceInput.disabled = !enabled;
+                        priceTextInput.disabled = !enabled;
+                        nameFontSizeInput.disabled = !enabled;
+                        priceFontSizeInput.disabled = !enabled;
+                        textFontFamilyInput.disabled = !enabled;
+                        namePositionInput.disabled = !enabled;
+                        pricePositionInput.disabled = !enabled;
+                        nameColorInput.disabled = !enabled;
+                        nameBadgeEnabledInput.disabled = !enabled;
+                        nameBadgeColorInput.disabled = !enabled || !nameBadgeEnabledInput.checked;
+                        priceColorInput.disabled = !enabled;
+                        priceBadgeEnabledInput.disabled = !enabled;
+                        priceBadgeColorInput.disabled = !enabled || !priceBadgeEnabledInput.checked;
+                        previewFrame.style.opacity = enabled ? '1' : '0.45';
+                        updatePreview();
+                    };
+
+                    updatePlatformEnabledState();
+
+                    nameInput.addEventListener('input', updatePreview);
+                    showNameInput.addEventListener('change', updatePreview);
+                    showPriceInput.addEventListener('change', updatePreview);
+                    priceTextInput.addEventListener('input', updatePreview);
+                    nameFontSizeInput.addEventListener('input', updatePreview);
+                    priceFontSizeInput.addEventListener('input', updatePreview);
+                    textFontFamilyInput.addEventListener('change', updatePreview);
+                    namePositionInput.addEventListener('change', updatePreview);
+                    pricePositionInput.addEventListener('change', updatePreview);
+                    nameColorInput.addEventListener('input', updatePreview);
+                    nameBadgeEnabledInput.addEventListener('change', updatePreview);
+                    nameBadgeColorInput.addEventListener('input', updatePreview);
+                    priceColorInput.addEventListener('input', updatePreview);
+                    priceBadgeEnabledInput.addEventListener('change', updatePreview);
+                    priceBadgeColorInput.addEventListener('input', updatePreview);
+                    updatePreview();
+
+                    return {
+                        wrap,
+                        enabledInput,
+                        heightInput,
+                        widthInput,
+                        offsetInput,
+                        showNameInput,
+                        showPriceInput,
+                        priceTextInput,
+                        nameFontSizeInput,
+                        priceFontSizeInput,
+                        textFontFamilyInput,
+                        namePositionInput,
+                        pricePositionInput,
+                        nameColorInput,
+                        nameBadgeEnabledInput,
+                        nameBadgeColorInput,
+                        priceColorInput,
+                        priceBadgeEnabledInput,
+                        priceBadgeColorInput,
+                        updatePreview,
+                        updatePlatformEnabledState,
+                    };
+                };
+
                 const syncEndMin = () => {
                     endInput.min = startInput.value || '';
                 };
 
-                startInput.addEventListener('change', () => {
-                    syncEndMin();
-                    rightSidebarImageScheduleState[url] = {
+                const windowsConfig = createPlatformConfigCard({
+                    platform: 'windows',
+                    title: 'Windows',
+                    isEnabled: state.enabledForWindows !== false,
+                    imageHeight: state.windowsImageHeight,
+                    imageWidth: state.windowsImageWidth,
+                    verticalOffset: state.windowsVerticalOffset,
+                    showName: state.windowsShowName,
+                    showPrice: state.windowsShowPrice,
+                    priceText: state.windowsPriceText,
+                    nameFontSize: state.windowsNameFontSize,
+                    priceFontSize: state.windowsPriceFontSize,
+                    textFontFamily: state.windowsTextFontFamily,
+                    namePosition: state.windowsNamePosition,
+                    pricePosition: state.windowsPricePosition,
+                    nameColor: state.windowsNameColor,
+                    nameBadgeEnabled: state.windowsNameBadgeEnabled,
+                    nameBadgeColor: state.windowsNameBadgeColor,
+                    priceColor: state.windowsPriceColor,
+                    priceBadgeEnabled: state.windowsPriceBadgeEnabled,
+                    priceBadgeColor: state.windowsPriceBadgeColor,
+                });
+
+                const androidConfig = createPlatformConfigCard({
+                    platform: 'android',
+                    title: 'Android',
+                    isEnabled: state.enabledForAndroid !== false,
+                    imageHeight: state.androidImageHeight,
+                    imageWidth: state.androidImageWidth,
+                    verticalOffset: state.androidVerticalOffset,
+                    showName: state.androidShowName,
+                    showPrice: state.androidShowPrice,
+                    priceText: state.androidPriceText,
+                    nameFontSize: state.androidNameFontSize,
+                    priceFontSize: state.androidPriceFontSize,
+                    textFontFamily: state.androidTextFontFamily,
+                    namePosition: state.androidNamePosition,
+                    pricePosition: state.androidPricePosition,
+                    nameColor: state.androidNameColor,
+                    nameBadgeEnabled: state.androidNameBadgeEnabled,
+                    nameBadgeColor: state.androidNameBadgeColor,
+                    priceColor: state.androidPriceColor,
+                    priceBadgeEnabled: state.androidPriceBadgeEnabled,
+                    priceBadgeColor: state.androidPriceBadgeColor,
+                });
+
+                const syncStateFromInputs = () => {
+                    const nextUrl = normalizeSlideUrlForCompare(linkInput.value);
+                    const currentUrl = normalizeSlideUrlForCompare(row.getAttribute('data-schedule-row-url'));
+                    const nextState = {
+                        name: String(nameInput.value || '').trim(),
                         startDate: String(startInput.value || '').trim(),
                         endDate: String(endInput.value || '').trim(),
+                        enabledForWindows: Boolean(windowsConfig.enabledInput.checked),
+                        enabledForAndroid: Boolean(androidConfig.enabledInput.checked),
+                        windowsImageHeight: Math.max(0, Number(windowsConfig.heightInput.value || 0) || 0),
+                        windowsImageWidth: Math.max(0, Number(windowsConfig.widthInput.value || 0) || 0),
+                        windowsVerticalOffset: Math.max(-300, Math.min(300, Number(windowsConfig.offsetInput.value || 0) || 0)),
+                        windowsShowName: Boolean(windowsConfig.showNameInput.checked),
+                        windowsShowPrice: Boolean(windowsConfig.showPriceInput.checked),
+                        windowsPriceText: String(windowsConfig.priceTextInput.value || '').trim(),
+                        windowsNameFontSize: Math.max(8, Math.min(120, Number(windowsConfig.nameFontSizeInput.value || 18) || 18)),
+                        windowsPriceFontSize: Math.max(8, Math.min(120, Number(windowsConfig.priceFontSizeInput.value || 22) || 22)),
+                        windowsTextFontFamily: String(windowsConfig.textFontFamilyInput.value || 'arial').toLowerCase(),
+                        windowsNamePosition: String(windowsConfig.namePositionInput.value || 'top').toLowerCase(),
+                        windowsPricePosition: String(windowsConfig.pricePositionInput.value || 'bottom').toLowerCase(),
+                        windowsNameColor: String(windowsConfig.nameColorInput.value || '#FFFFFF'),
+                        windowsNameBadgeEnabled: Boolean(windowsConfig.nameBadgeEnabledInput.checked),
+                        windowsNameBadgeColor: String(windowsConfig.nameBadgeColorInput.value || '#0F172A'),
+                        windowsPriceColor: String(windowsConfig.priceColorInput.value || '#FDE68A'),
+                        windowsPriceBadgeEnabled: Boolean(windowsConfig.priceBadgeEnabledInput.checked),
+                        windowsPriceBadgeColor: String(windowsConfig.priceBadgeColorInput.value || '#0F172A'),
+                        androidImageHeight: Math.max(0, Number(androidConfig.heightInput.value || 0) || 0),
+                        androidImageWidth: Math.max(0, Number(androidConfig.widthInput.value || 0) || 0),
+                        androidVerticalOffset: Math.max(-300, Math.min(300, Number(androidConfig.offsetInput.value || 0) || 0)),
+                        androidShowName: Boolean(androidConfig.showNameInput.checked),
+                        androidShowPrice: Boolean(androidConfig.showPriceInput.checked),
+                        androidPriceText: String(androidConfig.priceTextInput.value || '').trim(),
+                        androidNameFontSize: Math.max(8, Math.min(120, Number(androidConfig.nameFontSizeInput.value || 18) || 18)),
+                        androidPriceFontSize: Math.max(8, Math.min(120, Number(androidConfig.priceFontSizeInput.value || 22) || 22)),
+                        androidTextFontFamily: String(androidConfig.textFontFamilyInput.value || 'arial').toLowerCase(),
+                        androidNamePosition: String(androidConfig.namePositionInput.value || 'top').toLowerCase(),
+                        androidPricePosition: String(androidConfig.pricePositionInput.value || 'bottom').toLowerCase(),
+                        androidNameColor: String(androidConfig.nameColorInput.value || '#FFFFFF'),
+                        androidNameBadgeEnabled: Boolean(androidConfig.nameBadgeEnabledInput.checked),
+                        androidNameBadgeColor: String(androidConfig.nameBadgeColorInput.value || '#0F172A'),
+                        androidPriceColor: String(androidConfig.priceColorInput.value || '#FDE68A'),
+                        androidPriceBadgeEnabled: Boolean(androidConfig.priceBadgeEnabledInput.checked),
+                        androidPriceBadgeColor: String(androidConfig.priceBadgeColorInput.value || '#0F172A'),
                     };
+
+                    legacyHeight.value = nextState.windowsImageHeight;
+                    legacyWidth.value = nextState.windowsImageWidth;
+                    legacyOffset.value = nextState.windowsVerticalOffset;
+
+                    rightSidebarImageScheduleState[currentUrl] = nextState;
+
+                    if (nextUrl && nextUrl !== currentUrl) {
+                        const currentUrls = parseRightSidebarImageUrls().map((item) => normalizeSlideUrlForCompare(item));
+                        const replacedUrls = currentUrls.map((item) => (item === currentUrl ? nextUrl : item));
+                        const uniqueUrls = Array.from(new Set(replacedUrls.filter((item) => item !== '')));
+                        rightSidebarImageUrls.value = uniqueUrls.join('\n');
+                        rightSidebarImageScheduleState[nextUrl] = nextState;
+                        delete rightSidebarImageScheduleState[currentUrl];
+                        if (openRightSidebarImageScheduleUrl === currentUrl) {
+                            openRightSidebarImageScheduleUrl = nextUrl;
+                        }
+                        renderRightSidebarImageScheduleEditor();
+                        return;
+                    }
+
+                    summaryTitle.textContent = nextState.name || `Imagem ${index + 1}`;
+                    summaryTitle.title = summaryTitle.textContent;
+                };
+
+                startInput.addEventListener('change', () => {
+                    syncEndMin();
+                    syncStateFromInputs();
                 });
 
                 endInput.addEventListener('change', () => {
-                    rightSidebarImageScheduleState[url] = {
-                        startDate: String(startInput.value || '').trim(),
-                        endDate: String(endInput.value || '').trim(),
-                    };
+                    syncStateFromInputs();
                 });
 
+                nameInput.addEventListener('input', syncStateFromInputs);
+                linkInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.enabledInput.addEventListener('change', () => {
+                    windowsConfig.updatePlatformEnabledState();
+                    syncStateFromInputs();
+                });
+                androidConfig.enabledInput.addEventListener('change', () => {
+                    androidConfig.updatePlatformEnabledState();
+                    syncStateFromInputs();
+                });
+                windowsConfig.heightInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.widthInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.offsetInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.showNameInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.showPriceInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.priceTextInput.addEventListener('input', syncStateFromInputs);
+                windowsConfig.nameFontSizeInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.priceFontSizeInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.textFontFamilyInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.namePositionInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.pricePositionInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.nameColorInput.addEventListener('input', syncStateFromInputs);
+                windowsConfig.nameBadgeEnabledInput.addEventListener('change', () => {
+                    windowsConfig.updatePlatformEnabledState();
+                    syncStateFromInputs();
+                });
+                windowsConfig.nameBadgeColorInput.addEventListener('input', syncStateFromInputs);
+                windowsConfig.priceColorInput.addEventListener('input', syncStateFromInputs);
+                windowsConfig.priceBadgeEnabledInput.addEventListener('change', () => {
+                    windowsConfig.updatePlatformEnabledState();
+                    syncStateFromInputs();
+                });
+                windowsConfig.priceBadgeColorInput.addEventListener('input', syncStateFromInputs);
+                androidConfig.heightInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.widthInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.offsetInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.showNameInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.showPriceInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.priceTextInput.addEventListener('input', syncStateFromInputs);
+                androidConfig.nameFontSizeInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.priceFontSizeInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.textFontFamilyInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.namePositionInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.pricePositionInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.nameColorInput.addEventListener('input', syncStateFromInputs);
+                androidConfig.nameBadgeEnabledInput.addEventListener('change', () => {
+                    androidConfig.updatePlatformEnabledState();
+                    syncStateFromInputs();
+                });
+                androidConfig.nameBadgeColorInput.addEventListener('input', syncStateFromInputs);
+                androidConfig.priceColorInput.addEventListener('input', syncStateFromInputs);
+                androidConfig.priceBadgeEnabledInput.addEventListener('change', () => {
+                    androidConfig.updatePlatformEnabledState();
+                    syncStateFromInputs();
+                });
+                androidConfig.priceBadgeColorInput.addEventListener('input', syncStateFromInputs);
+
                 syncEndMin();
-                grid.appendChild(startWrap);
-                grid.appendChild(endWrap);
-                row.appendChild(grid);
+                dateGrid.appendChild(startWrap);
+                dateGrid.appendChild(endWrap);
+                details.appendChild(dateGrid);
+
+                details.appendChild(windowsConfig.wrap);
+                details.appendChild(androidConfig.wrap);
+
+                const actionWrap = document.createElement('div');
+                actionWrap.className = 'pt-1 flex items-center justify-end';
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-700';
+                removeButton.textContent = 'Excluir imagem';
+                removeButton.addEventListener('click', () => {
+                    const currentUrl = normalizeSlideUrlForCompare(row.getAttribute('data-schedule-row-url'));
+                    const filteredUrls = parseRightSidebarImageUrls()
+                        .map((item) => normalizeSlideUrlForCompare(item))
+                        .filter((item) => item !== '' && item !== currentUrl);
+                    rightSidebarImageUrls.value = Array.from(new Set(filteredUrls)).join('\n');
+                    hasUserInteractedWithSlideSelection = true;
+                    if (suggestedSlideSelectionSubmittedInput) {
+                        suggestedSlideSelectionSubmittedInput.value = '1';
+                    }
+                    uncheckManagedSlideSourcesByUrl(currentUrl);
+                    delete rightSidebarImageScheduleState[currentUrl];
+                    if (openRightSidebarImageScheduleUrl === currentUrl) {
+                        openRightSidebarImageScheduleUrl = null;
+                    }
+                    renderRightSidebarImageScheduleEditor();
+                });
+                actionWrap.appendChild(removeButton);
+                details.appendChild(actionWrap);
+
+                summaryButton.addEventListener('click', () => {
+                    collectScheduleStateFromEditor();
+                    openRightSidebarImageScheduleUrl = openRightSidebarImageScheduleUrl === url ? null : url;
+                    renderRightSidebarImageScheduleEditor();
+                });
+
+                row.appendChild(details);
 
                 rightSidebarImageScheduleEditor.appendChild(row);
+
+                if (pendingScheduleRowHighlightUrl && pendingScheduleRowHighlightUrl === url) {
+                    row.classList.add('border-emerald-400', 'bg-emerald-50');
+                    window.setTimeout(() => {
+                        row.classList.remove('border-emerald-400', 'bg-emerald-50');
+                    }, 1100);
+                    pendingScheduleRowHighlightUrl = null;
+                }
             });
 
             rightSidebarImageScheduleState = preservedState;
-            rightSidebarImageScheduleHint.textContent = `${urls.length} imagem(ns) com periodo configuravel.`;
+            rightSidebarImageScheduleHint.textContent = `${urls.length} imagem(ns) com configuracao separada para Windows e Android.`;
         }
 
         function normalizeSlideUrlForCompare(url) {
-            const value = String(url || '').trim();
+            let value = String(url || '').trim();
             if (value === '') {
                 return '';
             }
+
+            value = String(value.split('#')[0].split('?')[0] || '').trim();
 
             if (/^https?:\/\/localhost\/storage\//i.test(value)) {
                 return value.replace(/^https?:\/\/localhost\/storage\//i, '/storage/');
             }
 
+            if (/^https?:\/\/127\.0\.0\.1\/storage\//i.test(value)) {
+                return value.replace(/^https?:\/\/127\.0\.0\.1\/storage\//i, '/storage/');
+            }
+
             if (/^storage\//i.test(value)) {
                 return `/${value.replace(/^\/+/, '')}`;
+            }
+
+            if (/^https?:\/\//i.test(value)) {
+                try {
+                    const parsed = new URL(value);
+                    const path = String(parsed.pathname || '').trim();
+                    if (/^\/storage\//i.test(path)) {
+                        return path;
+                    }
+                } catch (_error) {
+                }
             }
 
             return value;
@@ -1720,8 +2878,24 @@
 
             const finalUrls = Array.from(new Set([...manualUrls, ...selectedUrls]));
             rightSidebarImageUrls.value = finalUrls.join('\n');
-            renderRightSidebarImagePreview();
             renderRightSidebarImageScheduleEditor();
+        }
+
+        function uncheckManagedSlideSourcesByUrl(targetUrl) {
+            const normalizedTarget = normalizeSlideUrlForCompare(targetUrl);
+            if (!normalizedTarget) {
+                return;
+            }
+
+            const managedCheckboxes = Array.from(document.querySelectorAll('input[name="suggestedSlideImageSources[]"][data-source-url]'));
+            managedCheckboxes.forEach((input) => {
+                const sourceUrl = normalizeSlideUrlForCompare(input.getAttribute('data-source-url'));
+                if (sourceUrl === normalizedTarget) {
+                    input.checked = false;
+                }
+            });
+
+            updateCompanyGalleryCardStates();
         }
 
         if (rightSidebarMediaTypeVideo) {
@@ -1736,16 +2910,19 @@
             rightSidebarMediaTypeHybrid.addEventListener('change', updateRightSidebarMediaConfigState);
         }
 
+        if (rightSidebarProductCarouselEnabled) {
+            rightSidebarProductCarouselEnabled.addEventListener('change', updateRightSidebarMediaTypeAvailability);
+        }
+
         if (rightSidebarImageUrls) {
             rightSidebarImageUrls.addEventListener('input', () => {
-                renderRightSidebarImagePreview();
                 renderRightSidebarImageScheduleEditor();
             });
         }
 
         updateRightSidebarMediaConfigState();
+        updateRightSidebarMediaTypeAvailability();
         rightSidebarImageScheduleState = getNormalizedScheduleStateFromInitialData();
-        renderRightSidebarImagePreview();
         renderRightSidebarImageScheduleEditor();
 
         function getOldSuggestedSlideSources() {
@@ -2001,6 +3178,9 @@
 
             if (target.name === 'suggestedSlideImageSources[]') {
                 hasUserInteractedWithSlideSelection = true;
+                if (suggestedSlideSelectionSubmittedInput) {
+                    suggestedSlideSelectionSubmittedInput.value = '1';
+                }
                 syncSelectedSlideUrlsToTextarea();
             }
         });
@@ -2060,6 +3240,28 @@
             companyGallerySubmenuButtons.forEach((button) => setCompanyGallerySubmenuButtonState(button, false));
         }
 
+            function openCompanyGalleryTargetBlock(targetId) {
+                const normalizedTargetId = String(targetId || '').trim();
+                if (!normalizedTargetId) {
+                    return;
+                }
+
+                const targetButton = companyGallerySubmenuButtons.find(
+                    (button) => String(button.getAttribute('data-company-gallery-target') || '').trim() === normalizedTargetId
+                );
+
+                if (!targetButton) {
+                    return;
+                }
+
+                activeCompanyGalleryTargetId = normalizedTargetId;
+                setCompanyGalleryActiveBlock(normalizedTargetId, targetButton);
+                companyGallerySubmenuButtons.forEach((submenuButton) => {
+                    setCompanyGallerySubmenuButtonState(submenuButton, submenuButton === targetButton);
+                });
+                updateRightSidebarMediaConfigState();
+            }
+
         function buildCompanyGallerySubmenuButtons() {
             if (!companyGallerySubmenuList) {
                 return;
@@ -2092,12 +3294,7 @@
                         return;
                     }
 
-                    activeCompanyGalleryTargetId = clickedTargetId;
-                    setCompanyGalleryActiveBlock(clickedTargetId, button);
-                    companyGallerySubmenuButtons.forEach((submenuButton) => {
-                        setCompanyGallerySubmenuButtonState(submenuButton, submenuButton === button);
-                    });
-                    updateRightSidebarMediaConfigState();
+                        openCompanyGalleryTargetBlock(clickedTargetId);
                 });
 
                 companyGallerySubmenuList.appendChild(button);
@@ -2108,6 +3305,12 @@
 
         buildCompanyGallerySubmenuButtons();
         closeAllCompanyGalleryBlocks();
+
+        if (addSlideImageFromGalleryBtn) {
+            addSlideImageFromGalleryBtn.addEventListener('click', () => {
+                openCompanyGalleryTargetBlock('companyGalleryLibraryBlock');
+            });
+        }
 
         function setConfigMenuButtonState(button, isActive) {
             if (!button) return;
@@ -2202,7 +3405,10 @@
             formControls.forEach((control) => {
                 const isToken = control instanceof HTMLInputElement && control.name === '_token';
                 const isSaveSection = control === saveSectionInput;
-                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection;
+                const isSuggestedSlideSelectionSubmitted = control === suggestedSlideSelectionSubmittedInput;
+                const isOpenCompanyGalleryTarget = control === openCompanyGalleryTargetInput;
+                const isOpenRightSidebarImageScheduleUrl = control === openRightSidebarImageScheduleUrlInput;
+                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl;
 
                 controlsState.push({ control, disabled: control.disabled });
                 if (!shouldKeep) {
@@ -2211,6 +3417,29 @@
             });
 
             saveSectionInput.value = sectionId;
+
+            if (openCompanyGalleryTargetInput) {
+                if (sectionId === 'companyGalleryConfigSection') {
+                    openCompanyGalleryTargetInput.value = String(activeCompanyGalleryTargetId || '');
+                } else {
+                    openCompanyGalleryTargetInput.value = '';
+                }
+            }
+
+            if (openRightSidebarImageScheduleUrlInput) {
+                if (sectionId === 'companyGalleryConfigSection' && String(activeCompanyGalleryTargetId || '') === 'rightSidebarImageConfig') {
+                    openRightSidebarImageScheduleUrlInput.value = String(openRightSidebarImageScheduleUrl || '');
+                } else {
+                    openRightSidebarImageScheduleUrlInput.value = '';
+                }
+            }
+
+            if (sectionId === 'companyGalleryConfigSection') {
+                if (suggestedSlideSelectionSubmittedInput && hasUserInteractedWithSlideSelection) {
+                    suggestedSlideSelectionSubmittedInput.value = '1';
+                }
+                syncSelectedSlideUrlsToTextarea();
+            }
 
             // Restore control states if browser blocks submission due to validation.
             const restoreStates = () => {
@@ -2226,9 +3455,23 @@
 
         configMenuButtons.forEach((button) => setConfigMenuButtonState(button, false));
 
-        const initialTarget = @json($hasVideoValidationErrors ? 'videoConfigSection' : null);
-        if (initialTarget) {
+        const requestedInitialPanel = @json(session('openConfigSection'));
+        const requestedCompanyGalleryTarget = @json(session('openCompanyGalleryTarget'));
+        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null);
+        if (initialTarget && configPanels.some((panel) => panel.id === initialTarget)) {
             openConfigPanel(initialTarget);
+
+            if (initialTarget === 'companyGalleryConfigSection') {
+                const fallbackTarget = 'rightSidebarImageConfig';
+                const targetToOpen = String(requestedCompanyGalleryTarget || fallbackTarget);
+                openCompanyGalleryTargetBlock(targetToOpen);
+
+                if (targetToOpen === 'rightSidebarImageConfig') {
+                    const nextOpenUrl = normalizeSlideUrlForCompare(requestedOpenRightSidebarImageScheduleUrl || '');
+                    openRightSidebarImageScheduleUrl = nextOpenUrl || openRightSidebarImageScheduleUrl;
+                    renderRightSidebarImageScheduleEditor();
+                }
+            }
         }
     </script>
 </x-app-layout>

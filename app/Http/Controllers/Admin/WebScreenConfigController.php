@@ -119,6 +119,8 @@ class WebScreenConfigController extends Controller
 
         $validated = $request->validate([
             'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,imageSizeConfigSection,paginationConfigSection'],
+            'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig'],
+            'openRightSidebarImageScheduleUrl' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarAndroidHeight' => ['nullable', 'integer', 'min:0', 'max:1500'],
@@ -143,6 +145,8 @@ class WebScreenConfigController extends Controller
             'showRightSidebarPanel' => ['nullable', 'boolean'],
             'showRightSidebarLogo' => ['nullable', 'boolean'],
             'rightSidebarLogoPosition' => ['nullable', 'in:sidebar_top,screen_right_vertical'],
+            'rightSidebarLogoPositionWindows' => ['nullable', 'in:sidebar_top,screen_right_vertical'],
+            'rightSidebarLogoPositionAndroid' => ['nullable', 'in:sidebar_top,screen_right_vertical'],
             'showLeftVerticalLogo' => ['nullable', 'boolean'],
             'isMainBorderEnabled' => ['nullable', 'boolean'],
             'isRoundedCornersEnabled' => ['nullable', 'boolean'],
@@ -161,26 +165,90 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageUrls' => ['nullable', 'string', 'max:10000'],
             'rightSidebarImageSchedules' => ['nullable', 'array'],
             'rightSidebarImageSchedules.*.url' => ['nullable', 'string', 'max:1000'],
+            'rightSidebarImageSchedules.*.name' => ['nullable', 'string', 'max:120'],
             'rightSidebarImageSchedules.*.startDate' => ['nullable', 'date_format:Y-m-d'],
             'rightSidebarImageSchedules.*.endDate' => ['nullable', 'date_format:Y-m-d'],
+            'rightSidebarImageSchedules.*.imageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageSchedules.*.imageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageSchedules.*.verticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
+            'rightSidebarImageSchedules.*.enabledForWindows' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.enabledForAndroid' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.windowsImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageSchedules.*.windowsImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageSchedules.*.windowsVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
+            'rightSidebarImageSchedules.*.androidImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageSchedules.*.androidImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarImageSchedules.*.androidVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
+            'rightSidebarImageSchedules.*.windowsShowName' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.windowsShowPrice' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.windowsPriceText' => ['nullable', 'string', 'max:60'],
+            'rightSidebarImageSchedules.*.windowsNameFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
+            'rightSidebarImageSchedules.*.windowsPriceFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
+            'rightSidebarImageSchedules.*.windowsTextFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
+            'rightSidebarImageSchedules.*.windowsNamePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarImageSchedules.*.windowsPricePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarImageSchedules.*.windowsNameColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.windowsNameBadgeEnabled' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.windowsNameBadgeColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.windowsPriceColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.windowsPriceBadgeEnabled' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.windowsPriceBadgeColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.androidShowName' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.androidShowPrice' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.androidPriceText' => ['nullable', 'string', 'max:60'],
+            'rightSidebarImageSchedules.*.androidNameFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
+            'rightSidebarImageSchedules.*.androidPriceFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
+            'rightSidebarImageSchedules.*.androidTextFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
+            'rightSidebarImageSchedules.*.androidNamePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarImageSchedules.*.androidPricePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarImageSchedules.*.androidNameColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.androidNameBadgeEnabled' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.androidNameBadgeColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.androidPriceColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarImageSchedules.*.androidPriceBadgeEnabled' => ['nullable', 'boolean'],
+            'rightSidebarImageSchedules.*.androidPriceBadgeColor' => ['nullable', 'string', 'max:9'],
             'suggestedSlideImageSources' => ['nullable', 'array'],
             'suggestedSlideImageSources.*' => ['string', 'regex:/^(slot_[1-3]|company_upload|company_existing_\d+)$/'],
             'suggestedSlideSelectionSubmitted' => ['nullable', 'boolean'],
             'companyGalleryUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'companyGalleryDirectUrl' => ['nullable', 'string', 'max:1000'],
             'rightSidebarLogoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'rightSidebarLogoUrl' => ['nullable', 'string', 'max:1000'],
             'rightSidebarLogoWidth' => ['nullable', 'integer', 'min:60', 'max:1200'],
             'rightSidebarLogoHeight' => ['nullable', 'integer', 'min:30', 'max:300'],
+            'rightSidebarLogoWidthWindows' => ['nullable', 'integer', 'min:60', 'max:1200'],
+            'rightSidebarLogoHeightWindows' => ['nullable', 'integer', 'min:30', 'max:300'],
+            'rightSidebarLogoWidthAndroid' => ['nullable', 'integer', 'min:60', 'max:1200'],
+            'rightSidebarLogoHeightAndroid' => ['nullable', 'integer', 'min:30', 'max:300'],
             'leftVerticalLogoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'leftVerticalLogoUrl' => ['nullable', 'string', 'max:1000'],
             'leftVerticalLogoWidth' => ['nullable', 'integer', 'min:40', 'max:1000'],
             'leftVerticalLogoHeight' => ['nullable', 'integer', 'min:40', 'max:1000'],
+            'leftVerticalLogoWidthWindows' => ['nullable', 'integer', 'min:40', 'max:1000'],
+            'leftVerticalLogoHeightWindows' => ['nullable', 'integer', 'min:40', 'max:1000'],
+            'leftVerticalLogoWidthAndroid' => ['nullable', 'integer', 'min:40', 'max:1000'],
+            'leftVerticalLogoHeightAndroid' => ['nullable', 'integer', 'min:40', 'max:1000'],
             'rightSidebarLogoBackgroundColor' => ['nullable', 'string', 'max:9'],
             'isRightSidebarLogoBackgroundTransparent' => ['nullable', 'boolean'],
             'rightSidebarImageInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
             'rightSidebarImageFit' => ['required', 'in:contain,cover,scale-down'],
             'rightSidebarHybridVideoDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'rightSidebarHybridImageDuration' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'rightSidebarProductCarouselEnabled' => ['nullable', 'boolean'],
+            'rightSidebarProductDisplayMode' => ['nullable', 'in:all,offers_only'],
+            'rightSidebarProductTransitionMode' => ['nullable', 'in:products_only,before_images,mixed_with_images,mixed_with_media'],
+            'rightSidebarProductInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
+            'rightSidebarProductShowImage' => ['nullable', 'boolean'],
+            'rightSidebarProductShowName' => ['nullable', 'boolean'],
+            'rightSidebarProductShowPrice' => ['nullable', 'boolean'],
+            'rightSidebarProductNamePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarProductPricePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarProductNameColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarProductPriceColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarProductNameBadgeEnabled' => ['nullable', 'boolean'],
+            'rightSidebarProductNameBadgeColor' => ['nullable', 'string', 'max:9'],
+            'rightSidebarProductPriceBadgeEnabled' => ['nullable', 'boolean'],
+            'rightSidebarProductPriceBadgeColor' => ['nullable', 'string', 'max:9'],
             'productListType' => ['nullable', 'in:1,2'],
             'productListLeftGroupIds' => ['nullable', 'array'],
             'productListLeftGroupIds.*' => ['integer'],
@@ -216,8 +284,10 @@ class WebScreenConfigController extends Controller
             'imageHeight' => ['nullable', 'integer', 'min:20', 'max:400'],
             'rowVerticalPadding' => ['nullable', 'integer', 'min:0', 'max:40'],
             'rowLineSpacing' => ['nullable', 'integer', 'min:0', 'max:40'],
+            'productListVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
             'listFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
             'groupLabelFontSize' => ['nullable', 'integer', 'min:10', 'max:60'],
+            'groupLabelVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
             'groupLabelFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
             'groupLabelColor' => ['required', 'string', 'max:9'],
             'showGroupLabelBadge' => ['nullable', 'boolean'],
@@ -249,14 +319,27 @@ class WebScreenConfigController extends Controller
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
         $validated['showRightSidebarPanel'] = (bool) ($validated['showRightSidebarPanel'] ?? true);
         $validated['showRightSidebarLogo'] = (bool) ($validated['showRightSidebarLogo'] ?? false);
-        $validated['rightSidebarLogoPosition'] = 'sidebar_top';
+        $validated['rightSidebarLogoPositionWindows'] = (string) ($validated['rightSidebarLogoPositionWindows'] ?? $validated['rightSidebarLogoPosition'] ?? 'sidebar_top');
+        $validated['rightSidebarLogoPositionAndroid'] = (string) ($validated['rightSidebarLogoPositionAndroid'] ?? $validated['rightSidebarLogoPositionWindows'] ?? 'sidebar_top');
+        // Keep legacy field aligned with Windows option.
+        $validated['rightSidebarLogoPosition'] = $validated['rightSidebarLogoPositionWindows'];
         $validated['showLeftVerticalLogo'] = (bool) ($validated['showLeftVerticalLogo'] ?? false);
         $validated['rightSidebarLogoUrl'] = trim((string) ($validated['rightSidebarLogoUrl'] ?? ''));
-        $validated['rightSidebarLogoWidth'] = (int) ($validated['rightSidebarLogoWidth'] ?? 220);
-        $validated['rightSidebarLogoHeight'] = (int) ($validated['rightSidebarLogoHeight'] ?? 58);
+        $validated['rightSidebarLogoWidthWindows'] = (int) ($validated['rightSidebarLogoWidthWindows'] ?? $validated['rightSidebarLogoWidth'] ?? 220);
+        $validated['rightSidebarLogoHeightWindows'] = (int) ($validated['rightSidebarLogoHeightWindows'] ?? $validated['rightSidebarLogoHeight'] ?? 58);
+        $validated['rightSidebarLogoWidthAndroid'] = (int) ($validated['rightSidebarLogoWidthAndroid'] ?? $validated['rightSidebarLogoWidthWindows'] ?? 220);
+        $validated['rightSidebarLogoHeightAndroid'] = (int) ($validated['rightSidebarLogoHeightAndroid'] ?? $validated['rightSidebarLogoHeightWindows'] ?? 58);
+        // Legacy fields stay mapped to Windows values.
+        $validated['rightSidebarLogoWidth'] = $validated['rightSidebarLogoWidthWindows'];
+        $validated['rightSidebarLogoHeight'] = $validated['rightSidebarLogoHeightWindows'];
         $validated['leftVerticalLogoUrl'] = trim((string) ($validated['leftVerticalLogoUrl'] ?? ''));
-        $validated['leftVerticalLogoWidth'] = (int) ($validated['leftVerticalLogoWidth'] ?? 120);
-        $validated['leftVerticalLogoHeight'] = (int) ($validated['leftVerticalLogoHeight'] ?? 220);
+        $validated['leftVerticalLogoWidthWindows'] = (int) ($validated['leftVerticalLogoWidthWindows'] ?? $validated['leftVerticalLogoWidth'] ?? 120);
+        $validated['leftVerticalLogoHeightWindows'] = (int) ($validated['leftVerticalLogoHeightWindows'] ?? $validated['leftVerticalLogoHeight'] ?? 220);
+        $validated['leftVerticalLogoWidthAndroid'] = (int) ($validated['leftVerticalLogoWidthAndroid'] ?? $validated['leftVerticalLogoWidthWindows'] ?? 120);
+        $validated['leftVerticalLogoHeightAndroid'] = (int) ($validated['leftVerticalLogoHeightAndroid'] ?? $validated['leftVerticalLogoHeightWindows'] ?? 220);
+        // Legacy fields stay mapped to Windows values.
+        $validated['leftVerticalLogoWidth'] = $validated['leftVerticalLogoWidthWindows'];
+        $validated['leftVerticalLogoHeight'] = $validated['leftVerticalLogoHeightWindows'];
         $validated['rightSidebarLogoBackgroundColor'] = (string) ($validated['rightSidebarLogoBackgroundColor'] ?? '#0f172a');
         $validated['isRightSidebarLogoBackgroundTransparent'] = (bool) ($validated['isRightSidebarLogoBackgroundTransparent'] ?? false);
         $validated['isMainBorderEnabled'] = (bool) ($validated['isMainBorderEnabled'] ?? false);
@@ -289,10 +372,92 @@ class WebScreenConfigController extends Controller
                     $endDate = $startDate;
                 }
 
+                $legacyImageHeight = max(0, min(1000, (int) ($item['imageHeight'] ?? 0)));
+                $legacyImageWidth = max(0, min(1000, (int) ($item['imageWidth'] ?? 0)));
+                $legacyVerticalOffset = max(-300, min(300, (int) ($item['verticalOffset'] ?? 0)));
+
+                $windowsImageHeight = max(0, min(1000, (int) ($item['windowsImageHeight'] ?? $legacyImageHeight)));
+                $windowsImageWidth = max(0, min(1000, (int) ($item['windowsImageWidth'] ?? $legacyImageWidth)));
+                $windowsVerticalOffset = max(-300, min(300, (int) ($item['windowsVerticalOffset'] ?? $legacyVerticalOffset)));
+
+                $androidImageHeight = max(0, min(1000, (int) ($item['androidImageHeight'] ?? $legacyImageHeight)));
+                $androidImageWidth = max(0, min(1000, (int) ($item['androidImageWidth'] ?? $legacyImageWidth)));
+                $androidVerticalOffset = max(-300, min(300, (int) ($item['androidVerticalOffset'] ?? $legacyVerticalOffset)));
+
+                $windowsShowName = isset($item['windowsShowName']) ? (bool) $item['windowsShowName'] : false;
+                $windowsShowPrice = isset($item['windowsShowPrice']) ? (bool) $item['windowsShowPrice'] : false;
+                $windowsPriceText = substr(trim((string) ($item['windowsPriceText'] ?? '')), 0, 60);
+                $windowsNameFontSize = max(8, min(120, (int) ($item['windowsNameFontSize'] ?? 18)));
+                $windowsPriceFontSize = max(8, min(120, (int) ($item['windowsPriceFontSize'] ?? 22)));
+                $windowsTextFontFamily = (string) ($item['windowsTextFontFamily'] ?? 'arial');
+                $windowsNamePosition = (string) ($item['windowsNamePosition'] ?? 'top');
+                $windowsPricePosition = (string) ($item['windowsPricePosition'] ?? 'bottom');
+                $windowsNameColor = $this->normalizeHexColor((string) ($item['windowsNameColor'] ?? '#ffffff'), '#ffffff');
+                $windowsNameBadgeEnabled = isset($item['windowsNameBadgeEnabled']) ? (bool) $item['windowsNameBadgeEnabled'] : true;
+                $windowsNameBadgeColor = $this->normalizeHexColor((string) ($item['windowsNameBadgeColor'] ?? '#0f172a'), '#0f172a');
+                $windowsPriceColor = $this->normalizeHexColor((string) ($item['windowsPriceColor'] ?? '#fde68a'), '#fde68a');
+                $windowsPriceBadgeEnabled = isset($item['windowsPriceBadgeEnabled']) ? (bool) $item['windowsPriceBadgeEnabled'] : true;
+                $windowsPriceBadgeColor = $this->normalizeHexColor((string) ($item['windowsPriceBadgeColor'] ?? '#0f172a'), '#0f172a');
+
+                $androidShowName = isset($item['androidShowName']) ? (bool) $item['androidShowName'] : false;
+                $androidShowPrice = isset($item['androidShowPrice']) ? (bool) $item['androidShowPrice'] : false;
+                $androidPriceText = substr(trim((string) ($item['androidPriceText'] ?? '')), 0, 60);
+                $androidNameFontSize = max(8, min(120, (int) ($item['androidNameFontSize'] ?? 18)));
+                $androidPriceFontSize = max(8, min(120, (int) ($item['androidPriceFontSize'] ?? 22)));
+                $androidTextFontFamily = (string) ($item['androidTextFontFamily'] ?? 'arial');
+                $androidNamePosition = (string) ($item['androidNamePosition'] ?? 'top');
+                $androidPricePosition = (string) ($item['androidPricePosition'] ?? 'bottom');
+                $androidNameColor = $this->normalizeHexColor((string) ($item['androidNameColor'] ?? '#ffffff'), '#ffffff');
+                $androidNameBadgeEnabled = isset($item['androidNameBadgeEnabled']) ? (bool) $item['androidNameBadgeEnabled'] : true;
+                $androidNameBadgeColor = $this->normalizeHexColor((string) ($item['androidNameBadgeColor'] ?? '#0f172a'), '#0f172a');
+                $androidPriceColor = $this->normalizeHexColor((string) ($item['androidPriceColor'] ?? '#fde68a'), '#fde68a');
+                $androidPriceBadgeEnabled = isset($item['androidPriceBadgeEnabled']) ? (bool) $item['androidPriceBadgeEnabled'] : true;
+                $androidPriceBadgeColor = $this->normalizeHexColor((string) ($item['androidPriceBadgeColor'] ?? '#0f172a'), '#0f172a');
+
                 return [
                     'url' => $normalizedUrl,
+                    'name' => substr(trim((string) ($item['name'] ?? '')), 0, 120),
                     'startDate' => $startDate,
                     'endDate' => $endDate,
+                    'imageHeight' => $legacyImageHeight,
+                    'imageWidth' => $legacyImageWidth,
+                    'verticalOffset' => $legacyVerticalOffset,
+                    'enabledForWindows' => isset($item['enabledForWindows']) ? (bool) $item['enabledForWindows'] : true,
+                    'enabledForAndroid' => isset($item['enabledForAndroid']) ? (bool) $item['enabledForAndroid'] : true,
+                    'windowsImageHeight' => $windowsImageHeight,
+                    'windowsImageWidth' => $windowsImageWidth,
+                    'windowsVerticalOffset' => $windowsVerticalOffset,
+                    'androidImageHeight' => $androidImageHeight,
+                    'androidImageWidth' => $androidImageWidth,
+                    'androidVerticalOffset' => $androidVerticalOffset,
+                    'windowsShowName' => $windowsShowName,
+                    'windowsShowPrice' => $windowsShowPrice,
+                    'windowsPriceText' => $windowsPriceText,
+                    'windowsNameFontSize' => $windowsNameFontSize,
+                    'windowsPriceFontSize' => $windowsPriceFontSize,
+                    'windowsTextFontFamily' => in_array($windowsTextFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system'], true) ? $windowsTextFontFamily : 'arial',
+                    'windowsNamePosition' => in_array($windowsNamePosition, ['top', 'bottom'], true) ? $windowsNamePosition : 'top',
+                    'windowsPricePosition' => in_array($windowsPricePosition, ['top', 'bottom'], true) ? $windowsPricePosition : 'bottom',
+                    'windowsNameColor' => $windowsNameColor,
+                    'windowsNameBadgeEnabled' => $windowsNameBadgeEnabled,
+                    'windowsNameBadgeColor' => $windowsNameBadgeColor,
+                    'windowsPriceColor' => $windowsPriceColor,
+                    'windowsPriceBadgeEnabled' => $windowsPriceBadgeEnabled,
+                    'windowsPriceBadgeColor' => $windowsPriceBadgeColor,
+                    'androidShowName' => $androidShowName,
+                    'androidShowPrice' => $androidShowPrice,
+                    'androidPriceText' => $androidPriceText,
+                    'androidNameFontSize' => $androidNameFontSize,
+                    'androidPriceFontSize' => $androidPriceFontSize,
+                    'androidTextFontFamily' => in_array($androidTextFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system'], true) ? $androidTextFontFamily : 'arial',
+                    'androidNamePosition' => in_array($androidNamePosition, ['top', 'bottom'], true) ? $androidNamePosition : 'top',
+                    'androidPricePosition' => in_array($androidPricePosition, ['top', 'bottom'], true) ? $androidPricePosition : 'bottom',
+                    'androidNameColor' => $androidNameColor,
+                    'androidNameBadgeEnabled' => $androidNameBadgeEnabled,
+                    'androidNameBadgeColor' => $androidNameBadgeColor,
+                    'androidPriceColor' => $androidPriceColor,
+                    'androidPriceBadgeEnabled' => $androidPriceBadgeEnabled,
+                    'androidPriceBadgeColor' => $androidPriceBadgeColor,
                 ];
             })
             ->filter(fn ($item) => is_array($item))
@@ -304,6 +469,21 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarImageFit'] = (string) ($validated['rightSidebarImageFit'] ?? 'scale-down');
         $validated['rightSidebarHybridVideoDuration'] = (int) ($validated['rightSidebarHybridVideoDuration'] ?? 2);
         $validated['rightSidebarHybridImageDuration'] = (int) ($validated['rightSidebarHybridImageDuration'] ?? 4);
+        $validated['rightSidebarProductCarouselEnabled'] = (bool) ($validated['rightSidebarProductCarouselEnabled'] ?? false);
+        $validated['rightSidebarProductDisplayMode'] = (string) ($validated['rightSidebarProductDisplayMode'] ?? 'all');
+        $validated['rightSidebarProductTransitionMode'] = (string) ($validated['rightSidebarProductTransitionMode'] ?? 'products_only');
+        $validated['rightSidebarProductInterval'] = (int) ($validated['rightSidebarProductInterval'] ?? 8);
+        $validated['rightSidebarProductShowImage'] = (bool) ($validated['rightSidebarProductShowImage'] ?? true);
+        $validated['rightSidebarProductShowName'] = (bool) ($validated['rightSidebarProductShowName'] ?? true);
+        $validated['rightSidebarProductShowPrice'] = (bool) ($validated['rightSidebarProductShowPrice'] ?? true);
+        $validated['rightSidebarProductNamePosition'] = (string) ($validated['rightSidebarProductNamePosition'] ?? 'top');
+        $validated['rightSidebarProductPricePosition'] = (string) ($validated['rightSidebarProductPricePosition'] ?? 'bottom');
+        $validated['rightSidebarProductNameColor'] = $this->normalizeHexColor((string) ($validated['rightSidebarProductNameColor'] ?? '#ffffff'), '#ffffff');
+        $validated['rightSidebarProductPriceColor'] = $this->normalizeHexColor((string) ($validated['rightSidebarProductPriceColor'] ?? '#fde68a'), '#fde68a');
+        $validated['rightSidebarProductNameBadgeEnabled'] = (bool) ($validated['rightSidebarProductNameBadgeEnabled'] ?? true);
+        $validated['rightSidebarProductNameBadgeColor'] = $this->normalizeHexColor((string) ($validated['rightSidebarProductNameBadgeColor'] ?? '#0f172a'), '#0f172a');
+        $validated['rightSidebarProductPriceBadgeEnabled'] = (bool) ($validated['rightSidebarProductPriceBadgeEnabled'] ?? true);
+        $validated['rightSidebarProductPriceBadgeColor'] = $this->normalizeHexColor((string) ($validated['rightSidebarProductPriceBadgeColor'] ?? '#0f172a'), '#0f172a');
         $validated['productListType'] = (string) ($validated['productListType'] ?? '1');
         $validGroupIds = Grupo::query()
             ->where('empresa_id', $empresaId)
@@ -331,8 +511,10 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarAndroidVerticalOffset'] = (int) ($validated['rightSidebarAndroidVerticalOffset'] ?? 0);
         $validated['rowVerticalPadding'] = (int) ($validated['rowVerticalPadding'] ?? 9);
         $validated['rowLineSpacing'] = (int) ($validated['rowLineSpacing'] ?? 12);
+        $validated['productListVerticalOffset'] = (int) ($validated['productListVerticalOffset'] ?? 0);
         $validated['listFontSize'] = (int) ($validated['listFontSize'] ?? 16);
         $validated['groupLabelFontSize'] = (int) ($validated['groupLabelFontSize'] ?? 14);
+        $validated['groupLabelVerticalOffset'] = (int) ($validated['groupLabelVerticalOffset'] ?? 0);
         $validated['groupLabelFontFamily'] = (string) ($validated['groupLabelFontFamily'] ?? 'arial');
         $validated['pageSize'] = (int) ($validated['pageSize'] ?? 10);
         $validated['paginationInterval'] = (int) ($validated['paginationInterval'] ?? 5);
@@ -347,6 +529,8 @@ class WebScreenConfigController extends Controller
         unset($validated['video_duration_seconds']);
         unset($validated['video_heights']);
         unset($validated['saveSection']);
+        unset($validated['openCompanyGalleryTarget']);
+        unset($validated['openRightSidebarImageScheduleUrl']);
 
         if (! $validated['useGradient']) {
             $validated['gradientStartColor'] = $validated['rowBackgroundColor'];
@@ -372,6 +556,14 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoPosition')) {
             unset($validated['rightSidebarLogoPosition']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoPositionWindows')) {
+            unset($validated['rightSidebarLogoPositionWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoPositionAndroid')) {
+            unset($validated['rightSidebarLogoPositionAndroid']);
         }
 
         if (! Schema::hasColumn('configuracoes', 'showLeftVerticalLogo')) {
@@ -400,6 +592,38 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoHeight')) {
             unset($validated['leftVerticalLogoHeight']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoWidthWindows')) {
+            unset($validated['rightSidebarLogoWidthWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoHeightWindows')) {
+            unset($validated['rightSidebarLogoHeightWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoWidthAndroid')) {
+            unset($validated['rightSidebarLogoWidthAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoHeightAndroid')) {
+            unset($validated['rightSidebarLogoHeightAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoWidthWindows')) {
+            unset($validated['leftVerticalLogoWidthWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoHeightWindows')) {
+            unset($validated['leftVerticalLogoHeightWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoWidthAndroid')) {
+            unset($validated['leftVerticalLogoWidthAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoHeightAndroid')) {
+            unset($validated['leftVerticalLogoHeightAndroid']);
         }
 
         if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoBackgroundColor')) {
@@ -461,6 +685,11 @@ class WebScreenConfigController extends Controller
                 $companyUploadUrl = $this->publicStorageUrl($companyUploadPath);
             }
 
+            $companyDirectUrl = $this->normalizeSingleImageUrl((string) ($validated['companyGalleryDirectUrl'] ?? ''));
+            if ($companyDirectUrl !== '' && !in_array($companyDirectUrl, $manualSlideUrls, true)) {
+                $manualSlideUrls[] = $companyDirectUrl;
+            }
+
             $availableSources = $availableGalleryImages;
             if ($companyUploadUrl) {
                 $availableSources['company_upload'] = $companyUploadUrl;
@@ -494,7 +723,7 @@ class WebScreenConfigController extends Controller
                 $finalSlideUrls = array_values(array_unique(array_merge($manualSlideUrlsWithoutManaged, $selectedSlideUrls)));
             }
 
-            if (empty($finalSlideUrls) && !empty($availableGalleryImages)) {
+            if (empty($finalSlideUrls) && !empty($availableGalleryImages) && !$slideSelectionSubmitted) {
                 $finalSlideUrls = array_values($availableGalleryImages);
             }
 
@@ -518,11 +747,79 @@ class WebScreenConfigController extends Controller
             unset($validated['rightSidebarImageSchedules']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductCarouselEnabled')) {
+            unset($validated['rightSidebarProductCarouselEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductDisplayMode')) {
+            unset($validated['rightSidebarProductDisplayMode']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductTransitionMode')) {
+            unset($validated['rightSidebarProductTransitionMode']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductInterval')) {
+            unset($validated['rightSidebarProductInterval']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductShowImage')) {
+            unset($validated['rightSidebarProductShowImage']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductShowName')) {
+            unset($validated['rightSidebarProductShowName']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductShowPrice')) {
+            unset($validated['rightSidebarProductShowPrice']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNamePosition')) {
+            unset($validated['rightSidebarProductNamePosition']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductPricePosition')) {
+            unset($validated['rightSidebarProductPricePosition']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNameColor')) {
+            unset($validated['rightSidebarProductNameColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductPriceColor')) {
+            unset($validated['rightSidebarProductPriceColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNameBadgeEnabled')) {
+            unset($validated['rightSidebarProductNameBadgeEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNameBadgeColor')) {
+            unset($validated['rightSidebarProductNameBadgeColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductPriceBadgeEnabled')) {
+            unset($validated['rightSidebarProductPriceBadgeEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductPriceBadgeColor')) {
+            unset($validated['rightSidebarProductPriceBadgeColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'productListVerticalOffset')) {
+            unset($validated['productListVerticalOffset']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'groupLabelVerticalOffset')) {
+            unset($validated['groupLabelVerticalOffset']);
+        }
+
         if ($validated['rightSidebarMediaType'] === 'video') {
             $validated['rightSidebarImageUrls'] = null;
         }
 
-        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload']);
+        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['companyGalleryDirectUrl'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload']);
 
         $embedStatuses = [];
         $embedWarnings = [];
@@ -544,6 +841,19 @@ class WebScreenConfigController extends Controller
 
         if ($saveSection !== '') {
             $redirect->with('success', 'Menu salvo com sucesso.');
+            $redirect->with('openConfigSection', $saveSection);
+
+            if ($saveSection === 'companyGalleryConfigSection') {
+                $openCompanyGalleryTarget = trim((string) $request->input('openCompanyGalleryTarget', ''));
+                if (in_array($openCompanyGalleryTarget, ['companyGalleryCodeBlock', 'companyGalleryLibraryBlock', 'rightSidebarImageConfig'], true)) {
+                    $redirect->with('openCompanyGalleryTarget', $openCompanyGalleryTarget);
+                }
+
+                $openRightSidebarImageScheduleUrl = $this->normalizeSingleImageUrl((string) $request->input('openRightSidebarImageScheduleUrl', ''));
+                if ($openRightSidebarImageScheduleUrl !== '') {
+                    $redirect->with('openRightSidebarImageScheduleUrl', $openRightSidebarImageScheduleUrl);
+                }
+            }
         } else {
             $redirect->with('success', 'Configuração da Tela Web atualizada com sucesso.');
         }
@@ -593,13 +903,23 @@ class WebScreenConfigController extends Controller
             'showRightSidebarPanel',
             'showRightSidebarLogo',
             'rightSidebarLogoPosition',
+            'rightSidebarLogoPositionWindows',
+            'rightSidebarLogoPositionAndroid',
             'showLeftVerticalLogo',
             'rightSidebarLogoUrl',
             'rightSidebarLogoWidth',
             'rightSidebarLogoHeight',
+            'rightSidebarLogoWidthWindows',
+            'rightSidebarLogoHeightWindows',
+            'rightSidebarLogoWidthAndroid',
+            'rightSidebarLogoHeightAndroid',
             'leftVerticalLogoUrl',
             'leftVerticalLogoWidth',
             'leftVerticalLogoHeight',
+            'leftVerticalLogoWidthWindows',
+            'leftVerticalLogoHeightWindows',
+            'leftVerticalLogoWidthAndroid',
+            'leftVerticalLogoHeightAndroid',
             'isMainBorderEnabled',
             'isRoundedCornersEnabled',
             'mainBorderColor',
@@ -624,6 +944,21 @@ class WebScreenConfigController extends Controller
             'rightSidebarAndroidVerticalOffset',
             'rightSidebarHybridVideoDuration',
             'rightSidebarHybridImageDuration',
+            'rightSidebarProductCarouselEnabled',
+            'rightSidebarProductDisplayMode',
+            'rightSidebarProductTransitionMode',
+            'rightSidebarProductInterval',
+            'rightSidebarProductShowImage',
+            'rightSidebarProductShowName',
+            'rightSidebarProductShowPrice',
+            'rightSidebarProductNamePosition',
+            'rightSidebarProductPricePosition',
+            'rightSidebarProductNameColor',
+            'rightSidebarProductPriceColor',
+            'rightSidebarProductNameBadgeEnabled',
+            'rightSidebarProductNameBadgeColor',
+            'rightSidebarProductPriceBadgeEnabled',
+            'rightSidebarProductPriceBadgeColor',
             'productListType',
             'isVideoPanelTransparent',
             'rowBackgroundColor',
@@ -655,8 +990,10 @@ class WebScreenConfigController extends Controller
             'imageHeight',
             'rowVerticalPadding',
             'rowLineSpacing',
+            'productListVerticalOffset',
             'listFontSize',
             'groupLabelFontSize',
+            'groupLabelVerticalOffset',
             'groupLabelFontFamily',
             'groupLabelColor',
             'showGroupLabelBadge',
@@ -812,6 +1149,17 @@ class WebScreenConfigController extends Controller
         }
 
         return $line;
+    }
+
+    private function normalizeHexColor(string $raw, string $default): string
+    {
+        $value = strtoupper(trim($raw));
+
+        if (preg_match('/^#[0-9A-F]{6}$/', $value) === 1) {
+            return $value;
+        }
+
+        return strtoupper($default);
     }
 
     private function resolveCompanyStorageDocuments(): array
