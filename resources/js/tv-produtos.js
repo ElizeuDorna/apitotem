@@ -1,3 +1,9 @@
+import { createDedicatedFullScreenSlideModule } from './tv/modules/dedicated-fullscreen-slide';
+import { createRightSidebarMediaModeModule } from './tv/modules/right-sidebar-media-mode';
+import { createRightSidebarMixedModeModule } from './tv/modules/right-sidebar-mixed-mode';
+import { createRightSidebarProductSequencesModule } from './tv/modules/right-sidebar-product-sequences';
+import { createRightSidebarProductCardRendererModule } from './tv/modules/right-sidebar-product-card-renderer';
+
 const tokenInput = document.getElementById('deviceToken');
 const loadButton = document.getElementById('loadProducts');
 const statusMessage = document.getElementById('statusMessage');
@@ -216,6 +222,14 @@ const visualConfig = {
     fullScreenSlideInterval: 8,
     fullScreenSlideReturnDelaySeconds: 0,
     fullScreenSlideEnabled: false,
+    fullScreenSlideStartDate: '',
+    fullScreenSlideEndDate: '',
+    fullScreenSlideEnabledWindows: true,
+    fullScreenSlideEnabledAndroid: true,
+    fullScreenSlideImageWidthWindows: 0,
+    fullScreenSlideImageHeightWindows: 0,
+    fullScreenSlideImageWidthAndroid: 0,
+    fullScreenSlideImageHeightAndroid: 0,
     rightSidebarImageSchedules: [],
     rightSidebarImageInterval: 8,
     rightSidebarImageFit: 'scale-down',
@@ -354,6 +368,255 @@ let forceFullScreenSlideModeActive = false;
 let dedicatedFullScreenSlideStartedAt = 0;
 let dedicatedFullScreenSlideMaxExpectedMs = 0;
 let productsRefreshTimer = null;
+let latestProductsForPagination = [];
+let dedicatedFullScreenExternalTimersPaused = false;
+
+const dedicatedFullScreenSlideState = {
+    get fullScreenSlideTimer() { return fullScreenSlideTimer; },
+    set fullScreenSlideTimer(value) { fullScreenSlideTimer = value; },
+    get fullScreenSlideExitTimer() { return fullScreenSlideExitTimer; },
+    set fullScreenSlideExitTimer(value) { fullScreenSlideExitTimer = value; },
+    get fullScreenSlideReturnTimer() { return fullScreenSlideReturnTimer; },
+    set fullScreenSlideReturnTimer(value) { fullScreenSlideReturnTimer = value; },
+    get fullScreenSlideUrls() { return fullScreenSlideUrls; },
+    set fullScreenSlideUrls(value) { fullScreenSlideUrls = value; },
+    get fullScreenSlideIndex() { return fullScreenSlideIndex; },
+    set fullScreenSlideIndex(value) { fullScreenSlideIndex = value; },
+    get hasCompletedDedicatedFullScreenSlideCycle() { return hasCompletedDedicatedFullScreenSlideCycle; },
+    set hasCompletedDedicatedFullScreenSlideCycle(value) { hasCompletedDedicatedFullScreenSlideCycle = value; },
+    get fullScreenSlideConfigSignature() { return fullScreenSlideConfigSignature; },
+    set fullScreenSlideConfigSignature(value) { fullScreenSlideConfigSignature = value; },
+    get fullScreenSlideCompletedSignatureMemory() { return fullScreenSlideCompletedSignatureMemory; },
+    set fullScreenSlideCompletedSignatureMemory(value) { fullScreenSlideCompletedSignatureMemory = value; },
+    get fullScreenSlideCompletedSignatureRuntime() { return fullScreenSlideCompletedSignatureRuntime; },
+    set fullScreenSlideCompletedSignatureRuntime(value) { fullScreenSlideCompletedSignatureRuntime = value; },
+    get dedicatedFullScreenCycleStartCount() { return dedicatedFullScreenCycleStartCount; },
+    set dedicatedFullScreenCycleStartCount(value) { dedicatedFullScreenCycleStartCount = value; },
+    get imageSlideUrls() { return imageSlideUrls; },
+    set imageSlideUrls(value) { imageSlideUrls = value; },
+    get imageSlideSettingsByUrl() { return imageSlideSettingsByUrl; },
+    set imageSlideSettingsByUrl(value) { imageSlideSettingsByUrl = value; },
+    get forceFullScreenSlideModeActive() { return forceFullScreenSlideModeActive; },
+    set forceFullScreenSlideModeActive(value) { forceFullScreenSlideModeActive = value; },
+    get dedicatedFullScreenSlideStartedAt() { return dedicatedFullScreenSlideStartedAt; },
+    set dedicatedFullScreenSlideStartedAt(value) { dedicatedFullScreenSlideStartedAt = value; },
+    get dedicatedFullScreenSlideMaxExpectedMs() { return dedicatedFullScreenSlideMaxExpectedMs; },
+    set dedicatedFullScreenSlideMaxExpectedMs(value) { dedicatedFullScreenSlideMaxExpectedMs = value; },
+};
+
+const dedicatedFullScreenSlideModule = createDedicatedFullScreenSlideModule({
+    state: dedicatedFullScreenSlideState,
+    visualConfig,
+    tvImageSlide,
+    toBoolean,
+    isAndroidDevice,
+    parseConfiguredUrlLines,
+    resolveRenderableImageUrl,
+    readCompletedSignatureFromWindowName,
+    getStoredCompletedFullscreenSlideSignature,
+    storeCompletedFullscreenSlideSignature,
+    clearFullScreenSlideTimer,
+    clearFullScreenSlideExitTimer,
+    clearFullScreenSlideReturnTimer,
+    clearImageSlideTimer,
+    stopVideoPlaybackForImageMode,
+    hideSidebarProductCard,
+    hideSlideTextOverlays,
+    showImageSlideAt,
+    setImageSlideFullscreenMode,
+    isVideoFullscreenModeActive,
+    shouldKeepRightSidebarVideoRunningDuringDedicatedFullScreen,
+    ensureRightSidebarMediaRestoredAfterDedicatedFullScreen,
+    forceRestoreMainLayoutAfterDedicatedSlide,
+    pauseExternalTimersForDedicatedFullScreen,
+    resumeExternalTimersForDedicatedFullScreen,
+    getReliableDeviceToken,
+    getSidebarProductItems: () => sidebarProductItems,
+    applyRightSidebarMediaMode,
+});
+
+const rightSidebarMediaModeState = {
+    get fullScreenSlideConfigSignature() { return fullScreenSlideConfigSignature; },
+    set fullScreenSlideConfigSignature(value) { fullScreenSlideConfigSignature = value; },
+    get forceFullScreenSlideModeActive() { return forceFullScreenSlideModeActive; },
+    set forceFullScreenSlideModeActive(value) { forceFullScreenSlideModeActive = value; },
+    get sidebarProductItems() { return sidebarProductItems; },
+    set sidebarProductItems(value) { sidebarProductItems = value; },
+    get sidebarMixedModeSignature() { return sidebarMixedModeSignature; },
+    set sidebarMixedModeSignature(value) { sidebarMixedModeSignature = value; },
+    get sidebarProductPassedBeforeImages() { return sidebarProductPassedBeforeImages; },
+    set sidebarProductPassedBeforeImages(value) { sidebarProductPassedBeforeImages = value; },
+    get sidebarMixedImageUrls() { return sidebarMixedImageUrls; },
+    set sidebarMixedImageUrls(value) { sidebarMixedImageUrls = value; },
+    get sidebarMixedImageIndex() { return sidebarMixedImageIndex; },
+    set sidebarMixedImageIndex(value) { sidebarMixedImageIndex = value; },
+    get sidebarMixedVideoItems() { return sidebarMixedVideoItems; },
+    set sidebarMixedVideoItems(value) { sidebarMixedVideoItems = value; },
+    get sidebarMixedVideoIndex() { return sidebarMixedVideoIndex; },
+    set sidebarMixedVideoIndex(value) { sidebarMixedVideoIndex = value; },
+    get sidebarMixedTurnIndex() { return sidebarMixedTurnIndex; },
+    set sidebarMixedTurnIndex(value) { sidebarMixedTurnIndex = value; },
+    get sidebarMixedVideoTurnActive() { return sidebarMixedVideoTurnActive; },
+    set sidebarMixedVideoTurnActive(value) { sidebarMixedVideoTurnActive = value; },
+    get sidebarMixedVideoTurnExpiresAt() { return sidebarMixedVideoTurnExpiresAt; },
+    set sidebarMixedVideoTurnExpiresAt(value) { sidebarMixedVideoTurnExpiresAt = value; },
+    get sidebarMixedCurrentVideoItem() { return sidebarMixedCurrentVideoItem; },
+    set sidebarMixedCurrentVideoItem(value) { sidebarMixedCurrentVideoItem = value; },
+    get sidebarMixedOnVideoFinished() { return sidebarMixedOnVideoFinished; },
+    set sidebarMixedOnVideoFinished(value) { sidebarMixedOnVideoFinished = value; },
+    get rightSidebarHybridPhase() { return rightSidebarHybridPhase; },
+    set rightSidebarHybridPhase(value) { rightSidebarHybridPhase = value; },
+    get rightSidebarHybridVideoCountInPhase() { return rightSidebarHybridVideoCountInPhase; },
+    set rightSidebarHybridVideoCountInPhase(value) { rightSidebarHybridVideoCountInPhase = value; },
+    get rightSidebarHybridImageCountInPhase() { return rightSidebarHybridImageCountInPhase; },
+    set rightSidebarHybridImageCountInPhase(value) { rightSidebarHybridImageCountInPhase = value; },
+    get rightSidebarHybridSwitching() { return rightSidebarHybridSwitching; },
+    set rightSidebarHybridSwitching(value) { rightSidebarHybridSwitching = value; },
+    get rightSidebarHybridLastCompletedAt() { return rightSidebarHybridLastCompletedAt; },
+    set rightSidebarHybridLastCompletedAt(value) { rightSidebarHybridLastCompletedAt = value; },
+    get forceVideoPlaylistApplyOnce() { return forceVideoPlaylistApplyOnce; },
+    set forceVideoPlaylistApplyOnce(value) { forceVideoPlaylistApplyOnce = value; },
+    get rightSidebarHybridConfigSignature() { return rightSidebarHybridConfigSignature; },
+    set rightSidebarHybridConfigSignature(value) { rightSidebarHybridConfigSignature = value; },
+    get rightSidebarHybridHasShownAnyImage() { return rightSidebarHybridHasShownAnyImage; },
+    set rightSidebarHybridHasShownAnyImage(value) { rightSidebarHybridHasShownAnyImage = value; },
+    get videoPlaylistItems() { return videoPlaylistItems; },
+    set videoPlaylistItems(value) { videoPlaylistItems = value; },
+    get currentVideoIndex() { return currentVideoIndex; },
+    set currentVideoIndex(value) { currentVideoIndex = value; },
+    get imageSlideTimer() { return imageSlideTimer; },
+    set imageSlideTimer(value) { imageSlideTimer = value; },
+};
+
+const rightSidebarMediaModeModule = createRightSidebarMediaModeModule({
+    state: rightSidebarMediaModeState,
+    visualConfig,
+    toBoolean,
+    tvImageSlide,
+    buildDedicatedFullScreenSlideSignature,
+    syncDedicatedFullScreenCompletionState,
+    parseConfiguredDedicatedFullScreenSlideUrls,
+    shouldSkipDedicatedFullScreenSlideForCurrentLoad,
+    markDedicatedFullScreenSlideCycleAsCompleted,
+    stopDedicatedFullScreenSlideMode,
+    forceRestoreMainLayoutAfterDedicatedSlide,
+    hasStaleDedicatedFullScreenSlideSession,
+    completeDedicatedFullScreenSlideCycle,
+    startDedicatedFullScreenSlideMode,
+    clearSidebarProductTimer,
+    hideSidebarProductCard,
+    stopVideoPlaybackForImageMode,
+    startImageSlideMode,
+    stopImageSlideMode,
+    startSidebarProductsBeforeImagesMode,
+    startSidebarProductsMixedWithImagesMode,
+    startSidebarProductsMixedWithMediaMode,
+    startSidebarProductsOnlyMode,
+    parseConfiguredVideoUrls,
+    applyHybridImageLayout,
+    loadVideoPlaylist,
+    startHybridImagePhase,
+});
+
+const rightSidebarMixedModeState = {
+    get sidebarMixedModeSignature() { return sidebarMixedModeSignature; },
+    set sidebarMixedModeSignature(value) { sidebarMixedModeSignature = value; },
+    get sidebarProductTimer() { return sidebarProductTimer; },
+    set sidebarProductTimer(value) { sidebarProductTimer = value; },
+    get sidebarMixedVideoTurnActive() { return sidebarMixedVideoTurnActive; },
+    set sidebarMixedVideoTurnActive(value) { sidebarMixedVideoTurnActive = value; },
+    get sidebarMixedVideoItems() { return sidebarMixedVideoItems; },
+    set sidebarMixedVideoItems(value) { sidebarMixedVideoItems = value; },
+    get sidebarProductItems() { return sidebarProductItems; },
+    set sidebarProductItems(value) { sidebarProductItems = value; },
+    get sidebarMixedImageUrls() { return sidebarMixedImageUrls; },
+    set sidebarMixedImageUrls(value) { sidebarMixedImageUrls = value; },
+    get imageSlideUrls() { return imageSlideUrls; },
+    set imageSlideUrls(value) { imageSlideUrls = value; },
+    get imageSlideSettingsByUrl() { return imageSlideSettingsByUrl; },
+    set imageSlideSettingsByUrl(value) { imageSlideSettingsByUrl = value; },
+    get sidebarProductIndex() { return sidebarProductIndex; },
+    set sidebarProductIndex(value) { sidebarProductIndex = value; },
+    get sidebarMixedImageIndex() { return sidebarMixedImageIndex; },
+    set sidebarMixedImageIndex(value) { sidebarMixedImageIndex = value; },
+    get sidebarMixedVideoIndex() { return sidebarMixedVideoIndex; },
+    set sidebarMixedVideoIndex(value) { sidebarMixedVideoIndex = value; },
+    get sidebarMixedTurnIndex() { return sidebarMixedTurnIndex; },
+    set sidebarMixedTurnIndex(value) { sidebarMixedTurnIndex = value; },
+    get sidebarMixedVideoTurnExpiresAt() { return sidebarMixedVideoTurnExpiresAt; },
+    set sidebarMixedVideoTurnExpiresAt(value) { sidebarMixedVideoTurnExpiresAt = value; },
+    get sidebarMixedCurrentVideoItem() { return sidebarMixedCurrentVideoItem; },
+    set sidebarMixedCurrentVideoItem(value) { sidebarMixedCurrentVideoItem = value; },
+    get sidebarMixedOnVideoFinished() { return sidebarMixedOnVideoFinished; },
+    set sidebarMixedOnVideoFinished(value) { sidebarMixedOnVideoFinished = value; },
+};
+
+const rightSidebarMixedModeModule = createRightSidebarMixedModeModule({
+    state: rightSidebarMixedModeState,
+    visualConfig,
+    toBoolean,
+    tvImageSlide,
+    normalizeSidebarProductItems,
+    parseConfiguredImageSlideUrls,
+    parseConfiguredVideoUrls,
+    clearSidebarProductTimer,
+    stopVideoPlaybackForImageMode,
+    stopImageSlideMode,
+    hideSidebarProductCard,
+    hideSlideTextOverlays,
+    renderSidebarProductItem,
+    showImageSlideAt,
+    applyVideoSource,
+    getYouTubeVideoId,
+    resolveEmbedUrl,
+});
+
+const rightSidebarProductCardRendererModule = createRightSidebarProductCardRendererModule({
+    visualConfig,
+    ensureSidebarProductCard,
+    toBoolean,
+    normalizeImageSrcCandidate,
+    resolveRenderableImageUrl,
+    buildImageFallbackCandidates,
+    escapeHtmlAttribute,
+});
+
+const rightSidebarProductSequencesState = {
+    get sidebarProductTimer() { return sidebarProductTimer; },
+    set sidebarProductTimer(value) { sidebarProductTimer = value; },
+    get sidebarMixedModeSignature() { return sidebarMixedModeSignature; },
+    set sidebarMixedModeSignature(value) { sidebarMixedModeSignature = value; },
+    get sidebarMixedVideoItems() { return sidebarMixedVideoItems; },
+    set sidebarMixedVideoItems(value) { sidebarMixedVideoItems = value; },
+    get sidebarMixedVideoIndex() { return sidebarMixedVideoIndex; },
+    set sidebarMixedVideoIndex(value) { sidebarMixedVideoIndex = value; },
+    get sidebarMixedTurnIndex() { return sidebarMixedTurnIndex; },
+    set sidebarMixedTurnIndex(value) { sidebarMixedTurnIndex = value; },
+    get sidebarMixedVideoTurnActive() { return sidebarMixedVideoTurnActive; },
+    set sidebarMixedVideoTurnActive(value) { sidebarMixedVideoTurnActive = value; },
+    get sidebarMixedVideoTurnExpiresAt() { return sidebarMixedVideoTurnExpiresAt; },
+    set sidebarMixedVideoTurnExpiresAt(value) { sidebarMixedVideoTurnExpiresAt = value; },
+    get sidebarMixedCurrentVideoItem() { return sidebarMixedCurrentVideoItem; },
+    set sidebarMixedCurrentVideoItem(value) { sidebarMixedCurrentVideoItem = value; },
+    get sidebarMixedOnVideoFinished() { return sidebarMixedOnVideoFinished; },
+    set sidebarMixedOnVideoFinished(value) { sidebarMixedOnVideoFinished = value; },
+    get sidebarProductItems() { return sidebarProductItems; },
+    set sidebarProductItems(value) { sidebarProductItems = value; },
+    get sidebarProductIndex() { return sidebarProductIndex; },
+    set sidebarProductIndex(value) { sidebarProductIndex = value; },
+};
+
+const rightSidebarProductSequencesModule = createRightSidebarProductSequencesModule({
+    state: rightSidebarProductSequencesState,
+    visualConfig,
+    normalizeSidebarProductItems,
+    clearSidebarProductTimer,
+    stopVideoPlaybackForImageMode,
+    stopImageSlideMode,
+    hideSidebarProductCard,
+    renderSidebarProductItem,
+    startImageSlideMode,
+});
 
 function applyProductsRefreshInterval(nextSeconds) {
     const normalized = Math.max(5, Math.min(3600, Number(nextSeconds || 30)));
@@ -783,85 +1046,23 @@ function parseConfiguredUrlLines(rawValue) {
 }
 
 function parseConfiguredDedicatedFullScreenSlideUrls() {
-    if (!toBoolean(visualConfig.fullScreenSlideEnabled, false)) {
-        return [];
-    }
-
-    const configured = parseConfiguredUrlLines(visualConfig.fullScreenSlideImageUrls);
-    if (configured.length === 0) {
-        return [];
-    }
-
-    const unique = [];
-    const seen = new Set();
-
-    configured.forEach((rawUrl) => {
-        const normalized = String(rawUrl || '').trim();
-        if (!normalized || seen.has(normalized)) {
-            return;
-        }
-
-        seen.add(normalized);
-        unique.push(normalized);
-    });
-
-    return unique;
+    return dedicatedFullScreenSlideModule.parseConfiguredDedicatedFullScreenSlideUrls();
 }
 
 function buildDedicatedFullScreenSlideSignature() {
-    const urls = parseConfiguredDedicatedFullScreenSlideUrls();
-    const normalizedUrls = urls.map((item) => {
-        const resolved = String(resolveRenderableImageUrl(item) || item || '').trim();
-        const withoutHash = resolved.split('#')[0] || '';
-        const withoutQuery = withoutHash.split('?')[0] || '';
-        return withoutQuery.replace(/\/+$/, '');
-    });
-
-    return JSON.stringify({
-        urls: normalizedUrls,
-        interval: Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8)),
-    });
+    return dedicatedFullScreenSlideModule.buildDedicatedFullScreenSlideSignature();
 }
 
 function isDedicatedFullScreenSlideCompletedForSignature(signature) {
-    const currentSignature = String(signature || '').trim();
-    if (!currentSignature) {
-        return false;
-    }
-
-    const storedCompletedSignature = getStoredCompletedFullscreenSlideSignature();
-    const memoryCompletedSignature = String(fullScreenSlideCompletedSignatureMemory || '').trim();
-    const runtimeCompletedSignature = String(fullScreenSlideCompletedSignatureRuntime || '').trim();
-    const windowNameCompletedSignature = String(readCompletedSignatureFromWindowName() || '').trim();
-
-    return (
-        (storedCompletedSignature !== '' && storedCompletedSignature === currentSignature)
-        || (memoryCompletedSignature !== '' && memoryCompletedSignature === currentSignature)
-        || (runtimeCompletedSignature !== '' && runtimeCompletedSignature === currentSignature)
-        || (windowNameCompletedSignature !== '' && windowNameCompletedSignature === currentSignature)
-    );
+    return dedicatedFullScreenSlideModule.isDedicatedFullScreenSlideCompletedForSignature(signature);
 }
 
 function markDedicatedFullScreenSlideCycleAsCompleted(signature = '') {
-    const resolvedSignature = String(signature || fullScreenSlideConfigSignature || '').trim();
-    if (!resolvedSignature) {
-        return;
-    }
-
-    hasCompletedDedicatedFullScreenSlideCycle = true;
-    fullScreenSlideCompletedSignatureMemory = resolvedSignature;
-    fullScreenSlideCompletedSignatureRuntime = resolvedSignature;
-    storeCompletedFullscreenSlideSignature(resolvedSignature);
+    dedicatedFullScreenSlideModule.markDedicatedFullScreenSlideCycleAsCompleted(signature);
 }
 
 function shouldSkipDedicatedFullScreenSlideForCurrentLoad(hasDedicatedFullScreenSlide, options = {}) {
-    if (!hasDedicatedFullScreenSlide) {
-        return false;
-    }
-
-    // Keep gating scoped to an already-started dedicated cycle only.
-    // Load/reload flags were causing dedicated fullscreen to never re-enter.
-    return dedicatedFullScreenCycleStartCount >= 1;
+    return dedicatedFullScreenSlideModule.shouldSkipDedicatedFullScreenSlideForCurrentLoad(hasDedicatedFullScreenSlide, options);
 }
 
 function isVideoFullscreenModeActive() {
@@ -894,74 +1095,15 @@ function isVideoFullscreenModeActive() {
 }
 
 function getDedicatedFullScreenSlideReturnDelaySeconds() {
-    return Math.max(0, Math.min(86400, Number(visualConfig.fullScreenSlideReturnDelaySeconds || 0)));
+    return dedicatedFullScreenSlideModule.getDedicatedFullScreenSlideReturnDelaySeconds();
 }
 
 function scheduleDedicatedFullScreenSlideRestart() {
-    clearFullScreenSlideReturnTimer();
-
-    const delaySeconds = getDedicatedFullScreenSlideReturnDelaySeconds();
-    if (delaySeconds <= 0) {
-        return;
-    }
-
-    const hasDedicatedSlideUrls = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
-    if (!hasDedicatedSlideUrls) {
-        return;
-    }
-
-    const tryRestart = () => {
-        if (forceFullScreenSlideModeActive) {
-            return;
-        }
-
-        const hasSlideUrls = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
-        if (!hasSlideUrls) {
-            return;
-        }
-
-        if (isVideoFullscreenModeActive()) {
-            // Respect fullscreen video flow: retry until it is not active.
-            fullScreenSlideReturnTimer = setTimeout(tryRestart, 2000);
-            return;
-        }
-
-        dedicatedFullScreenCycleStartCount = 0;
-        hasCompletedDedicatedFullScreenSlideCycle = false;
-        fullScreenSlideCompletedSignatureMemory = '';
-        fullScreenSlideCompletedSignatureRuntime = '';
-        storeCompletedFullscreenSlideSignature('');
-
-        const startedDedicatedSlide = startDedicatedFullScreenSlideMode();
-        if (startedDedicatedSlide) {
-            return;
-        }
-
-        const token = getReliableDeviceToken();
-        if (!token) {
-            return;
-        }
-
-        applyRightSidebarMediaMode(token, sidebarProductItems, { ignoreDedicatedLoadSkip: true });
-    };
-
-    fullScreenSlideReturnTimer = setTimeout(tryRestart, delaySeconds * 1000);
+    dedicatedFullScreenSlideModule.scheduleDedicatedFullScreenSlideRestart();
 }
 
 function completeDedicatedFullScreenSlideCycle() {
-    if (!fullScreenSlideConfigSignature) {
-        fullScreenSlideConfigSignature = buildDedicatedFullScreenSlideSignature();
-    }
-
-    markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
-    stopDedicatedFullScreenSlideMode();
-    forceRestoreMainLayoutAfterDedicatedSlide();
-    scheduleDedicatedFullScreenSlideRestart();
-
-    const token = getReliableDeviceToken();
-    if (token) {
-        applyRightSidebarMediaMode(token, sidebarProductItems);
-    }
+    dedicatedFullScreenSlideModule.completeDedicatedFullScreenSlideCycle();
 }
 
 function forceRestoreMainLayoutAfterDedicatedSlide() {
@@ -996,131 +1138,15 @@ function forceRestoreMainLayoutAfterDedicatedSlide() {
 }
 
 function hasStaleDedicatedFullScreenSlideSession() {
-    if (!forceFullScreenSlideModeActive) {
-        return false;
-    }
-
-    const startedAt = Number(dedicatedFullScreenSlideStartedAt || 0);
-    const maxExpectedMs = Math.max(1000, Number(dedicatedFullScreenSlideMaxExpectedMs || 0));
-    const elapsedMs = startedAt > 0 ? (Date.now() - startedAt) : 0;
-    const timedOut = startedAt > 0 && elapsedMs > (maxExpectedMs + 12000);
-    const slideHidden = !tvImageSlide || tvImageSlide.classList.contains('hidden');
-    const noRunningTimers = !fullScreenSlideTimer && !fullScreenSlideExitTimer;
-
-    return timedOut || (slideHidden && noRunningTimers);
+    return dedicatedFullScreenSlideModule.hasStaleDedicatedFullScreenSlideSession();
 }
 
 function startDedicatedFullScreenSlideMode() {
-    if (!tvImageSlide) {
-        return false;
-    }
-
-    if (dedicatedFullScreenCycleStartCount >= 1) {
-        return false;
-    }
-
-    if (forceFullScreenSlideModeActive) {
-        return true;
-    }
-
-    const nextUrls = parseConfiguredDedicatedFullScreenSlideUrls();
-    if (nextUrls.length === 0) {
-        stopDedicatedFullScreenSlideMode();
-        return false;
-    }
-
-    stopVideoPlaybackForImageMode();
-    clearImageSlideTimer();
-    clearFullScreenSlideTimer();
-    hideSidebarProductCard();
-    hideSlideTextOverlays();
-
-    forceFullScreenSlideModeActive = true;
-    hasCompletedDedicatedFullScreenSlideCycle = false;
-    dedicatedFullScreenCycleStartCount += 1;
-    dedicatedFullScreenSlideStartedAt = Date.now();
-    fullScreenSlideUrls = nextUrls;
-    fullScreenSlideIndex = 0;
-    imageSlideUrls = fullScreenSlideUrls.slice();
-    imageSlideSettingsByUrl = new Map();
-
-    tvImageSlide.classList.remove('hidden');
-    showImageSlideAt(0);
-
-    const intervalSeconds = Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8));
-    const hardStopMs = Math.max(1000, fullScreenSlideUrls.length * intervalSeconds * 1000 + 1500);
-    dedicatedFullScreenSlideMaxExpectedMs = hardStopMs;
-
-    clearFullScreenSlideExitTimer();
-    fullScreenSlideExitTimer = setTimeout(() => {
-        if (!forceFullScreenSlideModeActive) {
-            return;
-        }
-
-        finishCycle();
-    }, hardStopMs);
-
-    const finishCycle = () => {
-        clearFullScreenSlideExitTimer();
-        completeDedicatedFullScreenSlideCycle();
-    };
-
-    const advanceDedicatedSlideStep = () => {
-        clearFullScreenSlideTimer();
-
-        fullScreenSlideTimer = setTimeout(() => {
-            if (!forceFullScreenSlideModeActive) {
-                return;
-            }
-
-            const nextIndex = fullScreenSlideIndex + 1;
-            if (nextIndex >= fullScreenSlideUrls.length) {
-                finishCycle();
-                return;
-            }
-
-            fullScreenSlideIndex = nextIndex;
-            imageSlideUrls = fullScreenSlideUrls.slice();
-            showImageSlideAt(fullScreenSlideIndex);
-            advanceDedicatedSlideStep();
-        }, intervalSeconds * 1000);
-    };
-
-    if (fullScreenSlideUrls.length > 1) {
-        advanceDedicatedSlideStep();
-    } else {
-        fullScreenSlideTimer = setTimeout(() => {
-            if (!forceFullScreenSlideModeActive) {
-                return;
-            }
-
-            finishCycle();
-        }, intervalSeconds * 1000);
-    }
-
-    return true;
+    return dedicatedFullScreenSlideModule.startDedicatedFullScreenSlideMode();
 }
 
 function stopDedicatedFullScreenSlideMode() {
-    clearFullScreenSlideTimer();
-    clearFullScreenSlideExitTimer();
-    fullScreenSlideUrls = [];
-    fullScreenSlideIndex = 0;
-    dedicatedFullScreenSlideStartedAt = 0;
-    dedicatedFullScreenSlideMaxExpectedMs = 0;
-    forceFullScreenSlideModeActive = false;
-    imageSlideUrls = [];
-    imageSlideSettingsByUrl = new Map();
-    setImageSlideFullscreenMode(false);
-
-    if (tvImageSlide) {
-        tvImageSlide.classList.add('hidden');
-        tvImageSlide.removeAttribute('src');
-        tvImageSlide.removeAttribute('data-fallback-candidates');
-        tvImageSlide.removeAttribute('data-fallback-index');
-    }
-
-    hideSlideTextOverlays();
+    dedicatedFullScreenSlideModule.stopDedicatedFullScreenSlideMode();
 }
 
 function getStoredCompletedFullscreenSlideSignature() {
@@ -1148,13 +1174,7 @@ function storeCompletedFullscreenSlideSignature(signature) {
 }
 
 function syncDedicatedFullScreenCompletionState() {
-    const currentSignature = String(fullScreenSlideConfigSignature || '').trim();
-    if (!currentSignature) {
-        hasCompletedDedicatedFullScreenSlideCycle = false;
-        return;
-    }
-
-    hasCompletedDedicatedFullScreenSlideCycle = isDedicatedFullScreenSlideCompletedForSignature(currentSignature);
+    dedicatedFullScreenSlideModule.syncDedicatedFullScreenCompletionState();
 }
 
 function parseConfiguredImageSlideUrls() {
@@ -1758,6 +1778,30 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
         return;
     }
 
+    const isCurrentUrlFromDedicatedFullScreenSet = () => {
+        const target = String(currentSlideUrl || '').trim();
+        if (!target) {
+            return false;
+        }
+
+        const normalizeForCompare = (value) => String(resolveRenderableImageUrl(value) || value || '')
+            .split('#')[0]
+            .split('?')[0]
+            .trim()
+            .replace(/\/+$/, '');
+
+        const targetNormalized = normalizeForCompare(target);
+        if (!targetNormalized) {
+            return false;
+        }
+
+        const dedicatedUrls = Array.isArray(fullScreenSlideUrls) && fullScreenSlideUrls.length > 0
+            ? fullScreenSlideUrls
+            : parseConfiguredDedicatedFullScreenSlideUrls();
+
+        return dedicatedUrls.some((url) => normalizeForCompare(url) === targetNormalized);
+    };
+
     const compactViewport = isCompactViewport();
 
     const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
@@ -1778,16 +1822,27 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     const perImageHeight = Math.max(0, Number(perImageSettings?.imageHeight || 0) || 0);
     const perImageWidth = Math.max(0, Number(perImageSettings?.imageWidth || 0) || 0);
     const perImageVerticalOffset = Math.max(-300, Math.min(300, Number(perImageSettings?.verticalOffset || 0) || 0));
-    const shouldFullscreen = forceFullScreenSlideModeActive;
+    const shouldFullscreen = forceFullScreenSlideModeActive
+        && toBoolean(visualConfig.fullScreenSlideEnabled, false)
+        && parseConfiguredDedicatedFullScreenSlideUrls().length > 0
+        && isCurrentUrlFromDedicatedFullScreenSet();
 
     setImageSlideFullscreenMode(shouldFullscreen);
 
     if (shouldFullscreen) {
-        tvImageSlide.style.width = '100vw';
-        tvImageSlide.style.height = '100vh';
-        tvImageSlide.style.maxWidth = '100vw';
-        tvImageSlide.style.maxHeight = '100vh';
-        tvImageSlide.style.objectFit = 'cover';
+        const isAndroidRuntime = isAndroidDevice();
+        const configuredWidth = isAndroidRuntime
+            ? Math.max(0, Number(visualConfig.fullScreenSlideImageWidthAndroid || 0))
+            : Math.max(0, Number(visualConfig.fullScreenSlideImageWidthWindows || 0));
+        const configuredHeight = isAndroidRuntime
+            ? Math.max(0, Number(visualConfig.fullScreenSlideImageHeightAndroid || 0))
+            : Math.max(0, Number(visualConfig.fullScreenSlideImageHeightWindows || 0));
+
+        tvImageSlide.style.width = configuredWidth > 0 ? `${configuredWidth}px` : '100vw';
+        tvImageSlide.style.height = configuredHeight > 0 ? `${configuredHeight}px` : '100vh';
+        tvImageSlide.style.maxWidth = configuredWidth > 0 ? `${configuredWidth}px` : '100vw';
+        tvImageSlide.style.maxHeight = configuredHeight > 0 ? `${configuredHeight}px` : '100vh';
+        tvImageSlide.style.objectFit = (configuredWidth > 0 || configuredHeight > 0) ? 'contain' : 'cover';
         tvImageSlide.style.objectPosition = 'center center';
         return;
     }
@@ -1959,434 +2014,43 @@ function normalizeSidebarProductItems(items) {
 }
 
 function renderSidebarProductItem(item) {
-    const card = ensureSidebarProductCard();
-    if (!card || !item) {
-        return;
-    }
-
-    const showName = toBoolean(visualConfig.rightSidebarProductShowName, true);
-    const showPrice = toBoolean(visualConfig.rightSidebarProductShowPrice, true);
-    const showImage = toBoolean(visualConfig.rightSidebarProductShowImage, true);
-    const namePosition = String(visualConfig.rightSidebarProductNamePosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
-    const pricePosition = String(visualConfig.rightSidebarProductPricePosition || 'bottom').toLowerCase() === 'top' ? 'top' : 'bottom';
-
-    const nome = String(item?.nome || 'Produto').trim() || 'Produto';
-    const precoNormal = Number(item?.preco || 0);
-    const oferta = Number(item?.oferta || 0);
-    const hasOferta = Number.isFinite(oferta) && oferta > 0;
-    const valorFinal = hasOferta ? oferta : precoNormal;
-    const precoTexto = Number.isFinite(valorFinal)
-        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorFinal)
-        : '-';
-    const imagem = String(item?.imagem || '').trim();
-
-    const nameBadgeBackground = toBoolean(visualConfig.rightSidebarProductNameBadgeEnabled, true)
-        ? String(visualConfig.rightSidebarProductNameBadgeColor || '#0F172A')
-        : 'transparent';
-    const priceBadgeBackground = toBoolean(visualConfig.rightSidebarProductPriceBadgeEnabled, true)
-        ? String(visualConfig.rightSidebarProductPriceBadgeColor || '#0F172A')
-        : 'transparent';
-
-    const nameBlock = showName
-        ? `<div style="padding:6px 8px;border-radius:8px;background:${nameBadgeBackground};color:${String(visualConfig.rightSidebarProductNameColor || '#FFFFFF')};font-weight:700;text-align:center;line-height:1.2;word-break:break-word;">${nome}</div>`
-        : '';
-
-    const priceBlock = showPrice
-        ? `<div style="padding:6px 8px;border-radius:8px;background:${priceBadgeBackground};color:${String(visualConfig.rightSidebarProductPriceColor || '#FDE68A')};font-weight:800;text-align:center;line-height:1.2;">${precoTexto}</div>`
-        : '';
-
-    const imagemSrc = normalizeImageSrcCandidate(resolveRenderableImageUrl(imagem) || imagem);
-    const imagemFallbackCandidates = buildImageFallbackCandidates(imagem, imagemSrc);
-    const imagemFallbackPrimary = String(imagemFallbackCandidates[0] || '');
-    const imagemFallbackSecondary = String(imagemFallbackCandidates[1] || '');
-
-    const imageBlock = showImage && imagem !== ''
-        ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:96px;"><img src="${escapeHtmlAttribute(imagemSrc || imagem)}" data-fallback-src="${escapeHtmlAttribute(imagemFallbackPrimary)}" data-fallback-src-2="${escapeHtmlAttribute(imagemFallbackSecondary)}" alt="${escapeHtmlAttribute(nome)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" loading="lazy" onerror="if(this.dataset.fallbackSrc&&this.dataset.fallbackTried!=='1'){this.dataset.fallbackTried='1';this.src=this.dataset.fallbackSrc;return;}if(this.dataset.fallbackSrc2&&this.dataset.fallbackTried2!=='1'){this.dataset.fallbackTried2='1';this.src=this.dataset.fallbackSrc2;return;}this.style.display='none'"/></div>`
-        : '<div style="flex:1"></div>';
-
-    const topBlock = namePosition === 'top' ? nameBlock : (pricePosition === 'top' ? priceBlock : '');
-    const bottomBlock = pricePosition === 'bottom' ? priceBlock : (namePosition === 'bottom' ? nameBlock : '');
-
-    card.innerHTML = `${topBlock}${imageBlock}${bottomBlock}`;
-    card.style.display = 'flex';
-    card.classList.remove('hidden');
+    rightSidebarProductCardRendererModule.renderSidebarProductItem(item);
 }
 
 function startSidebarProductsOnlyMode(items) {
-    clearSidebarProductTimer();
-    sidebarMixedModeSignature = '';
-    sidebarMixedVideoItems = [];
-    sidebarMixedVideoIndex = 0;
-    sidebarMixedTurnIndex = 0;
-    sidebarMixedVideoTurnActive = false;
-    sidebarMixedVideoTurnExpiresAt = 0;
-    sidebarMixedCurrentVideoItem = null;
-    sidebarMixedOnVideoFinished = null;
-    stopVideoPlaybackForImageMode();
-    stopImageSlideMode();
-
-    sidebarProductItems = normalizeSidebarProductItems(items);
-    sidebarProductIndex = 0;
-
-    if (sidebarProductItems.length === 0) {
-        hideSidebarProductCard();
-        return;
-    }
-
-    renderSidebarProductItem(sidebarProductItems[0]);
-    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarProductInterval || 8));
-    if (sidebarProductItems.length > 1) {
-        sidebarProductTimer = setInterval(() => {
-            sidebarProductIndex = (sidebarProductIndex + 1) % sidebarProductItems.length;
-            renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
-        }, intervalSeconds * 1000);
-    }
+    rightSidebarProductSequencesModule.startSidebarProductsOnlyMode(items);
 }
 
 function startSidebarProductsBeforeImagesMode(items) {
-    clearSidebarProductTimer();
-    sidebarMixedModeSignature = '';
-    sidebarMixedVideoItems = [];
-    sidebarMixedVideoIndex = 0;
-    sidebarMixedTurnIndex = 0;
-    sidebarMixedVideoTurnActive = false;
-    sidebarMixedVideoTurnExpiresAt = 0;
-    sidebarMixedCurrentVideoItem = null;
-    sidebarMixedOnVideoFinished = null;
-    stopVideoPlaybackForImageMode();
-    stopImageSlideMode();
-
-    sidebarProductItems = normalizeSidebarProductItems(items);
-    sidebarProductIndex = 0;
-
-    if (sidebarProductItems.length === 0) {
-        hideSidebarProductCard();
-        startImageSlideMode();
-        return;
-    }
-
-    renderSidebarProductItem(sidebarProductItems[0]);
-    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarProductInterval || 8));
-    if (sidebarProductItems.length === 1) {
-        setTimeout(() => {
-            hideSidebarProductCard();
-            startImageSlideMode();
-        }, intervalSeconds * 1000);
-        return;
-    }
-
-    let shown = 1;
-    sidebarProductTimer = setInterval(() => {
-        sidebarProductIndex = (sidebarProductIndex + 1) % sidebarProductItems.length;
-        shown += 1;
-        renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
-
-        if (shown >= sidebarProductItems.length) {
-            clearSidebarProductTimer();
-            hideSidebarProductCard();
-            startImageSlideMode();
-        }
-    }, intervalSeconds * 1000);
+    rightSidebarProductSequencesModule.startSidebarProductsBeforeImagesMode(items);
 }
 
 function startSidebarProductsMixedWithImagesMode(items) {
-    startSidebarProductsMixedMode(items, false);
+    rightSidebarMixedModeModule.startSidebarProductsMixedWithImagesMode(items);
 }
 
 function startSidebarProductsMixedWithMediaMode(items) {
-    startSidebarProductsMixedMode(items, true);
+    rightSidebarMixedModeModule.startSidebarProductsMixedWithMediaMode(items);
 }
 
 function startSidebarProductsMixedMode(items, includeVideos) {
-    const nextProductItems = normalizeSidebarProductItems(items);
-    const nextImageUrls = parseConfiguredImageSlideUrls();
-    const nextImageSettingsMap = new Map(imageSlideSettingsByUrl);
-    const nextVideoItems = includeVideos && toBoolean(visualConfig.showVideoPanel, true)
-        ? parseConfiguredVideoUrls()
-        : [];
-    const intervalSeconds = Math.max(1, Number(visualConfig.rightSidebarProductInterval || 8));
-    const nextSignature = JSON.stringify({
-        intervalSeconds,
-        transition: String(visualConfig.rightSidebarProductTransitionMode || (includeVideos ? 'mixed_with_media' : 'mixed_with_images')).toLowerCase(),
-        displayMode: String(visualConfig.rightSidebarProductDisplayMode || 'all').toLowerCase(),
-        products: nextProductItems.map((item) => ({
-            id: Number(item?.id || 0),
-            nome: String(item?.nome || ''),
-            preco: Number(item?.preco || 0),
-            oferta: Number(item?.oferta || 0),
-            imagem: String(item?.imagem || ''),
-        })),
-        images: nextImageUrls,
-        videos: nextVideoItems.map((item) => ({
-            url: String(item?.url || ''),
-            muted: toBoolean(item?.muted, false),
-            fullscreen: toBoolean(item?.fullscreen, false),
-            durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
-            heightPx: Math.max(0, Number(item?.heightPx || 0)),
-        })),
-    });
-
-    const isSameMixedSessionRunning = sidebarMixedModeSignature !== ''
-        && sidebarMixedModeSignature === nextSignature
-        && (Boolean(sidebarProductTimer) || sidebarMixedVideoTurnActive);
-
-    sidebarProductItems = nextProductItems;
-    sidebarMixedImageUrls = nextImageUrls;
-    imageSlideUrls = sidebarMixedImageUrls;
-    sidebarMixedVideoItems = nextVideoItems;
-
-    if (isSameMixedSessionRunning) {
-        // Keep current turn/index so refresh polling does not restart in product turn only.
-        return;
-    }
-
-    clearSidebarProductTimer();
-    stopVideoPlaybackForImageMode();
-    stopImageSlideMode();
-
-    // stopImageSlideMode clears slide arrays/maps; restore mixed-mode image source state.
-    imageSlideUrls = Array.isArray(sidebarMixedImageUrls) ? sidebarMixedImageUrls.slice() : [];
-    imageSlideSettingsByUrl = nextImageSettingsMap;
-
-    sidebarMixedModeSignature = nextSignature;
-    sidebarProductIndex = 0;
-    sidebarMixedImageIndex = 0;
-    sidebarMixedVideoIndex = 0;
-    sidebarMixedTurnIndex = 0;
-
-    if (sidebarProductItems.length === 0 && sidebarMixedImageUrls.length === 0 && sidebarMixedVideoItems.length === 0) {
-        hideSidebarProductCard();
-        return;
-    }
-
-    const turnSequence = [];
-    if (sidebarProductItems.length > 0) {
-        turnSequence.push('product');
-    }
-    if (sidebarMixedImageUrls.length > 0) {
-        turnSequence.push('image');
-    }
-    if (sidebarMixedVideoItems.length > 0) {
-        turnSequence.push('video');
-    }
-
-    if (turnSequence.length === 0) {
-        hideSidebarProductCard();
-        return;
-    }
-
-    sidebarMixedOnVideoFinished = () => {
-        if (!sidebarMixedVideoTurnActive || sidebarMixedVideoItems.length === 0) {
-            return false;
-        }
-
-        clearSidebarProductTimer();
-
-        if (sidebarMixedVideoIndex < sidebarMixedVideoItems.length - 1) {
-            sidebarMixedVideoIndex += 1;
-            renderMixedTurn();
-            return true;
-        }
-
-        sidebarMixedVideoIndex = 0;
-        sidebarMixedVideoTurnActive = false;
-        sidebarMixedVideoTurnExpiresAt = 0;
-        sidebarMixedCurrentVideoItem = null;
-        sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
-        renderMixedTurn();
-        return true;
-    };
-
-    const scheduleNextMixedTurn = (delaySeconds = intervalSeconds) => {
-        clearSidebarProductTimer();
-        sidebarProductTimer = setTimeout(() => {
-            renderMixedTurn();
-        }, Math.max(1, Number(delaySeconds) || intervalSeconds) * 1000);
-    };
-
-    const renderMixedTurn = () => {
-        const turn = turnSequence[sidebarMixedTurnIndex % turnSequence.length] || 'product';
-
-        // mixed_with_media: run full batches in sequence (all products -> all images -> all videos).
-        if (includeVideos) {
-            if (turn === 'product' && sidebarProductItems.length > 0) {
-                sidebarMixedVideoTurnActive = false;
-                sidebarMixedVideoTurnExpiresAt = 0;
-                sidebarMixedCurrentVideoItem = null;
-                stopVideoPlaybackForImageMode();
-                if (tvImageSlide) {
-                    tvImageSlide.classList.add('hidden');
-                }
-                hideSlideTextOverlays();
-
-                renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
-                sidebarProductIndex += 1;
-                if (sidebarProductIndex >= sidebarProductItems.length) {
-                    sidebarProductIndex = 0;
-                    sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
-                }
-
-                scheduleNextMixedTurn(intervalSeconds);
-                return;
-            }
-
-            if (turn === 'image' && sidebarMixedImageUrls.length > 0) {
-                sidebarMixedVideoTurnActive = false;
-                sidebarMixedVideoTurnExpiresAt = 0;
-                sidebarMixedCurrentVideoItem = null;
-                stopVideoPlaybackForImageMode();
-                hideSidebarProductCard();
-                imageSlideUrls = Array.isArray(sidebarMixedImageUrls) ? sidebarMixedImageUrls.slice() : [];
-                if (tvImageSlide) {
-                    tvImageSlide.classList.remove('hidden');
-                    showImageSlideAt(sidebarMixedImageIndex);
-                }
-
-                sidebarMixedImageIndex += 1;
-                if (sidebarMixedImageIndex >= sidebarMixedImageUrls.length) {
-                    sidebarMixedImageIndex = 0;
-                    sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
-                }
-
-                scheduleNextMixedTurn(intervalSeconds);
-                return;
-            }
-
-            if (turn === 'video' && sidebarMixedVideoItems.length > 0) {
-                hideSidebarProductCard();
-                hideSlideTextOverlays();
-                if (tvImageSlide) {
-                    tvImageSlide.classList.add('hidden');
-                }
-
-                const nextVideo = sidebarMixedVideoItems[sidebarMixedVideoIndex % sidebarMixedVideoItems.length] || null;
-                if (nextVideo?.url) {
-                    applyVideoSource(nextVideo);
-                }
-
-                const currentUrl = String(nextVideo?.url || '').trim();
-                const isYouTube = Boolean(getYouTubeVideoId(currentUrl));
-                const isDirectVideoFile = /\.(mp4|webm|ogg|m3u8)([?#].*)?$/i.test(currentUrl);
-                const hasEmbedUrl = Boolean(resolveEmbedUrl(currentUrl, toBoolean(nextVideo?.muted, false)));
-                const needsFallbackTimer = hasEmbedUrl && !isYouTube && !isDirectVideoFile;
-
-                sidebarMixedVideoTurnActive = true;
-                sidebarMixedVideoTurnExpiresAt = 0;
-                sidebarMixedCurrentVideoItem = nextVideo || null;
-
-                if (needsFallbackTimer) {
-                    // Non-YouTube embeds usually do not emit reliable ended events.
-                    const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
-                    const fallbackSeconds = Math.max(configuredVideoSeconds, 30);
-                    clearSidebarProductTimer();
-                    sidebarProductTimer = setTimeout(() => {
-                        if (typeof sidebarMixedOnVideoFinished === 'function') {
-                            sidebarMixedOnVideoFinished();
-                        }
-                    }, fallbackSeconds * 1000);
-                } else {
-                    clearSidebarProductTimer();
-                }
-
-                return;
-            }
-
-            // If current phase has no items, skip to next phase.
-            sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
-            scheduleNextMixedTurn(intervalSeconds);
-            return;
-        }
-
-        sidebarMixedTurnIndex = (sidebarMixedTurnIndex + 1) % turnSequence.length;
-
-        if (turn === 'product' && sidebarProductItems.length > 0) {
-            sidebarMixedVideoTurnActive = false;
-            sidebarMixedVideoTurnExpiresAt = 0;
-            sidebarMixedCurrentVideoItem = null;
-            stopVideoPlaybackForImageMode();
-            if (tvImageSlide) {
-                tvImageSlide.classList.add('hidden');
-            }
-            hideSlideTextOverlays();
-            renderSidebarProductItem(sidebarProductItems[sidebarProductIndex]);
-            sidebarProductIndex = (sidebarProductIndex + 1) % sidebarProductItems.length;
-            scheduleNextMixedTurn(intervalSeconds);
-            return;
-        }
-
-        if (turn === 'image' && sidebarMixedImageUrls.length > 0) {
-            sidebarMixedVideoTurnActive = false;
-            sidebarMixedVideoTurnExpiresAt = 0;
-            sidebarMixedCurrentVideoItem = null;
-            stopVideoPlaybackForImageMode();
-            hideSidebarProductCard();
-            imageSlideUrls = Array.isArray(sidebarMixedImageUrls) ? sidebarMixedImageUrls.slice() : [];
-            if (tvImageSlide) {
-                tvImageSlide.classList.remove('hidden');
-                showImageSlideAt(sidebarMixedImageIndex);
-            }
-            sidebarMixedImageIndex = (sidebarMixedImageIndex + 1) % sidebarMixedImageUrls.length;
-            scheduleNextMixedTurn(intervalSeconds);
-            return;
-        }
-
-        if (turn === 'video' && sidebarMixedVideoItems.length > 0) {
-            hideSidebarProductCard();
-            hideSlideTextOverlays();
-            if (tvImageSlide) {
-                tvImageSlide.classList.add('hidden');
-            }
-
-            const nextVideo = sidebarMixedVideoItems[sidebarMixedVideoIndex % sidebarMixedVideoItems.length] || null;
-            sidebarMixedVideoIndex = (sidebarMixedVideoIndex + 1) % sidebarMixedVideoItems.length;
-            if (nextVideo?.url) {
-                applyVideoSource(nextVideo);
-            }
-
-            // Keep video visible for a minimum duration in mixed mode.
-            const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
-            const videoTurnSeconds = Math.max(intervalSeconds, configuredVideoSeconds, 4);
-            sidebarMixedVideoTurnActive = true;
-            sidebarMixedVideoTurnExpiresAt = Date.now() + (videoTurnSeconds * 1000);
-            sidebarMixedCurrentVideoItem = nextVideo || null;
-            scheduleNextMixedTurn(videoTurnSeconds);
-            return;
-        }
-
-        sidebarMixedVideoTurnActive = false;
-        sidebarMixedVideoTurnExpiresAt = 0;
-        sidebarMixedCurrentVideoItem = null;
-        scheduleNextMixedTurn(intervalSeconds);
-    };
-
-    renderMixedTurn();
+    rightSidebarMixedModeModule.startSidebarProductsMixedMode(items, includeVideos);
 }
 
 function getRightSidebarMediaType() {
-    const mode = String(visualConfig.rightSidebarMediaType || 'video').trim().toLowerCase();
-
-    // If videos are disabled, force image mode for the right sidebar media logic.
-    if (!toBoolean(visualConfig.showVideoPanel, true)) {
-        return 'image';
-    }
-
-    if (mode === 'image' || mode === 'hybrid') {
-        return mode;
-    }
-
-    return 'video';
+    return rightSidebarMediaModeModule.getRightSidebarMediaType();
 }
 
 function getHybridVideoCountLimit() {
-    return Math.max(1, Number(visualConfig.rightSidebarHybridVideoDuration || 2));
+    return rightSidebarMediaModeModule.getHybridVideoCountLimit();
 }
 
 function getHybridImageCountLimit() {
-    return Math.max(1, Number(visualConfig.rightSidebarHybridImageDuration || 4));
+    return rightSidebarMediaModeModule.getHybridImageCountLimit();
 }
 
 function getNextHybridPhase(phase) {
-    return phase === 'image' ? 'video' : 'image';
+    return rightSidebarMediaModeModule.getNextHybridPhase(phase);
 }
 
 function applyHybridImageLayout() {
@@ -2394,64 +2058,15 @@ function applyHybridImageLayout() {
 }
 
 async function applyRightSidebarModeOnce(token, mode) {
-    if (mode === 'image') {
-        startImageSlideMode();
-        return;
-    }
-
-    stopImageSlideMode();
-    await loadVideoPlaylist(token);
+    await rightSidebarMediaModeModule.applyRightSidebarModeOnce(token, mode);
 }
 
 async function switchRightSidebarHybridPhase(token, nextPhase) {
-    if (getRightSidebarMediaType() !== 'hybrid') {
-        return;
-    }
-
-    if (rightSidebarHybridSwitching) {
-        return;
-    }
-
-    rightSidebarHybridSwitching = true;
-    try {
-        rightSidebarHybridPhase = nextPhase === 'image' ? 'image' : 'video';
-
-        if (rightSidebarHybridPhase === 'video') {
-            rightSidebarHybridVideoCountInPhase = 0;
-            forceVideoPlaylistApplyOnce = true;
-            await applyRightSidebarModeOnce(token, 'video');
-        } else {
-            rightSidebarHybridImageCountInPhase = 0;
-            startHybridImagePhase(token);
-        }
-    } finally {
-        rightSidebarHybridSwitching = false;
-    }
+    await rightSidebarMediaModeModule.switchRightSidebarHybridPhase(token, nextPhase);
 }
 
 function handleHybridVideoItemCompleted(token) {
-    if (getRightSidebarMediaType() !== 'hybrid' || rightSidebarHybridPhase !== 'video') {
-        return;
-    }
-
-    const now = Date.now();
-    if (now - rightSidebarHybridLastCompletedAt < 700) {
-        return;
-    }
-
-    rightSidebarHybridLastCompletedAt = now;
-    rightSidebarHybridVideoCountInPhase += 1;
-
-    if (rightSidebarHybridVideoCountInPhase >= getHybridVideoCountLimit()) {
-        rightSidebarHybridVideoCountInPhase = 0;
-        rightSidebarHybridImageCountInPhase = 0;
-
-        if (Array.isArray(videoPlaylistItems) && videoPlaylistItems.length > 0) {
-            currentVideoIndex = (currentVideoIndex + 1) % videoPlaylistItems.length;
-        }
-
-        switchRightSidebarHybridPhase(token, 'image');
-    }
+    rightSidebarMediaModeModule.handleHybridVideoItemCompleted(token);
 }
 
 function startHybridImagePhase(token) {
@@ -2515,170 +2130,7 @@ function startHybridImagePhase(token) {
 }
 
 async function applyRightSidebarMediaMode(token, productsForSidebar = null, options = {}) {
-    const currentDedicatedSignature = buildDedicatedFullScreenSlideSignature();
-    if (currentDedicatedSignature) {
-        fullScreenSlideConfigSignature = currentDedicatedSignature;
-    }
-
-    syncDedicatedFullScreenCompletionState();
-
-    const hasDedicatedFullScreenSlide = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
-    const shouldSkipDedicatedForCurrentLoad = shouldSkipDedicatedFullScreenSlideForCurrentLoad(
-        hasDedicatedFullScreenSlide,
-        { ignoreLoadSkip: Boolean(options.ignoreDedicatedLoadSkip) }
-    );
-
-    if (shouldSkipDedicatedForCurrentLoad) {
-        markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
-        stopDedicatedFullScreenSlideMode();
-        forceRestoreMainLayoutAfterDedicatedSlide();
-    }
-
-    if (hasDedicatedFullScreenSlide && forceFullScreenSlideModeActive) {
-        if (hasStaleDedicatedFullScreenSlideSession()) {
-            completeDedicatedFullScreenSlideCycle();
-        }
-        return;
-    }
-
-    if (hasDedicatedFullScreenSlide && !forceFullScreenSlideModeActive && !shouldSkipDedicatedForCurrentLoad) {
-        clearSidebarProductTimer();
-        sidebarMixedModeSignature = '';
-        sidebarProductPassedBeforeImages = false;
-        sidebarMixedImageUrls = [];
-        sidebarMixedImageIndex = 0;
-        sidebarMixedVideoItems = [];
-        sidebarMixedVideoIndex = 0;
-        sidebarMixedTurnIndex = 0;
-        sidebarMixedVideoTurnActive = false;
-        sidebarMixedVideoTurnExpiresAt = 0;
-        sidebarMixedCurrentVideoItem = null;
-        sidebarMixedOnVideoFinished = null;
-        const startedDedicatedSlide = startDedicatedFullScreenSlideMode();
-        if (startedDedicatedSlide) {
-            return;
-        }
-
-        // If it did not start, continue with normal sidebar flow and avoid getting stuck.
-        markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
-    }
-
-    stopDedicatedFullScreenSlideMode();
-
-    const isProductCarouselEnabled = toBoolean(visualConfig.rightSidebarProductCarouselEnabled, false);
-    const transitionMode = String(visualConfig.rightSidebarProductTransitionMode || 'products_only').toLowerCase();
-
-    if (!toBoolean(visualConfig.showRightSidebarPanel, true)) {
-        clearSidebarProductTimer();
-        sidebarMixedModeSignature = '';
-        hideSidebarProductCard();
-        stopImageSlideMode();
-        stopVideoPlaybackForImageMode();
-        return;
-    }
-
-    if (isProductCarouselEnabled) {
-        const sourceItems = Array.isArray(productsForSidebar) ? productsForSidebar : sidebarProductItems;
-
-        if (transitionMode === 'before_images') {
-            startSidebarProductsBeforeImagesMode(sourceItems);
-            return;
-        }
-
-        if (transitionMode === 'mixed_with_images') {
-            startSidebarProductsMixedWithImagesMode(sourceItems);
-            return;
-        }
-
-        if (transitionMode === 'mixed_with_media') {
-            startSidebarProductsMixedWithMediaMode(sourceItems);
-            return;
-        }
-
-        startSidebarProductsOnlyMode(sourceItems);
-        return;
-    }
-
-    clearSidebarProductTimer();
-    sidebarMixedModeSignature = '';
-    hideSidebarProductCard();
-    sidebarProductPassedBeforeImages = false;
-    sidebarMixedImageUrls = [];
-    sidebarMixedImageIndex = 0;
-    sidebarMixedVideoItems = [];
-    sidebarMixedVideoIndex = 0;
-    sidebarMixedTurnIndex = 0;
-    sidebarMixedVideoTurnActive = false;
-    sidebarMixedVideoTurnExpiresAt = 0;
-    sidebarMixedCurrentVideoItem = null;
-    sidebarMixedOnVideoFinished = null;
-
-    const mode = getRightSidebarMediaType();
-
-    if (mode === 'image') {
-        rightSidebarHybridConfigSignature = '';
-        rightSidebarHybridPhase = 'video';
-        rightSidebarHybridVideoCountInPhase = 0;
-        rightSidebarHybridImageCountInPhase = 0;
-        rightSidebarHybridSwitching = false;
-        rightSidebarHybridLastCompletedAt = 0;
-        forceVideoPlaylistApplyOnce = false;
-        rightSidebarHybridHasShownAnyImage = false;
-        startImageSlideMode();
-        return;
-    }
-
-    if (mode === 'hybrid') {
-        const hybridSignature = JSON.stringify({
-            mode,
-            imageUrls: String(visualConfig.rightSidebarImageUrls || ''),
-            imageInterval: Number(visualConfig.rightSidebarImageInterval || 8),
-            imageFit: String(visualConfig.rightSidebarImageFit || 'scale-down'),
-            imageHeight: Number(visualConfig.rightSidebarImageHeight || 0),
-            imageWidth: Number(visualConfig.rightSidebarImageWidth || 0),
-            videoCount: Number(visualConfig.rightSidebarHybridVideoDuration || 2),
-            imageCount: Number(visualConfig.rightSidebarHybridImageDuration || 4),
-            playlist: JSON.stringify(parseConfiguredVideoUrls().map((item) => String(item?.url || ''))),
-        });
-
-        if (hybridSignature !== rightSidebarHybridConfigSignature) {
-            rightSidebarHybridConfigSignature = hybridSignature;
-            rightSidebarHybridPhase = 'video';
-            rightSidebarHybridVideoCountInPhase = 0;
-            rightSidebarHybridImageCountInPhase = 0;
-            rightSidebarHybridSwitching = false;
-            rightSidebarHybridLastCompletedAt = 0;
-            forceVideoPlaylistApplyOnce = false;
-            rightSidebarHybridHasShownAnyImage = false;
-            await applyRightSidebarModeOnce(token, 'video');
-            return;
-        }
-
-        if (rightSidebarHybridPhase === 'image') {
-            applyHybridImageLayout();
-
-            const hasRunningImageTimer = Boolean(imageSlideTimer);
-            if (!hasRunningImageTimer || !tvImageSlide || tvImageSlide.classList.contains('hidden')) {
-                startHybridImagePhase(token);
-            }
-
-            return;
-        }
-
-        stopImageSlideMode();
-        await loadVideoPlaylist(token);
-        return;
-    }
-
-    rightSidebarHybridConfigSignature = '';
-    rightSidebarHybridPhase = 'video';
-    rightSidebarHybridVideoCountInPhase = 0;
-    rightSidebarHybridImageCountInPhase = 0;
-    rightSidebarHybridSwitching = false;
-    rightSidebarHybridLastCompletedAt = 0;
-    forceVideoPlaylistApplyOnce = false;
-    rightSidebarHybridHasShownAnyImage = false;
-    await applyRightSidebarModeOnce(token, 'video');
+    await rightSidebarMediaModeModule.applyRightSidebarMediaMode(token, productsForSidebar, options);
 }
 
 function scheduleInitialVideoAutoplayRetry(videoItem) {
@@ -4657,6 +4109,77 @@ function clearPaginationTimer() {
     }
 }
 
+function shouldKeepRightSidebarVideoRunningDuringDedicatedFullScreen() {
+    const mediaMode = String(getRightSidebarMediaType() || '').toLowerCase();
+    const isProductCarouselEnabled = toBoolean(visualConfig.rightSidebarProductCarouselEnabled, false);
+    const showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
+    return mediaMode === 'video' && !isProductCarouselEnabled && showRightSidebarPanel;
+}
+
+function ensureRightSidebarMediaRestoredAfterDedicatedFullScreen() {
+    if (!shouldKeepRightSidebarVideoRunningDuringDedicatedFullScreen()) {
+        return false;
+    }
+
+    const configuredVideos = parseConfiguredVideoUrls();
+    if (configuredVideos.length > 0) {
+        startVideoPlaylist(configuredVideos);
+        return true;
+    }
+
+    if (Array.isArray(videoPlaylistItems) && videoPlaylistItems.length > 0) {
+        const safeIndex = Math.max(0, Math.min(videoPlaylistItems.length - 1, Number(currentVideoIndex || 0)));
+        applyVideoSource(videoPlaylistItems[safeIndex]);
+        return true;
+    }
+
+    return false;
+}
+
+function shouldPauseExternalTimersForDedicatedFullScreen() {
+    const mediaMode = String(getRightSidebarMediaType() || '').toLowerCase();
+    const isProductCarouselEnabled = toBoolean(visualConfig.rightSidebarProductCarouselEnabled, false);
+    return !(mediaMode === 'video' && !isProductCarouselEnabled);
+}
+
+function pauseExternalTimersForDedicatedFullScreen() {
+    if (!shouldPauseExternalTimersForDedicatedFullScreen()) {
+        dedicatedFullScreenExternalTimersPaused = false;
+        return;
+    }
+
+    if (dedicatedFullScreenExternalTimersPaused) {
+        return;
+    }
+
+    dedicatedFullScreenExternalTimersPaused = true;
+    clearPaginationTimer();
+    clearSidebarProductTimer();
+    clearImageSlideTimer();
+}
+
+function resumeExternalTimersForDedicatedFullScreen() {
+    if (!shouldPauseExternalTimersForDedicatedFullScreen()) {
+        dedicatedFullScreenExternalTimersPaused = false;
+        return;
+    }
+
+    if (!dedicatedFullScreenExternalTimersPaused) {
+        return;
+    }
+
+    dedicatedFullScreenExternalTimersPaused = false;
+
+    const fallbackProducts = readCachedProducts();
+    const productsToResume = latestProductsForPagination.length > 0
+        ? latestProductsForPagination
+        : (Array.isArray(fallbackProducts) ? fallbackProducts : []);
+
+    if (productsToResume.length > 0) {
+        renderProductsWithPagination(productsToResume);
+    }
+}
+
 function splitTwoListItemsBySide(items) {
     const list = Array.isArray(items) ? items : [];
     const leftGroupSet = new Set((visualConfig.productListLeftGroupIds || []).map((id) => Number(id)).filter((id) => id > 0));
@@ -4690,6 +4213,7 @@ function renderProductsWithPagination(produtos) {
     clearPaginationTimer();
 
     const list = Array.isArray(produtos) ? produtos : [];
+    latestProductsForPagination = list.slice();
     const rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
     const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
 
@@ -4988,6 +4512,14 @@ async function loadVisualConfig(token) {
         visualConfig.fullScreenSlideInterval = Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8));
         visualConfig.fullScreenSlideReturnDelaySeconds = Math.max(0, Math.min(86400, Number(visualConfig.fullScreenSlideReturnDelaySeconds || 0)));
         visualConfig.fullScreenSlideEnabled = toBoolean(visualConfig.fullScreenSlideEnabled, false);
+        visualConfig.fullScreenSlideStartDate = String(visualConfig.fullScreenSlideStartDate || '').trim();
+        visualConfig.fullScreenSlideEndDate = String(visualConfig.fullScreenSlideEndDate || '').trim();
+        visualConfig.fullScreenSlideEnabledWindows = toBoolean(visualConfig.fullScreenSlideEnabledWindows, true);
+        visualConfig.fullScreenSlideEnabledAndroid = toBoolean(visualConfig.fullScreenSlideEnabledAndroid, true);
+        visualConfig.fullScreenSlideImageWidthWindows = Math.max(0, Math.min(3840, Number(visualConfig.fullScreenSlideImageWidthWindows || 0)));
+        visualConfig.fullScreenSlideImageHeightWindows = Math.max(0, Math.min(2160, Number(visualConfig.fullScreenSlideImageHeightWindows || 0)));
+        visualConfig.fullScreenSlideImageWidthAndroid = Math.max(0, Math.min(3840, Number(visualConfig.fullScreenSlideImageWidthAndroid || 0)));
+        visualConfig.fullScreenSlideImageHeightAndroid = Math.max(0, Math.min(2160, Number(visualConfig.fullScreenSlideImageHeightAndroid || 0)));
 
         const nextFullScreenSignature = buildDedicatedFullScreenSlideSignature();
 

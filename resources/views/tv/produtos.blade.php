@@ -404,15 +404,20 @@
 
         .tv-video-fullscreen #tvHeader,
         .tv-video-fullscreen #tvFooter,
-        .tv-video-fullscreen #tvProductsPanel {
+        .tv-video-fullscreen #tvProductsPanel,
+        .tv-image-fullscreen #tvHeader,
+        .tv-image-fullscreen #tvFooter,
+        .tv-image-fullscreen #tvProductsPanel {
             display: none;
         }
 
-        .tv-video-fullscreen #tvMain {
+        .tv-video-fullscreen #tvMain,
+        .tv-image-fullscreen #tvMain {
             display: block;
         }
 
-        .tv-video-fullscreen #tvVideoPanel {
+        .tv-video-fullscreen #tvVideoPanel,
+        .tv-image-fullscreen #tvVideoPanel {
             position: fixed;
             inset: 0;
             z-index: 50;
@@ -427,18 +432,23 @@
             gap: 0;
         }
 
-        .tv-video-fullscreen #tvRightSidebarLogoSlot {
+        .tv-video-fullscreen #tvRightSidebarLogoSlot,
+        .tv-image-fullscreen #tvRightSidebarLogoSlot {
             display: none;
         }
 
-        .tv-video-fullscreen #tvRightSidebarMediaWrap {
+        .tv-video-fullscreen #tvRightSidebarMediaWrap,
+        .tv-image-fullscreen #tvRightSidebarMediaWrap {
             width: 100vw;
             height: 100vh;
         }
 
         .tv-video-fullscreen #tvVideo,
         .tv-video-fullscreen #tvEmbed,
-        .tv-video-fullscreen #tvImageSlide {
+        .tv-video-fullscreen #tvImageSlide,
+        .tv-image-fullscreen #tvVideo,
+        .tv-image-fullscreen #tvEmbed,
+        .tv-image-fullscreen #tvImageSlide {
             width: 100vw;
             height: 100vh;
             border-radius: 0;
@@ -446,7 +456,10 @@
 
         .tv-video-fullscreen #videoHint,
         .tv-video-fullscreen #tvVideoPanel h2,
-        .tv-video-fullscreen #tvVideoPanel p {
+        .tv-video-fullscreen #tvVideoPanel p,
+        .tv-image-fullscreen #videoHint,
+        .tv-image-fullscreen #tvVideoPanel h2,
+        .tv-image-fullscreen #tvVideoPanel p {
             display: none;
         }
 
@@ -671,7 +684,7 @@
         <img id="tvLeftVerticalLogo" class="hidden" alt="Logo vertical esquerda" loading="eager">
     </div>
 
-    <button id="fullscreenTestButton" type="button" class="tv-fullscreen-test-btn" aria-label="Testar tela cheia" onclick="toggleTelaCheia(event)">
+    <button id="fullscreenTestButton" type="button" class="tv-fullscreen-test-btn" aria-label="Testar tela cheia">
         •
     </button>
 

@@ -94,9 +94,8 @@
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="videoConfigSection">Configuração de Vídeos</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="colorConfigSection">Configuração de Cores</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="rightSidebarConfigSection">Configuração Tela Lateral Direita</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Galeria Imagem da Empresa</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Galeria de Imagem</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Configuracao da lista produto</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="paginationConfigSection">Paginação da Lista</button>
                             </aside>
 
                             <div id="configPanelsStorage" class="space-y-4 hidden">
@@ -636,7 +635,7 @@
                                     </label>
                                     <label class="inline-flex items-center gap-2">
                                         <input type="radio" id="rightSidebarMediaTypeImage" name="rightSidebarMediaType" value="image" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'image')>
-                                        <span class="text-sm text-gray-700">Slide de imagens (links)</span>
+                                        <span class="text-sm text-gray-700">Slide da lateral direita (links)</span>
                                     </label>
                                     <label class="inline-flex items-center gap-2 ml-0 md:ml-6">
                                         <input type="radio" id="rightSidebarMediaTypeHybrid" name="rightSidebarMediaType" value="hybrid" class="text-indigo-600 border-gray-300" @checked(old('rightSidebarMediaType', $config->rightSidebarMediaType ?? 'video') === 'hybrid')>
@@ -695,7 +694,7 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comportamento com slide de imagens</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comportamento com slide da lateral direita</label>
                                     <select name="rightSidebarProductTransitionMode" class="w-full border rounded px-3 py-2">
                                         <option value="products_only" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'products_only')>Somente produtos</option>
                                         <option value="before_images" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'before_images')>Passar produtos antes das imagens</option>
@@ -850,7 +849,7 @@
 
                         <div id="companyGalleryConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
                             <div class="flex items-center justify-between gap-2">
-                                <h3 class="text-base font-semibold text-gray-800">Galeria Imagem da Empresa</h3>
+                                <h3 class="text-base font-semibold text-gray-800">Galeria de Imagem</h3>
                                 <button type="button" data-save-section="companyGalleryConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
                             </div>
                             <p class="text-sm text-gray-600">Configurações da galeria de imagens da empresa para uso na lateral direita.</p>
@@ -959,9 +958,9 @@
                                     @endif
                                 </div>
 
-                            <div id="rightSidebarImageConfig" data-company-gallery-name="Configuracao do Slide de Imagens" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                            <div id="rightSidebarImageConfig" data-company-gallery-name="Configuracao do Slide de lateral direita" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <div class="flex items-center justify-between gap-2">
-                                    <h4 class="text-sm font-semibold text-gray-800">Configuração do Slide de Imagens</h4>
+                                    <h4 class="text-sm font-semibold text-gray-800">Configuração do Slide de lateral direita</h4>
                                     <button
                                         type="button"
                                         id="addSlideImageFromGalleryBtn"
@@ -1017,6 +1016,60 @@
                                     <span class="text-sm text-gray-700">Ativar Slide de Tela Inteira</span>
                                 </label>
                                 @error('fullScreenSlideEnabled')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideStartDate">Data inicio</label>
+                                        <input type="date" id="fullScreenSlideStartDate" name="fullScreenSlideStartDate" value="{{ old('fullScreenSlideStartDate', $config->fullScreenSlideStartDate ?? '') }}" class="w-full border rounded px-3 py-2">
+                                        @error('fullScreenSlideStartDate')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideEndDate">Data fim</label>
+                                        <input type="date" id="fullScreenSlideEndDate" name="fullScreenSlideEndDate" value="{{ old('fullScreenSlideEndDate', $config->fullScreenSlideEndDate ?? '') }}" class="w-full border rounded px-3 py-2">
+                                        @error('fullScreenSlideEndDate')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="fullScreenSlideEnabledWindows" value="0">
+                                        <input type="checkbox" id="fullScreenSlideEnabledWindows" name="fullScreenSlideEnabledWindows" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabledWindows', $config->fullScreenSlideEnabledWindows ?? true))>
+                                        <span class="text-sm text-gray-700">Ativar no Windows</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="fullScreenSlideEnabledAndroid" value="0">
+                                        <input type="checkbox" id="fullScreenSlideEnabledAndroid" name="fullScreenSlideEnabledAndroid" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabledAndroid', $config->fullScreenSlideEnabledAndroid ?? true))>
+                                        <span class="text-sm text-gray-700">Ativar no Android</span>
+                                    </label>
+                                </div>
+                                @error('fullScreenSlideEnabledWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                @error('fullScreenSlideEnabledAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                <div class="rounded border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                    <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Dimensoes da imagem (0 = automatico)</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageWidthWindows">Largura Windows (px)</label>
+                                            <input type="number" id="fullScreenSlideImageWidthWindows" name="fullScreenSlideImageWidthWindows" min="0" max="3840" value="{{ old('fullScreenSlideImageWidthWindows', $config->fullScreenSlideImageWidthWindows ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            @error('fullScreenSlideImageWidthWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageHeightWindows">Altura Windows (px)</label>
+                                            <input type="number" id="fullScreenSlideImageHeightWindows" name="fullScreenSlideImageHeightWindows" min="0" max="2160" value="{{ old('fullScreenSlideImageHeightWindows', $config->fullScreenSlideImageHeightWindows ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            @error('fullScreenSlideImageHeightWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageWidthAndroid">Largura Android (px)</label>
+                                            <input type="number" id="fullScreenSlideImageWidthAndroid" name="fullScreenSlideImageWidthAndroid" min="0" max="3840" value="{{ old('fullScreenSlideImageWidthAndroid', $config->fullScreenSlideImageWidthAndroid ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            @error('fullScreenSlideImageWidthAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageHeightAndroid">Altura Android (px)</label>
+                                            <input type="number" id="fullScreenSlideImageHeightAndroid" name="fullScreenSlideImageHeightAndroid" min="0" max="2160" value="{{ old('fullScreenSlideImageHeightAndroid', $config->fullScreenSlideImageHeightAndroid ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            @error('fullScreenSlideImageHeightAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageUrls">Imagens da tela inteira (links)</label>
@@ -1260,31 +1313,31 @@
                                     @error('groupLabelBadgeColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
                             </div>
-                        </div>
 
-                        <div id="paginationConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
-                            <div class="flex items-center justify-between gap-2">
-                                <h3 class="text-base font-semibold text-gray-800">Paginação da Lista</h3>
-                                <button type="button" data-save-section="paginationConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
-                            </div>
-
-                            <label class="inline-flex items-center gap-2">
-                                <input type="hidden" name="isPaginationEnabled" value="0">
-                                <input type="checkbox" id="isPaginationEnabled" name="isPaginationEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isPaginationEnabled', $config->isPaginationEnabled))>
-                                <span class="text-sm text-gray-700">Ativar paginação automática</span>
-                            </label>
-
-                            <div id="paginationFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Itens por página</label>
-                                    <input type="number" name="pageSize" min="1" max="100" value="{{ old('pageSize', $config->pageSize ?? 10) }}" class="w-full border rounded px-3 py-2">
-                                    @error('pageSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h4 class="text-sm font-semibold text-gray-800">Paginação da Lista</h4>
+                                    <button type="button" data-save-section="imageSizeConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este bloco</button>
                                 </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tempo de troca (segundos)</label>
-                                    <input type="number" name="paginationInterval" min="1" max="120" value="{{ old('paginationInterval', $config->paginationInterval ?? 5) }}" class="w-full border rounded px-3 py-2">
-                                    @error('paginationInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="isPaginationEnabled" value="0">
+                                    <input type="checkbox" id="isPaginationEnabled" name="isPaginationEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isPaginationEnabled', $config->isPaginationEnabled))>
+                                    <span class="text-sm text-gray-700">Ativar paginação automática</span>
+                                </label>
+
+                                <div id="paginationFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Itens por página</label>
+                                        <input type="number" name="pageSize" min="1" max="100" value="{{ old('pageSize', $config->pageSize ?? 10) }}" class="w-full border rounded px-3 py-2">
+                                        @error('pageSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tempo de troca (segundos)</label>
+                                        <input type="number" name="paginationInterval" min="1" max="120" value="{{ old('paginationInterval', $config->paginationInterval ?? 5) }}" class="w-full border rounded px-3 py-2">
+                                        @error('paginationInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
                                 </div>
                             </div>
                         </div>

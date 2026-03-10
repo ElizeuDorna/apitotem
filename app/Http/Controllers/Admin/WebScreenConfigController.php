@@ -169,6 +169,14 @@ class WebScreenConfigController extends Controller
             'fullScreenSlideInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
             'fullScreenSlideReturnDelaySeconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'fullScreenSlideEnabled' => ['nullable', 'boolean'],
+            'fullScreenSlideStartDate' => ['nullable', 'date_format:Y-m-d'],
+            'fullScreenSlideEndDate' => ['nullable', 'date_format:Y-m-d'],
+            'fullScreenSlideEnabledWindows' => ['nullable', 'boolean'],
+            'fullScreenSlideEnabledAndroid' => ['nullable', 'boolean'],
+            'fullScreenSlideImageWidthWindows' => ['nullable', 'integer', 'min:0', 'max:3840'],
+            'fullScreenSlideImageHeightWindows' => ['nullable', 'integer', 'min:0', 'max:2160'],
+            'fullScreenSlideImageWidthAndroid' => ['nullable', 'integer', 'min:0', 'max:3840'],
+            'fullScreenSlideImageHeightAndroid' => ['nullable', 'integer', 'min:0', 'max:2160'],
             'rightSidebarImageSchedules' => ['nullable', 'array'],
             'rightSidebarImageSchedules.*.url' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageSchedules.*.name' => ['nullable', 'string', 'max:120'],
@@ -369,6 +377,17 @@ class WebScreenConfigController extends Controller
         $validated['fullScreenSlideInterval'] = (int) ($validated['fullScreenSlideInterval'] ?? 8);
         $validated['fullScreenSlideReturnDelaySeconds'] = (int) ($validated['fullScreenSlideReturnDelaySeconds'] ?? 0);
         $validated['fullScreenSlideEnabled'] = (bool) ($validated['fullScreenSlideEnabled'] ?? false);
+        $validated['fullScreenSlideStartDate'] = trim((string) ($validated['fullScreenSlideStartDate'] ?? '')) ?: null;
+        $validated['fullScreenSlideEndDate'] = trim((string) ($validated['fullScreenSlideEndDate'] ?? '')) ?: null;
+        if (!empty($validated['fullScreenSlideStartDate']) && !empty($validated['fullScreenSlideEndDate']) && $validated['fullScreenSlideEndDate'] < $validated['fullScreenSlideStartDate']) {
+            $validated['fullScreenSlideEndDate'] = $validated['fullScreenSlideStartDate'];
+        }
+        $validated['fullScreenSlideEnabledWindows'] = (bool) ($validated['fullScreenSlideEnabledWindows'] ?? true);
+        $validated['fullScreenSlideEnabledAndroid'] = (bool) ($validated['fullScreenSlideEnabledAndroid'] ?? true);
+        $validated['fullScreenSlideImageWidthWindows'] = max(0, min(3840, (int) ($validated['fullScreenSlideImageWidthWindows'] ?? 0)));
+        $validated['fullScreenSlideImageHeightWindows'] = max(0, min(2160, (int) ($validated['fullScreenSlideImageHeightWindows'] ?? 0)));
+        $validated['fullScreenSlideImageWidthAndroid'] = max(0, min(3840, (int) ($validated['fullScreenSlideImageWidthAndroid'] ?? 0)));
+        $validated['fullScreenSlideImageHeightAndroid'] = max(0, min(2160, (int) ($validated['fullScreenSlideImageHeightAndroid'] ?? 0)));
         $validated['rightSidebarImageSchedules'] = collect((array) ($validated['rightSidebarImageSchedules'] ?? []))
             ->map(function (array $item) {
                 $normalizedUrl = $this->normalizeSingleImageUrl((string) ($item['url'] ?? ''));
@@ -774,6 +793,38 @@ class WebScreenConfigController extends Controller
             unset($validated['fullScreenSlideEnabled']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideStartDate')) {
+            unset($validated['fullScreenSlideStartDate']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideEndDate')) {
+            unset($validated['fullScreenSlideEndDate']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideEnabledWindows')) {
+            unset($validated['fullScreenSlideEnabledWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideEnabledAndroid')) {
+            unset($validated['fullScreenSlideEnabledAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageWidthWindows')) {
+            unset($validated['fullScreenSlideImageWidthWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageHeightWindows')) {
+            unset($validated['fullScreenSlideImageHeightWindows']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageWidthAndroid')) {
+            unset($validated['fullScreenSlideImageWidthAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageHeightAndroid')) {
+            unset($validated['fullScreenSlideImageHeightAndroid']);
+        }
+
         if (! Schema::hasColumn('configuracoes', 'rightSidebarProductCarouselEnabled')) {
             unset($validated['rightSidebarProductCarouselEnabled']);
         }
@@ -974,6 +1025,14 @@ class WebScreenConfigController extends Controller
             'fullScreenSlideInterval',
             'fullScreenSlideReturnDelaySeconds',
             'fullScreenSlideEnabled',
+            'fullScreenSlideStartDate',
+            'fullScreenSlideEndDate',
+            'fullScreenSlideEnabledWindows',
+            'fullScreenSlideEnabledAndroid',
+            'fullScreenSlideImageWidthWindows',
+            'fullScreenSlideImageHeightWindows',
+            'fullScreenSlideImageWidthAndroid',
+            'fullScreenSlideImageHeightAndroid',
             'rightSidebarImageInterval',
             'rightSidebarImageFit',
             'rightSidebarImageHeight',
