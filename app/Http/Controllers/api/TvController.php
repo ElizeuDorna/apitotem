@@ -479,6 +479,7 @@ class TvController extends Controller
             'success' => true,
             'data' => [
                 'videoUrl' => $config->videoUrl,
+                'apiRefreshInterval' => (int) ($config->apiRefreshInterval ?? 30),
                 'videoMuted' => (bool) $config->videoMuted,
                 'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
                 'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
@@ -519,6 +520,10 @@ class TvController extends Controller
                 'rightSidebarMediaType' => (string) ($config->rightSidebarMediaType ?? 'video'),
                 'rightSidebarGlobalGalleryCode' => $globalGalleryCode,
                 'rightSidebarImageUrls' => $rightSidebarImageUrls,
+                'fullScreenSlideImageUrls' => $this->normalizeImageUrlsList((string) ($config->fullScreenSlideImageUrls ?? '')),
+                'fullScreenSlideInterval' => (int) ($config->fullScreenSlideInterval ?? 8),
+                'fullScreenSlideReturnDelaySeconds' => (int) ($config->fullScreenSlideReturnDelaySeconds ?? 0),
+                'fullScreenSlideEnabled' => (bool) ($config->fullScreenSlideEnabled ?? false),
                 'rightSidebarImageSchedules' => collect($config->rightSidebarImageSchedules ?? [])->values()->all(),
                 'rightSidebarImageInterval' => (int) ($config->rightSidebarImageInterval ?? 8),
                 'rightSidebarImageFit' => (string) ($config->rightSidebarImageFit ?? 'scale-down'),

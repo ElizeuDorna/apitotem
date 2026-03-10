@@ -27,6 +27,83 @@ const fullscreenTestButton = document.getElementById('fullscreenTestButton');
 const queryParams = new URLSearchParams(window.location.search);
 const TOKEN_HISTORY_KEY = 'tv_device_token_history_v1';
 const TOKEN_BACKUP_KEY = 'tv_device_token_backup';
+const DEDICATED_FULLSCREEN_SKIP_ON_NEXT_LOAD_KEY = 'tv_dedicated_fullscreen_skip_next_load_v1';
+const WINDOW_NAME_SKIP_MARKER = '__tv_dedicated_fs_skip_next_load__';
+const WINDOW_NAME_COMPLETED_SIGNATURE_PREFIX = '__tv_dedicated_fs_completed_signature=';
+
+function detectReloadNavigation() {
+    try {
+        const entries = performance.getEntriesByType('navigation');
+        if (Array.isArray(entries) && entries.length > 0) {
+            return String(entries[0]?.type || '').toLowerCase() === 'reload';
+        }
+
+        return performance.navigation?.type === 1;
+    } catch (_error) {
+        return false;
+    }
+}
+
+const isPageReloadNavigation = detectReloadNavigation();
+
+function readCompletedSignatureFromWindowName() {
+    try {
+        const value = String(window.name || '');
+        const regex = new RegExp(`${WINDOW_NAME_COMPLETED_SIGNATURE_PREFIX}([^;]*)`);
+        const match = value.match(regex);
+        if (!match || !match[1]) {
+            return '';
+        }
+
+        return decodeURIComponent(String(match[1] || ''));
+    } catch (_error) {
+        return '';
+    }
+}
+
+function writeCompletedSignatureToWindowName(signature) {
+    try {
+        const current = String(window.name || '');
+        const cleaned = current.replace(new RegExp(`${WINDOW_NAME_COMPLETED_SIGNATURE_PREFIX}[^;]*;?`, 'g'), '');
+        const normalized = String(signature || '').trim();
+        const compact = cleaned.replace(/;;+/g, ';').replace(/^;|;$/g, '');
+
+        if (!normalized) {
+            window.name = compact;
+            return;
+        }
+
+        const nextMarker = `${WINDOW_NAME_COMPLETED_SIGNATURE_PREFIX}${encodeURIComponent(normalized)}`;
+        window.name = compact ? `${compact};${nextMarker}` : nextMarker;
+    } catch (_error) {
+    }
+}
+
+function consumeWindowNameSkipDedicatedFullscreenFlag() {
+    try {
+        const current = String(window.name || '');
+        if (!current.includes(WINDOW_NAME_SKIP_MARKER)) {
+            return false;
+        }
+
+        window.name = current.replace(WINDOW_NAME_SKIP_MARKER, '').replace(/;;+/g, ';').replace(/^;|;$/g, '');
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+function consumeSkipDedicatedFullscreenOnLoadFlag() {
+    try {
+        const raw = String(sessionStorage.getItem(DEDICATED_FULLSCREEN_SKIP_ON_NEXT_LOAD_KEY) || '').trim();
+        sessionStorage.removeItem(DEDICATED_FULLSCREEN_SKIP_ON_NEXT_LOAD_KEY);
+        return raw === '1' || consumeWindowNameSkipDedicatedFullscreenFlag();
+    } catch (_error) {
+        return consumeWindowNameSkipDedicatedFullscreenFlag();
+    }
+}
+
+const shouldSkipDedicatedFullscreenOnThisLoad = consumeSkipDedicatedFullscreenOnLoadFlag();
 
 function readTokenHistory() {
     try {
@@ -86,10 +163,12 @@ const apiEndpoint = localStorage.getItem('tv_api_endpoint') || queryParams.get('
 const configEndpoint = '/api/tv/totemweb/config';
 const mediaEndpoint = '/api/tv/midias';
 const configPageUrl = '/tv/totemweb/configuracao';
-const refreshSeconds = Number(localStorage.getItem('tv_refresh_seconds') || queryParams.get('refresh') || 30);
+const initialRefreshSeconds = Number(localStorage.getItem('tv_refresh_seconds') || queryParams.get('refresh') || 30);
+let refreshSeconds = Math.max(5, Math.min(3600, Number(initialRefreshSeconds || 30)));
 const AUDIO_UNLOCK_STORAGE_KEY = 'tv_audio_autoplay_unlocked';
 const VISUAL_CONFIG_CACHE_KEY = 'tv_cached_visual_config_v1';
 const PRODUCTS_CACHE_KEY = 'tv_cached_products_v1';
+const FULLSCREEN_SLIDE_COMPLETED_SIGNATURE_KEY = 'tv_fullscreen_slide_completed_signature_v1';
 
 const visualConfig = {
     videoUrl: '',
@@ -133,6 +212,10 @@ const visualConfig = {
     rightSidebarBorderWidth: 1,
     rightSidebarMediaType: 'video',
     rightSidebarImageUrls: '',
+    fullScreenSlideImageUrls: '',
+    fullScreenSlideInterval: 8,
+    fullScreenSlideReturnDelaySeconds: 0,
+    fullScreenSlideEnabled: false,
     rightSidebarImageSchedules: [],
     rightSidebarImageInterval: 8,
     rightSidebarImageFit: 'scale-down',
@@ -223,6 +306,16 @@ let videoFallbackTimer = null;
 let initialVideoAutoplayRetryTimer = null;
 let imageSlideTimer = null;
 let imageSlideUrls = [];
+let fullScreenSlideTimer = null;
+let fullScreenSlideExitTimer = null;
+let fullScreenSlideReturnTimer = null;
+let fullScreenSlideUrls = [];
+let fullScreenSlideIndex = 0;
+let hasCompletedDedicatedFullScreenSlideCycle = false;
+let fullScreenSlideConfigSignature = '';
+let fullScreenSlideCompletedSignatureMemory = '';
+let fullScreenSlideCompletedSignatureRuntime = '';
+let dedicatedFullScreenCycleStartCount = 0;
 let imageSlideSettingsByUrl = new Map();
 let slideNameOverlay = null;
 let slidePriceOverlay = null;
@@ -257,7 +350,32 @@ let sidebarMixedVideoTurnActive = false;
 let sidebarMixedVideoTurnExpiresAt = 0;
 let sidebarMixedCurrentVideoItem = null;
 let sidebarMixedOnVideoFinished = null;
-let lastSlideImageErrorAt = 0;
+let forceFullScreenSlideModeActive = false;
+let dedicatedFullScreenSlideStartedAt = 0;
+let dedicatedFullScreenSlideMaxExpectedMs = 0;
+let productsRefreshTimer = null;
+
+function applyProductsRefreshInterval(nextSeconds) {
+    const normalized = Math.max(5, Math.min(3600, Number(nextSeconds || 30)));
+
+    if (productsRefreshTimer && refreshSeconds === normalized) {
+        return;
+    }
+
+    refreshSeconds = normalized;
+    localStorage.setItem('tv_refresh_seconds', String(refreshSeconds));
+
+    if (productsRefreshTimer) {
+        clearInterval(productsRefreshTimer);
+        productsRefreshTimer = null;
+    }
+
+    productsRefreshTimer = setInterval(() => {
+        if (getReliableDeviceToken()) {
+            loadProducts();
+        }
+    }, refreshSeconds * 1000);
+}
 
 function isFullscreenSupported() {
     const element = document.documentElement;
@@ -535,8 +653,8 @@ function resolveRenderableImageUrl(rawUrl) {
         return '';
     }
 
-    if (/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i.test(value)) {
-        return value.replace(/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i, '/storage/');
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i.test(value)) {
+        return value.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i, '/storage/');
     }
 
     if (/^storage\//i.test(value)) {
@@ -570,14 +688,35 @@ function resolveAlternateRenderableImageUrl(rawUrl, currentResolvedUrl = '') {
         }
     }
 
-    if (/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i.test(original)) {
-        const storageCandidate = original.replace(/^https?:\/\/(localhost|127\.0\.0\.1)\/storage\//i, '/storage/');
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i.test(original)) {
+        const storageCandidate = original.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i, '/storage/');
         if (storageCandidate !== current) {
             return storageCandidate;
         }
     }
 
     return '';
+}
+
+function normalizeImageSrcCandidate(input) {
+    let value = String(input || '').trim();
+    if (!value) {
+        return '';
+    }
+
+    if (/^storage\//i.test(value)) {
+        value = `/${value.replace(/^\/+/, '')}`;
+    }
+
+    if (/^\/\//.test(value)) {
+        value = `${window.location.protocol}${value}`;
+    }
+
+    try {
+        return encodeURI(value);
+    } catch (_error) {
+        return value;
+    }
 }
 
 function markAudioAutoplayUnlocked() {
@@ -610,10 +749,417 @@ function clearImageSlideTimer() {
     }
 }
 
-function parseConfiguredImageSlideUrls() {
-    const raw = String(visualConfig.rightSidebarImageUrls || '').trim();
+function clearFullScreenSlideTimer() {
+    if (fullScreenSlideTimer) {
+        clearInterval(fullScreenSlideTimer);
+        fullScreenSlideTimer = null;
+    }
+}
 
+function clearFullScreenSlideExitTimer() {
+    if (fullScreenSlideExitTimer) {
+        clearTimeout(fullScreenSlideExitTimer);
+        fullScreenSlideExitTimer = null;
+    }
+}
+
+function clearFullScreenSlideReturnTimer() {
+    if (fullScreenSlideReturnTimer) {
+        clearTimeout(fullScreenSlideReturnTimer);
+        fullScreenSlideReturnTimer = null;
+    }
+}
+
+function parseConfiguredUrlLines(rawValue) {
+    const raw = String(rawValue || '').trim();
     if (!raw) {
+        return [];
+    }
+
+    return raw
+        .split(/\r?\n/)
+        .map((item) => extractVideoUrl(item.trim().replace(/^['\"]+|['\"]+$/g, '')))
+        .filter(Boolean);
+}
+
+function parseConfiguredDedicatedFullScreenSlideUrls() {
+    if (!toBoolean(visualConfig.fullScreenSlideEnabled, false)) {
+        return [];
+    }
+
+    const configured = parseConfiguredUrlLines(visualConfig.fullScreenSlideImageUrls);
+    if (configured.length === 0) {
+        return [];
+    }
+
+    const unique = [];
+    const seen = new Set();
+
+    configured.forEach((rawUrl) => {
+        const normalized = String(rawUrl || '').trim();
+        if (!normalized || seen.has(normalized)) {
+            return;
+        }
+
+        seen.add(normalized);
+        unique.push(normalized);
+    });
+
+    return unique;
+}
+
+function buildDedicatedFullScreenSlideSignature() {
+    const urls = parseConfiguredDedicatedFullScreenSlideUrls();
+    const normalizedUrls = urls.map((item) => {
+        const resolved = String(resolveRenderableImageUrl(item) || item || '').trim();
+        const withoutHash = resolved.split('#')[0] || '';
+        const withoutQuery = withoutHash.split('?')[0] || '';
+        return withoutQuery.replace(/\/+$/, '');
+    });
+
+    return JSON.stringify({
+        urls: normalizedUrls,
+        interval: Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8)),
+    });
+}
+
+function isDedicatedFullScreenSlideCompletedForSignature(signature) {
+    const currentSignature = String(signature || '').trim();
+    if (!currentSignature) {
+        return false;
+    }
+
+    const storedCompletedSignature = getStoredCompletedFullscreenSlideSignature();
+    const memoryCompletedSignature = String(fullScreenSlideCompletedSignatureMemory || '').trim();
+    const runtimeCompletedSignature = String(fullScreenSlideCompletedSignatureRuntime || '').trim();
+    const windowNameCompletedSignature = String(readCompletedSignatureFromWindowName() || '').trim();
+
+    return (
+        (storedCompletedSignature !== '' && storedCompletedSignature === currentSignature)
+        || (memoryCompletedSignature !== '' && memoryCompletedSignature === currentSignature)
+        || (runtimeCompletedSignature !== '' && runtimeCompletedSignature === currentSignature)
+        || (windowNameCompletedSignature !== '' && windowNameCompletedSignature === currentSignature)
+    );
+}
+
+function markDedicatedFullScreenSlideCycleAsCompleted(signature = '') {
+    const resolvedSignature = String(signature || fullScreenSlideConfigSignature || '').trim();
+    if (!resolvedSignature) {
+        return;
+    }
+
+    hasCompletedDedicatedFullScreenSlideCycle = true;
+    fullScreenSlideCompletedSignatureMemory = resolvedSignature;
+    fullScreenSlideCompletedSignatureRuntime = resolvedSignature;
+    storeCompletedFullscreenSlideSignature(resolvedSignature);
+}
+
+function shouldSkipDedicatedFullScreenSlideForCurrentLoad(hasDedicatedFullScreenSlide, options = {}) {
+    if (!hasDedicatedFullScreenSlide) {
+        return false;
+    }
+
+    // Keep gating scoped to an already-started dedicated cycle only.
+    // Load/reload flags were causing dedicated fullscreen to never re-enter.
+    return dedicatedFullScreenCycleStartCount >= 1;
+}
+
+function isVideoFullscreenModeActive() {
+    const hasFullscreenClass = document.body.classList.contains('tv-video-fullscreen');
+    if (!hasFullscreenClass) {
+        return false;
+    }
+
+    const isElementVisible = (element) => {
+        if (!element) {
+            return false;
+        }
+
+        if (element.classList.contains('hidden')) {
+            return false;
+        }
+
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) > 0;
+    };
+
+    const hasVisibleVideo = isElementVisible(tvVideo) || isElementVisible(tvEmbed);
+    if (hasVisibleVideo) {
+        return true;
+    }
+
+    // Stale fullscreen-video class can block dedicated fullscreen indefinitely.
+    document.body.classList.remove('tv-video-fullscreen');
+    return false;
+}
+
+function getDedicatedFullScreenSlideReturnDelaySeconds() {
+    return Math.max(0, Math.min(86400, Number(visualConfig.fullScreenSlideReturnDelaySeconds || 0)));
+}
+
+function scheduleDedicatedFullScreenSlideRestart() {
+    clearFullScreenSlideReturnTimer();
+
+    const delaySeconds = getDedicatedFullScreenSlideReturnDelaySeconds();
+    if (delaySeconds <= 0) {
+        return;
+    }
+
+    const hasDedicatedSlideUrls = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
+    if (!hasDedicatedSlideUrls) {
+        return;
+    }
+
+    const tryRestart = () => {
+        if (forceFullScreenSlideModeActive) {
+            return;
+        }
+
+        const hasSlideUrls = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
+        if (!hasSlideUrls) {
+            return;
+        }
+
+        if (isVideoFullscreenModeActive()) {
+            // Respect fullscreen video flow: retry until it is not active.
+            fullScreenSlideReturnTimer = setTimeout(tryRestart, 2000);
+            return;
+        }
+
+        dedicatedFullScreenCycleStartCount = 0;
+        hasCompletedDedicatedFullScreenSlideCycle = false;
+        fullScreenSlideCompletedSignatureMemory = '';
+        fullScreenSlideCompletedSignatureRuntime = '';
+        storeCompletedFullscreenSlideSignature('');
+
+        const startedDedicatedSlide = startDedicatedFullScreenSlideMode();
+        if (startedDedicatedSlide) {
+            return;
+        }
+
+        const token = getReliableDeviceToken();
+        if (!token) {
+            return;
+        }
+
+        applyRightSidebarMediaMode(token, sidebarProductItems, { ignoreDedicatedLoadSkip: true });
+    };
+
+    fullScreenSlideReturnTimer = setTimeout(tryRestart, delaySeconds * 1000);
+}
+
+function completeDedicatedFullScreenSlideCycle() {
+    if (!fullScreenSlideConfigSignature) {
+        fullScreenSlideConfigSignature = buildDedicatedFullScreenSlideSignature();
+    }
+
+    markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
+    stopDedicatedFullScreenSlideMode();
+    forceRestoreMainLayoutAfterDedicatedSlide();
+    scheduleDedicatedFullScreenSlideRestart();
+
+    const token = getReliableDeviceToken();
+    if (token) {
+        applyRightSidebarMediaMode(token, sidebarProductItems);
+    }
+}
+
+function forceRestoreMainLayoutAfterDedicatedSlide() {
+    document.body.classList.remove('tv-image-fullscreen');
+    document.body.classList.remove('tv-video-fullscreen');
+    clearImageFullscreenShellOverrides();
+
+    if (tvImageSlide) {
+        tvImageSlide.classList.add('hidden');
+        tvImageSlide.removeAttribute('src');
+        tvImageSlide.style.removeProperty('position');
+        tvImageSlide.style.removeProperty('inset');
+        tvImageSlide.style.removeProperty('z-index');
+        tvImageSlide.style.removeProperty('width');
+        tvImageSlide.style.removeProperty('height');
+        tvImageSlide.style.removeProperty('max-width');
+        tvImageSlide.style.removeProperty('max-height');
+        tvImageSlide.style.removeProperty('border-radius');
+        tvImageSlide.style.removeProperty('background');
+    }
+
+    hideSlideTextOverlays();
+
+    const fullscreenElement = getCurrentFullscreenElement();
+    if (fullscreenElement) {
+        exitDocumentFullscreen().catch(() => {});
+    }
+
+    // Restore configured sidebar visuals after fullscreen overrides are cleared.
+    applyVideoBackground();
+    applyRightSidebarBorder();
+}
+
+function hasStaleDedicatedFullScreenSlideSession() {
+    if (!forceFullScreenSlideModeActive) {
+        return false;
+    }
+
+    const startedAt = Number(dedicatedFullScreenSlideStartedAt || 0);
+    const maxExpectedMs = Math.max(1000, Number(dedicatedFullScreenSlideMaxExpectedMs || 0));
+    const elapsedMs = startedAt > 0 ? (Date.now() - startedAt) : 0;
+    const timedOut = startedAt > 0 && elapsedMs > (maxExpectedMs + 12000);
+    const slideHidden = !tvImageSlide || tvImageSlide.classList.contains('hidden');
+    const noRunningTimers = !fullScreenSlideTimer && !fullScreenSlideExitTimer;
+
+    return timedOut || (slideHidden && noRunningTimers);
+}
+
+function startDedicatedFullScreenSlideMode() {
+    if (!tvImageSlide) {
+        return false;
+    }
+
+    if (dedicatedFullScreenCycleStartCount >= 1) {
+        return false;
+    }
+
+    if (forceFullScreenSlideModeActive) {
+        return true;
+    }
+
+    const nextUrls = parseConfiguredDedicatedFullScreenSlideUrls();
+    if (nextUrls.length === 0) {
+        stopDedicatedFullScreenSlideMode();
+        return false;
+    }
+
+    stopVideoPlaybackForImageMode();
+    clearImageSlideTimer();
+    clearFullScreenSlideTimer();
+    hideSidebarProductCard();
+    hideSlideTextOverlays();
+
+    forceFullScreenSlideModeActive = true;
+    hasCompletedDedicatedFullScreenSlideCycle = false;
+    dedicatedFullScreenCycleStartCount += 1;
+    dedicatedFullScreenSlideStartedAt = Date.now();
+    fullScreenSlideUrls = nextUrls;
+    fullScreenSlideIndex = 0;
+    imageSlideUrls = fullScreenSlideUrls.slice();
+    imageSlideSettingsByUrl = new Map();
+
+    tvImageSlide.classList.remove('hidden');
+    showImageSlideAt(0);
+
+    const intervalSeconds = Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8));
+    const hardStopMs = Math.max(1000, fullScreenSlideUrls.length * intervalSeconds * 1000 + 1500);
+    dedicatedFullScreenSlideMaxExpectedMs = hardStopMs;
+
+    clearFullScreenSlideExitTimer();
+    fullScreenSlideExitTimer = setTimeout(() => {
+        if (!forceFullScreenSlideModeActive) {
+            return;
+        }
+
+        finishCycle();
+    }, hardStopMs);
+
+    const finishCycle = () => {
+        clearFullScreenSlideExitTimer();
+        completeDedicatedFullScreenSlideCycle();
+    };
+
+    const advanceDedicatedSlideStep = () => {
+        clearFullScreenSlideTimer();
+
+        fullScreenSlideTimer = setTimeout(() => {
+            if (!forceFullScreenSlideModeActive) {
+                return;
+            }
+
+            const nextIndex = fullScreenSlideIndex + 1;
+            if (nextIndex >= fullScreenSlideUrls.length) {
+                finishCycle();
+                return;
+            }
+
+            fullScreenSlideIndex = nextIndex;
+            imageSlideUrls = fullScreenSlideUrls.slice();
+            showImageSlideAt(fullScreenSlideIndex);
+            advanceDedicatedSlideStep();
+        }, intervalSeconds * 1000);
+    };
+
+    if (fullScreenSlideUrls.length > 1) {
+        advanceDedicatedSlideStep();
+    } else {
+        fullScreenSlideTimer = setTimeout(() => {
+            if (!forceFullScreenSlideModeActive) {
+                return;
+            }
+
+            finishCycle();
+        }, intervalSeconds * 1000);
+    }
+
+    return true;
+}
+
+function stopDedicatedFullScreenSlideMode() {
+    clearFullScreenSlideTimer();
+    clearFullScreenSlideExitTimer();
+    fullScreenSlideUrls = [];
+    fullScreenSlideIndex = 0;
+    dedicatedFullScreenSlideStartedAt = 0;
+    dedicatedFullScreenSlideMaxExpectedMs = 0;
+    forceFullScreenSlideModeActive = false;
+    imageSlideUrls = [];
+    imageSlideSettingsByUrl = new Map();
+    setImageSlideFullscreenMode(false);
+
+    if (tvImageSlide) {
+        tvImageSlide.classList.add('hidden');
+        tvImageSlide.removeAttribute('src');
+        tvImageSlide.removeAttribute('data-fallback-candidates');
+        tvImageSlide.removeAttribute('data-fallback-index');
+    }
+
+    hideSlideTextOverlays();
+}
+
+function getStoredCompletedFullscreenSlideSignature() {
+    try {
+        return String(localStorage.getItem(FULLSCREEN_SLIDE_COMPLETED_SIGNATURE_KEY) || '').trim();
+    } catch (_error) {
+        return '';
+    }
+}
+
+function storeCompletedFullscreenSlideSignature(signature) {
+    try {
+        const normalized = String(signature || '').trim();
+        if (!normalized) {
+            localStorage.removeItem(FULLSCREEN_SLIDE_COMPLETED_SIGNATURE_KEY);
+            writeCompletedSignatureToWindowName('');
+            return;
+        }
+
+        localStorage.setItem(FULLSCREEN_SLIDE_COMPLETED_SIGNATURE_KEY, normalized);
+        writeCompletedSignatureToWindowName(normalized);
+    } catch (_error) {
+        writeCompletedSignatureToWindowName(signature);
+    }
+}
+
+function syncDedicatedFullScreenCompletionState() {
+    const currentSignature = String(fullScreenSlideConfigSignature || '').trim();
+    if (!currentSignature) {
+        hasCompletedDedicatedFullScreenSlideCycle = false;
+        return;
+    }
+
+    hasCompletedDedicatedFullScreenSlideCycle = isDedicatedFullScreenSlideCompletedForSignature(currentSignature);
+}
+
+function parseConfiguredImageSlideUrls() {
+    const inputUrls = parseConfiguredUrlLines(visualConfig.rightSidebarImageUrls);
+    if (inputUrls.length === 0) {
         return [];
     }
 
@@ -623,30 +1169,20 @@ function parseConfiguredImageSlideUrls() {
             return '';
         }
 
-        const stripQueryAndHash = (input) => String(input || '').split('#')[0].split('?')[0].trim();
+        let transformed = url;
 
-        if (/^https?:\/\/localhost\/storage\//i.test(url)) {
-            return stripQueryAndHash(url.replace(/^https?:\/\/localhost\/storage\//i, '/storage/'));
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i.test(transformed)) {
+            transformed = transformed.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i, '/storage/');
         }
 
-        if (/^storage\//i.test(url)) {
-            return stripQueryAndHash(`/${url.replace(/^\/+/, '')}`);
+        if (/^storage\//i.test(transformed)) {
+            transformed = `/${transformed.replace(/^\/+/, '')}`;
         }
 
-        if (/^https?:\/\//i.test(url)) {
-            try {
-                const parsed = new URL(url);
-                const normalizedPath = stripQueryAndHash(parsed.pathname || '');
-                if (/^\/storage\//i.test(normalizedPath)) {
-                    return normalizedPath;
-                }
-            } catch (_error) {
-                // Ignore URL parse failures and keep original value path.
-            }
-        }
-
-        return stripQueryAndHash(url);
+        return transformed;
     };
+
+    const stripQueryAndHash = (input) => String(input || '').split('#')[0].split('?')[0].trim();
 
     const schedules = Array.isArray(visualConfig.rightSidebarImageSchedules)
         ? visualConfig.rightSidebarImageSchedules
@@ -672,9 +1208,9 @@ function parseConfiguredImageSlideUrls() {
     const scheduleByUrl = new Map();
     const scheduleByLooseUrl = new Map();
     const scheduleByFileName = new Map();
-    const toLooseUrlKey = (value) => normalizeSlideUrl(value).replace(/\/$/, '');
+    const toLooseUrlKey = (value) => stripQueryAndHash(normalizeSlideUrl(value)).replace(/\/$/, '');
     const toFileNameKey = (value) => {
-        const normalized = normalizeSlideUrl(value);
+        const normalized = stripQueryAndHash(normalizeSlideUrl(value));
         if (!normalized) {
             return '';
         }
@@ -798,9 +1334,7 @@ function parseConfiguredImageSlideUrls() {
         return true;
     };
 
-    const filteredUrls = raw
-        .split(/\r?\n|,|;\s*/)
-        .map((item) => extractVideoUrl(item.trim()))
+    const filteredUrls = inputUrls
         .filter((url) => Boolean(url) && shouldShowByDate(url));
 
     const nextSettingsMap = new Map();
@@ -815,7 +1349,7 @@ function parseConfiguredImageSlideUrls() {
         const selectedWidth = isAndroidRuntime ? schedule.androidImageWidth : schedule.windowsImageWidth;
         const selectedOffset = isAndroidRuntime ? schedule.androidVerticalOffset : schedule.windowsVerticalOffset;
 
-        nextSettingsMap.set(url, {
+        const settings = {
             imageHeight: Math.max(0, Number(selectedHeight || 0) || 0),
             imageWidth: Math.max(0, Number(selectedWidth || 0) || 0),
             verticalOffset: Math.max(-300, Math.min(300, Number(selectedOffset || 0) || 0)),
@@ -834,7 +1368,12 @@ function parseConfiguredImageSlideUrls() {
             priceBadgeEnabled: isAndroidRuntime ? Boolean(schedule.androidPriceBadgeEnabled) : Boolean(schedule.windowsPriceBadgeEnabled),
             priceBadgeColor: String(isAndroidRuntime ? (schedule.androidPriceBadgeColor || '#0F172A') : (schedule.windowsPriceBadgeColor || '#0F172A')).trim(),
             nameText: String(schedule.name || '').trim(),
-        });
+        };
+
+        nextSettingsMap.set(url, settings);
+        if (normalized && normalized !== url) {
+            nextSettingsMap.set(normalized, settings);
+        }
     });
     imageSlideSettingsByUrl = nextSettingsMap;
 
@@ -850,6 +1389,7 @@ function stopVideoPlaybackForImageMode() {
     clearYouTubeStartupTimeout();
 
     document.body.classList.remove('tv-video-fullscreen');
+    document.body.classList.remove('tv-image-fullscreen');
 
     if (tvVideo) {
         tvVideo.pause();
@@ -862,6 +1402,90 @@ function stopVideoPlaybackForImageMode() {
     }
 }
 
+function applyImageFullscreenShellOverrides() {
+    // Keep fullscreen behavior scoped to CSS classes to avoid leaking inline
+    // sidebar styles after exiting dedicated fullscreen image mode.
+}
+
+function clearImageFullscreenShellOverrides() {
+    // Intentionally no-op: inline fullscreen shell overrides were removed.
+}
+
+function setImageSlideFullscreenMode(enabled = false) {
+    const isEnabled = Boolean(enabled);
+    document.body.classList.toggle('tv-image-fullscreen', isEnabled);
+
+    if (!isEnabled) {
+        clearImageFullscreenShellOverrides();
+    }
+
+    if (tvImageSlide) {
+        if (isEnabled) {
+            applyImageFullscreenShellOverrides();
+            tvImageSlide.style.setProperty('position', 'fixed', 'important');
+            tvImageSlide.style.setProperty('inset', '0', 'important');
+            tvImageSlide.style.setProperty('z-index', '60', 'important');
+            tvImageSlide.style.setProperty('width', '100vw', 'important');
+            tvImageSlide.style.setProperty('height', '100vh', 'important');
+            tvImageSlide.style.setProperty('max-width', '100vw', 'important');
+            tvImageSlide.style.setProperty('max-height', '100vh', 'important');
+            tvImageSlide.style.setProperty('border-radius', '0', 'important');
+            tvImageSlide.style.setProperty('background', '#000', 'important');
+        } else {
+            tvImageSlide.style.removeProperty('position');
+            tvImageSlide.style.removeProperty('inset');
+            tvImageSlide.style.removeProperty('z-index');
+            tvImageSlide.style.removeProperty('width');
+            tvImageSlide.style.removeProperty('height');
+            tvImageSlide.style.removeProperty('max-width');
+            tvImageSlide.style.removeProperty('max-height');
+            tvImageSlide.style.removeProperty('border-radius');
+            tvImageSlide.style.removeProperty('background');
+        }
+    }
+
+    if (isEnabled) {
+        document.body.classList.remove('tv-video-fullscreen');
+    }
+}
+
+function buildImageFallbackCandidates(rawUrl, currentResolvedUrl = '') {
+    const candidates = [];
+    const seen = new Set();
+
+    const pushCandidate = (value) => {
+        const candidate = normalizeImageSrcCandidate(value);
+        if (!candidate || seen.has(candidate) || candidate === String(currentResolvedUrl || '').trim()) {
+            return;
+        }
+
+        seen.add(candidate);
+        candidates.push(candidate);
+    };
+
+    const raw = normalizeImageSrcCandidate(rawUrl);
+    if (raw && raw !== String(currentResolvedUrl || '').trim()) {
+        pushCandidate(raw);
+    }
+
+    pushCandidate(resolveAlternateRenderableImageUrl(rawUrl, currentResolvedUrl));
+
+    const current = normalizeImageSrcCandidate(currentResolvedUrl);
+    if (/^\/storage\//i.test(current)) {
+        pushCandidate(`${window.location.origin}${current}`);
+    }
+
+    if (/^storage\//i.test(raw)) {
+        pushCandidate(`/${raw.replace(/^\/+/, '')}`);
+    }
+
+    if (/^\/storage\//i.test(raw)) {
+        pushCandidate(`${window.location.origin}${raw}`);
+    }
+
+    return candidates;
+}
+
 function showImageSlideAt(index) {
     if (!tvImageSlide || imageSlideUrls.length === 0) {
         return;
@@ -869,11 +1493,11 @@ function showImageSlideAt(index) {
 
     currentImageSlideIndex = (index + imageSlideUrls.length) % imageSlideUrls.length;
     const currentSlideUrl = imageSlideUrls[currentImageSlideIndex];
-    const resolvedSlideUrl = resolveRenderableImageUrl(currentSlideUrl);
-    const fallbackSlideUrl = resolveAlternateRenderableImageUrl(currentSlideUrl, resolvedSlideUrl);
-    tvImageSlide.dataset.fallbackSrc = fallbackSlideUrl || '';
-    tvImageSlide.dataset.fallbackTried = '0';
-    tvImageSlide.src = resolvedSlideUrl || currentSlideUrl;
+    const resolvedSlideUrl = normalizeImageSrcCandidate(resolveRenderableImageUrl(currentSlideUrl));
+    const fallbackCandidates = buildImageFallbackCandidates(currentSlideUrl, resolvedSlideUrl);
+    tvImageSlide.dataset.fallbackCandidates = JSON.stringify(fallbackCandidates);
+    tvImageSlide.dataset.fallbackIndex = '0';
+    tvImageSlide.src = resolvedSlideUrl || normalizeImageSrcCandidate(currentSlideUrl);
     applyConfiguredSlideImageLayout(currentSlideUrl);
     applyConfiguredSlideTextOverlay(currentSlideUrl);
 }
@@ -883,27 +1507,41 @@ function handleCurrentSlideImageLoadError() {
         return;
     }
 
-    const now = Date.now();
-    if (now - lastSlideImageErrorAt < 500) {
+    let fallbackCandidates = [];
+    try {
+        fallbackCandidates = JSON.parse(String(tvImageSlide.dataset.fallbackCandidates || '[]'));
+    } catch (_error) {
+        fallbackCandidates = [];
+    }
+
+    const fallbackIndex = Math.max(0, Number(tvImageSlide.dataset.fallbackIndex || 0) || 0);
+    const nextFallback = Array.isArray(fallbackCandidates) ? String(fallbackCandidates[fallbackIndex] || '').trim() : '';
+    if (nextFallback) {
+        tvImageSlide.dataset.fallbackIndex = String(fallbackIndex + 1);
+        tvImageSlide.src = nextFallback;
         return;
     }
 
-    if (tvImageSlide.dataset.fallbackTried !== '1' && tvImageSlide.dataset.fallbackSrc) {
-        tvImageSlide.dataset.fallbackTried = '1';
-        tvImageSlide.src = tvImageSlide.dataset.fallbackSrc;
+    if (forceFullScreenSlideModeActive) {
+        if (imageSlideUrls.length <= 1 || currentImageSlideIndex >= imageSlideUrls.length - 1) {
+            completeDedicatedFullScreenSlideCycle();
+            return;
+        }
+
+        fullScreenSlideIndex = Math.max(fullScreenSlideIndex, currentImageSlideIndex + 1);
+        showImageSlideAt(currentImageSlideIndex + 1);
         return;
     }
-
-    lastSlideImageErrorAt = now;
 
     if (imageSlideUrls.length === 1) {
+        setImageSlideFullscreenMode(false);
         tvImageSlide.classList.add('hidden');
         tvImageSlide.removeAttribute('src');
         hideSlideTextOverlays();
         return;
     }
 
-    // Skip broken image and continue the slide sequence.
+    // Skip broken image and continue the regular looping slide sequence.
     showImageSlideAt(currentImageSlideIndex + 1);
 }
 
@@ -973,6 +1611,58 @@ function hideSlideTextOverlays() {
     }
 }
 
+function getImageSlideSettings(currentSlideUrl = '') {
+    const raw = String(currentSlideUrl || '').trim();
+    if (!raw) {
+        return null;
+    }
+
+    const normalizeForCompare = (value) => String(value || '').split('#')[0].split('?')[0].trim().replace(/\/$/, '');
+    const toFileNameKey = (value) => {
+        const normalized = normalizeForCompare(value);
+        if (!normalized) {
+            return '';
+        }
+
+        const fileName = normalized.split('/').pop() || '';
+        try {
+            return decodeURIComponent(fileName).trim().toLowerCase();
+        } catch (_error) {
+            return fileName.trim().toLowerCase();
+        }
+    };
+
+    const direct = imageSlideSettingsByUrl.get(raw);
+    if (direct) {
+        return direct;
+    }
+
+    const normalized = resolveRenderableImageUrl(raw);
+    if (!normalized) {
+        return null;
+    }
+
+    const byNormalized = imageSlideSettingsByUrl.get(normalized);
+    if (byNormalized) {
+        return byNormalized;
+    }
+
+    const targetLoose = normalizeForCompare(normalized);
+    const targetFile = toFileNameKey(normalized);
+    for (const [key, settings] of imageSlideSettingsByUrl.entries()) {
+        const keyLoose = normalizeForCompare(key);
+        if (keyLoose && keyLoose === targetLoose) {
+            return settings;
+        }
+
+        if (targetFile && toFileNameKey(key) === targetFile) {
+            return settings;
+        }
+    }
+
+    return null;
+}
+
 function applyOverlayBlockPosition(element, position, defaultPosition) {
     if (!element) {
         return;
@@ -996,7 +1686,7 @@ function applyConfiguredSlideTextOverlay(currentSlideUrl = '') {
         return;
     }
 
-    const perImageSettings = imageSlideSettingsByUrl.get(currentSlideUrl) || null;
+    const perImageSettings = getImageSlideSettings(currentSlideUrl);
     if (!perImageSettings) {
         hideSlideTextOverlays();
         return;
@@ -1084,10 +1774,23 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
     let imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
 
-    const perImageSettings = imageSlideSettingsByUrl.get(currentSlideUrl) || null;
+    const perImageSettings = getImageSlideSettings(currentSlideUrl);
     const perImageHeight = Math.max(0, Number(perImageSettings?.imageHeight || 0) || 0);
     const perImageWidth = Math.max(0, Number(perImageSettings?.imageWidth || 0) || 0);
     const perImageVerticalOffset = Math.max(-300, Math.min(300, Number(perImageSettings?.verticalOffset || 0) || 0));
+    const shouldFullscreen = forceFullScreenSlideModeActive;
+
+    setImageSlideFullscreenMode(shouldFullscreen);
+
+    if (shouldFullscreen) {
+        tvImageSlide.style.width = '100vw';
+        tvImageSlide.style.height = '100vh';
+        tvImageSlide.style.maxWidth = '100vw';
+        tvImageSlide.style.maxHeight = '100vh';
+        tvImageSlide.style.objectFit = 'cover';
+        tvImageSlide.style.objectPosition = 'center center';
+        return;
+    }
 
     if (perImageHeight > 0) {
         imgHeight = perImageHeight;
@@ -1149,6 +1852,7 @@ function startImageSlideMode() {
     }
 
     stopVideoPlaybackForImageMode();
+    stopDedicatedFullScreenSlideMode();
     clearImageSlideTimer();
 
     applyConfiguredSlideImageLayout();
@@ -1156,6 +1860,7 @@ function startImageSlideMode() {
     imageSlideUrls = parseConfiguredImageSlideUrls();
 
     if (imageSlideUrls.length === 0) {
+        setImageSlideFullscreenMode(false);
         tvImageSlide.classList.add('hidden');
         tvImageSlide.removeAttribute('src');
         hideSlideTextOverlays();
@@ -1175,9 +1880,11 @@ function startImageSlideMode() {
 
 function stopImageSlideMode() {
     clearImageSlideTimer();
+    stopDedicatedFullScreenSlideMode();
     imageSlideUrls = [];
     imageSlideSettingsByUrl = new Map();
     currentImageSlideIndex = 0;
+    setImageSlideFullscreenMode(false);
 
     if (tvImageSlide) {
         tvImageSlide.classList.add('hidden');
@@ -1288,11 +1995,13 @@ function renderSidebarProductItem(item) {
         ? `<div style="padding:6px 8px;border-radius:8px;background:${priceBadgeBackground};color:${String(visualConfig.rightSidebarProductPriceColor || '#FDE68A')};font-weight:800;text-align:center;line-height:1.2;">${precoTexto}</div>`
         : '';
 
-    const imagemSrc = resolveRenderableImageUrl(imagem);
-    const imagemFallbackSrc = resolveAlternateRenderableImageUrl(imagem, imagemSrc);
+    const imagemSrc = normalizeImageSrcCandidate(resolveRenderableImageUrl(imagem) || imagem);
+    const imagemFallbackCandidates = buildImageFallbackCandidates(imagem, imagemSrc);
+    const imagemFallbackPrimary = String(imagemFallbackCandidates[0] || '');
+    const imagemFallbackSecondary = String(imagemFallbackCandidates[1] || '');
 
     const imageBlock = showImage && imagem !== ''
-        ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:96px;"><img src="${escapeHtmlAttribute(imagemSrc || imagem)}" data-fallback-src="${escapeHtmlAttribute(imagemFallbackSrc)}" alt="${escapeHtmlAttribute(nome)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" loading="lazy" onerror="if(this.dataset.fallbackSrc&&this.dataset.fallbackTried!=='1'){this.dataset.fallbackTried='1';this.src=this.dataset.fallbackSrc;return;}this.style.display='none'"/></div>`
+        ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:96px;"><img src="${escapeHtmlAttribute(imagemSrc || imagem)}" data-fallback-src="${escapeHtmlAttribute(imagemFallbackPrimary)}" data-fallback-src-2="${escapeHtmlAttribute(imagemFallbackSecondary)}" alt="${escapeHtmlAttribute(nome)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" loading="lazy" onerror="if(this.dataset.fallbackSrc&&this.dataset.fallbackTried!=='1'){this.dataset.fallbackTried='1';this.src=this.dataset.fallbackSrc;return;}if(this.dataset.fallbackSrc2&&this.dataset.fallbackTried2!=='1'){this.dataset.fallbackTried2='1';this.src=this.dataset.fallbackSrc2;return;}this.style.display='none'"/></div>`
         : '<div style="flex:1"></div>';
 
     const topBlock = namePosition === 'top' ? nameBlock : (pricePosition === 'top' ? priceBlock : '');
@@ -1391,6 +2100,7 @@ function startSidebarProductsMixedWithMediaMode(items) {
 function startSidebarProductsMixedMode(items, includeVideos) {
     const nextProductItems = normalizeSidebarProductItems(items);
     const nextImageUrls = parseConfiguredImageSlideUrls();
+    const nextImageSettingsMap = new Map(imageSlideSettingsByUrl);
     const nextVideoItems = includeVideos && toBoolean(visualConfig.showVideoPanel, true)
         ? parseConfiguredVideoUrls()
         : [];
@@ -1433,6 +2143,10 @@ function startSidebarProductsMixedMode(items, includeVideos) {
     clearSidebarProductTimer();
     stopVideoPlaybackForImageMode();
     stopImageSlideMode();
+
+    // stopImageSlideMode clears slide arrays/maps; restore mixed-mode image source state.
+    imageSlideUrls = Array.isArray(sidebarMixedImageUrls) ? sidebarMixedImageUrls.slice() : [];
+    imageSlideSettingsByUrl = nextImageSettingsMap;
 
     sidebarMixedModeSignature = nextSignature;
     sidebarProductIndex = 0;
@@ -1522,6 +2236,7 @@ function startSidebarProductsMixedMode(items, includeVideos) {
                 sidebarMixedCurrentVideoItem = null;
                 stopVideoPlaybackForImageMode();
                 hideSidebarProductCard();
+                imageSlideUrls = Array.isArray(sidebarMixedImageUrls) ? sidebarMixedImageUrls.slice() : [];
                 if (tvImageSlide) {
                     tvImageSlide.classList.remove('hidden');
                     showImageSlideAt(sidebarMixedImageIndex);
@@ -1605,6 +2320,7 @@ function startSidebarProductsMixedMode(items, includeVideos) {
             sidebarMixedCurrentVideoItem = null;
             stopVideoPlaybackForImageMode();
             hideSidebarProductCard();
+            imageSlideUrls = Array.isArray(sidebarMixedImageUrls) ? sidebarMixedImageUrls.slice() : [];
             if (tvImageSlide) {
                 tvImageSlide.classList.remove('hidden');
                 showImageSlideAt(sidebarMixedImageIndex);
@@ -1798,7 +2514,57 @@ function startHybridImagePhase(token) {
     }
 }
 
-async function applyRightSidebarMediaMode(token, productsForSidebar = null) {
+async function applyRightSidebarMediaMode(token, productsForSidebar = null, options = {}) {
+    const currentDedicatedSignature = buildDedicatedFullScreenSlideSignature();
+    if (currentDedicatedSignature) {
+        fullScreenSlideConfigSignature = currentDedicatedSignature;
+    }
+
+    syncDedicatedFullScreenCompletionState();
+
+    const hasDedicatedFullScreenSlide = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
+    const shouldSkipDedicatedForCurrentLoad = shouldSkipDedicatedFullScreenSlideForCurrentLoad(
+        hasDedicatedFullScreenSlide,
+        { ignoreLoadSkip: Boolean(options.ignoreDedicatedLoadSkip) }
+    );
+
+    if (shouldSkipDedicatedForCurrentLoad) {
+        markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
+        stopDedicatedFullScreenSlideMode();
+        forceRestoreMainLayoutAfterDedicatedSlide();
+    }
+
+    if (hasDedicatedFullScreenSlide && forceFullScreenSlideModeActive) {
+        if (hasStaleDedicatedFullScreenSlideSession()) {
+            completeDedicatedFullScreenSlideCycle();
+        }
+        return;
+    }
+
+    if (hasDedicatedFullScreenSlide && !forceFullScreenSlideModeActive && !shouldSkipDedicatedForCurrentLoad) {
+        clearSidebarProductTimer();
+        sidebarMixedModeSignature = '';
+        sidebarProductPassedBeforeImages = false;
+        sidebarMixedImageUrls = [];
+        sidebarMixedImageIndex = 0;
+        sidebarMixedVideoItems = [];
+        sidebarMixedVideoIndex = 0;
+        sidebarMixedTurnIndex = 0;
+        sidebarMixedVideoTurnActive = false;
+        sidebarMixedVideoTurnExpiresAt = 0;
+        sidebarMixedCurrentVideoItem = null;
+        sidebarMixedOnVideoFinished = null;
+        const startedDedicatedSlide = startDedicatedFullScreenSlideMode();
+        if (startedDedicatedSlide) {
+            return;
+        }
+
+        // If it did not start, continue with normal sidebar flow and avoid getting stuck.
+        markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
+    }
+
+    stopDedicatedFullScreenSlideMode();
+
     const isProductCarouselEnabled = toBoolean(visualConfig.rightSidebarProductCarouselEnabled, false);
     const transitionMode = String(visualConfig.rightSidebarProductTransitionMode || 'products_only').toLowerCase();
 
@@ -2825,8 +3591,25 @@ function updateStatus(message, isError = false) {
         return;
     }
 
+    if (statusMessage.__hideTimer) {
+        clearTimeout(statusMessage.__hideTimer);
+        statusMessage.__hideTimer = null;
+    }
+
     statusMessage.textContent = message;
     statusMessage.className = `tv-status-floating text-xs ${isError ? 'text-red-400' : 'text-slate-400'}`;
+    statusMessage.style.display = '';
+
+    if (!isError) {
+        statusMessage.__hideTimer = setTimeout(() => {
+            if (!statusMessage) {
+                return;
+            }
+
+            statusMessage.style.display = 'none';
+            statusMessage.__hideTimer = null;
+        }, 5000);
+    }
 }
 
 function updateWarningStatus(message) {
@@ -2834,8 +3617,14 @@ function updateWarningStatus(message) {
         return;
     }
 
+    if (statusMessage.__hideTimer) {
+        clearTimeout(statusMessage.__hideTimer);
+        statusMessage.__hideTimer = null;
+    }
+
     statusMessage.textContent = message;
     statusMessage.className = 'tv-status-floating text-xs text-amber-300';
+    statusMessage.style.display = '';
 }
 
 function ensureOfflineIndicator() {
@@ -4140,6 +4929,7 @@ async function loadVisualConfig(token) {
         }
 
         Object.assign(visualConfig, payload.data || {});
+        visualConfig.apiRefreshInterval = Math.max(5, Math.min(3600, Number(visualConfig.apiRefreshInterval || refreshSeconds || 30)));
         visualConfig.showImage = Boolean(visualConfig.showImage);
         visualConfig.showVideoPanel = toBoolean(visualConfig.showVideoPanel, true);
         visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
@@ -4194,6 +4984,16 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
         visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
         visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
+        visualConfig.fullScreenSlideImageUrls = String(visualConfig.fullScreenSlideImageUrls || '').trim();
+        visualConfig.fullScreenSlideInterval = Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8));
+        visualConfig.fullScreenSlideReturnDelaySeconds = Math.max(0, Math.min(86400, Number(visualConfig.fullScreenSlideReturnDelaySeconds || 0)));
+        visualConfig.fullScreenSlideEnabled = toBoolean(visualConfig.fullScreenSlideEnabled, false);
+
+        const nextFullScreenSignature = buildDedicatedFullScreenSlideSignature();
+
+        fullScreenSlideConfigSignature = nextFullScreenSignature;
+        syncDedicatedFullScreenCompletionState();
+
         visualConfig.rightSidebarImageSchedules = Array.isArray(visualConfig.rightSidebarImageSchedules)
             ? visualConfig.rightSidebarImageSchedules
             : [];
@@ -4237,6 +5037,7 @@ async function loadVisualConfig(token) {
         applyLeftVerticalLogoVisibility();
         applyTitleVisibility();
         await applyAutoFullscreenPreference();
+        applyProductsRefreshInterval(visualConfig.apiRefreshInterval);
         saveCachedVisualConfig(visualConfig);
         setOfflineIndicatorVisible(false);
         return true;
@@ -4433,13 +5234,7 @@ enforceValidTokenOrRedirect().then((isTokenValid) => {
     loadProducts();
 });
 
-if (refreshSeconds > 0) {
-    setInterval(() => {
-        if (getReliableDeviceToken()) {
-            loadProducts();
-        }
-    }, refreshSeconds * 1000);
-}
+applyProductsRefreshInterval(refreshSeconds);
 
 if (tvVideo) {
     tvVideo.addEventListener('loadedmetadata', () => ensureVideoAudioEnabled(tvVideo.muted));
@@ -4477,13 +5272,24 @@ if (tvVideo) {
     });
 }
 
+window.addEventListener('beforeunload', () => {
+    try {
+        sessionStorage.setItem(DEDICATED_FULLSCREEN_SKIP_ON_NEXT_LOAD_KEY, '1');
+    } catch (_error) {
+    }
+
+    try {
+        const current = String(window.name || '');
+        if (!current.includes(WINDOW_NAME_SKIP_MARKER)) {
+            window.name = current ? `${current};${WINDOW_NAME_SKIP_MARKER}` : WINDOW_NAME_SKIP_MARKER;
+        }
+    } catch (_error) {
+    }
+});
+
 if (tvImageSlide) {
     tvImageSlide.addEventListener('error', () => {
         handleCurrentSlideImageLoadError();
-    });
-
-    tvImageSlide.addEventListener('load', () => {
-        lastSlideImageErrorAt = 0;
     });
 }
 

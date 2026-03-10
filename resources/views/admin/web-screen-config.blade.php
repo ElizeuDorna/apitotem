@@ -107,6 +107,21 @@
                             </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="apiRefreshInterval">Tempo para atualizar a TV (segundos)</label>
+                                    <input
+                                        type="number"
+                                        id="apiRefreshInterval"
+                                        name="apiRefreshInterval"
+                                        min="5"
+                                        max="3600"
+                                        value="{{ old('apiRefreshInterval', $config->apiRefreshInterval ?? 30) }}"
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    <p class="text-xs text-gray-500 mt-1">Define de quanto em quanto tempo a tela consulta a API novamente.</p>
+                                    @error('apiRefreshInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
                                 <h4 class="text-sm font-semibold text-gray-800">Borda geral</h4>
                                 <p class="text-xs text-gray-600">Aplica uma borda em toda a tela <code>/tv/totemweb</code>.</p>
 
@@ -988,6 +1003,62 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div id="fullScreenSlideConfig" data-company-gallery-name="Slide de Tela Inteira" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h4 class="text-sm font-semibold text-gray-800">Slide de Tela Inteira</h4>
+                                    <button type="button" data-save-section="fullScreenSlideConfig" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                                </div>
+                                <p class="text-xs text-gray-600">Use este slide separado para imagens em tela cheia. Uma URL por linha.</p>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="fullScreenSlideEnabled" value="0">
+                                    <input type="checkbox" id="fullScreenSlideEnabled" name="fullScreenSlideEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabled', $config->fullScreenSlideEnabled ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar Slide de Tela Inteira</span>
+                                </label>
+                                @error('fullScreenSlideEnabled')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageUrls">Imagens da tela inteira (links)</label>
+                                    <textarea
+                                        id="fullScreenSlideImageUrls"
+                                        name="fullScreenSlideImageUrls"
+                                        rows="6"
+                                        class="w-full border rounded px-3 py-2 font-mono text-xs"
+                                        placeholder="https://exemplo.com/imagem1.jpg&#10;https://exemplo.com/imagem2.jpg"
+                                    >{{ old('fullScreenSlideImageUrls', $config->fullScreenSlideImageUrls ?? '') }}</textarea>
+                                    @error('fullScreenSlideImageUrls')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideInterval">Tempo por imagem (segundos)</label>
+                                    <input
+                                        type="number"
+                                        id="fullScreenSlideInterval"
+                                        name="fullScreenSlideInterval"
+                                        min="1"
+                                        max="300"
+                                        value="{{ old('fullScreenSlideInterval', $config->fullScreenSlideInterval ?? 8) }}"
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    @error('fullScreenSlideInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideReturnDelaySeconds">Voltar para slide tela inteira após sair (segundos)</label>
+                                    <input
+                                        type="number"
+                                        id="fullScreenSlideReturnDelaySeconds"
+                                        name="fullScreenSlideReturnDelaySeconds"
+                                        min="0"
+                                        max="86400"
+                                        value="{{ old('fullScreenSlideReturnDelaySeconds', $config->fullScreenSlideReturnDelaySeconds ?? 0) }}"
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    <p class="text-xs text-gray-500 mt-1">Use 0 para não voltar automaticamente. Exemplo: 300 = volta após 5 minutos.</p>
+                                    @error('fullScreenSlideReturnDelaySeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
                         </div>
 
                         <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
@@ -1768,7 +1839,7 @@
             }
 
             return String(rightSidebarImageUrls.value || '')
-                .split(/\r?\n|,|;\s*/)
+                .split(/\r?\n/)
                 .map((value) => value.trim())
                 .filter((value) => /^https?:\/\//i.test(value) || /^\/storage\//i.test(value) || /^storage\//i.test(value));
         }
@@ -1955,11 +2026,24 @@
                 summaryButton.setAttribute('data-schedule-summary', url);
 
                 const thumb = document.createElement('img');
-                thumb.src = url;
+                const thumbPrimarySrc = resolveRenderableSlideUrl(url);
+                const thumbFallbackSrc = resolveAlternateRenderableSlideUrl(url, thumbPrimarySrc);
+                thumb.src = thumbPrimarySrc || url;
+                thumb.setAttribute('data-fallback-src', thumbFallbackSrc || '');
+                thumb.setAttribute('data-fallback-tried', '0');
                 thumb.alt = 'Miniatura';
                 thumb.className = 'w-14 h-10 rounded object-cover border border-gray-200 bg-gray-100 shrink-0';
                 thumb.loading = 'lazy';
                 thumb.onerror = function () {
+                    const fallbackSrc = String(thumb.getAttribute('data-fallback-src') || '').trim();
+                    const fallbackTried = String(thumb.getAttribute('data-fallback-tried') || '0');
+
+                    if (fallbackSrc !== '' && fallbackTried !== '1') {
+                        thumb.setAttribute('data-fallback-tried', '1');
+                        thumb.src = fallbackSrc;
+                        return;
+                    }
+
                     thumb.style.opacity = '0.35';
                 };
 
@@ -2568,6 +2652,7 @@
                     endInput.min = startInput.value || '';
                 };
 
+
                 const windowsConfig = createPlatformConfigCard({
                     platform: 'windows',
                     title: 'Windows',
@@ -2812,8 +2897,6 @@
                 return '';
             }
 
-            value = String(value.split('#')[0].split('?')[0] || '').trim();
-
             if (/^https?:\/\/localhost\/storage\//i.test(value)) {
                 return value.replace(/^https?:\/\/localhost\/storage\//i, '/storage/');
             }
@@ -2826,18 +2909,54 @@
                 return `/${value.replace(/^\/+/, '')}`;
             }
 
-            if (/^https?:\/\//i.test(value)) {
-                try {
-                    const parsed = new URL(value);
-                    const path = String(parsed.pathname || '').trim();
-                    if (/^\/storage\//i.test(path)) {
-                        return path;
-                    }
-                } catch (_error) {
-                }
+            return value;
+        }
+
+        function resolveRenderableSlideUrl(url) {
+            const value = String(url || '').trim();
+            if (value === '') {
+                return '';
+            }
+
+            if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i.test(value)) {
+                return value.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i, '/storage/');
+            }
+
+            if (/^storage\//i.test(value)) {
+                return `/${value.replace(/^\/+/, '')}`;
+            }
+
+            if (/^\/\//.test(value)) {
+                return `${window.location.protocol}${value}`;
             }
 
             return value;
+        }
+
+        function resolveAlternateRenderableSlideUrl(rawUrl, currentResolvedUrl = '') {
+            const original = String(rawUrl || '').trim();
+            if (original === '') {
+                return '';
+            }
+
+            const current = String(currentResolvedUrl || '').trim();
+            const isHttpsPage = String(window.location.protocol || '').toLowerCase() === 'https:';
+
+            if (isHttpsPage && /^http:\/\//i.test(original)) {
+                const httpsCandidate = original.replace(/^http:\/\//i, 'https://');
+                if (httpsCandidate !== current) {
+                    return httpsCandidate;
+                }
+            }
+
+            if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i.test(original)) {
+                const storageCandidate = original.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/storage\//i, '/storage/');
+                if (storageCandidate !== current) {
+                    return storageCandidate;
+                }
+            }
+
+            return '';
         }
 
         function isSavedSlideUrl(url) {
@@ -3419,22 +3538,24 @@
             saveSectionInput.value = sectionId;
 
             if (openCompanyGalleryTargetInput) {
-                if (sectionId === 'companyGalleryConfigSection') {
-                    openCompanyGalleryTargetInput.value = String(activeCompanyGalleryTargetId || '');
+                if (sectionId === 'companyGalleryConfigSection' || sectionId === 'fullScreenSlideConfig') {
+                    openCompanyGalleryTargetInput.value = sectionId === 'fullScreenSlideConfig'
+                        ? 'fullScreenSlideConfig'
+                        : String(activeCompanyGalleryTargetId || '');
                 } else {
                     openCompanyGalleryTargetInput.value = '';
                 }
             }
 
             if (openRightSidebarImageScheduleUrlInput) {
-                if (sectionId === 'companyGalleryConfigSection' && String(activeCompanyGalleryTargetId || '') === 'rightSidebarImageConfig') {
+                if ((sectionId === 'companyGalleryConfigSection' || sectionId === 'fullScreenSlideConfig') && String(activeCompanyGalleryTargetId || '') === 'rightSidebarImageConfig') {
                     openRightSidebarImageScheduleUrlInput.value = String(openRightSidebarImageScheduleUrl || '');
                 } else {
                     openRightSidebarImageScheduleUrlInput.value = '';
                 }
             }
 
-            if (sectionId === 'companyGalleryConfigSection') {
+            if (sectionId === 'companyGalleryConfigSection' || sectionId === 'fullScreenSlideConfig') {
                 if (suggestedSlideSelectionSubmittedInput && hasUserInteractedWithSlideSelection) {
                     suggestedSlideSelectionSubmittedInput.value = '1';
                 }

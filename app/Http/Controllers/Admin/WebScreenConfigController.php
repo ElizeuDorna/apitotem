@@ -28,6 +28,7 @@ class WebScreenConfigController extends Controller
 
         $config = $config->fresh();
         $config->rightSidebarImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
+        $config->fullScreenSlideImageUrls = $this->normalizeImageUrlsList((string) ($config->fullScreenSlideImageUrls ?? ''));
 
         return view('admin.web-screen-config', [
             'config' => $config,
@@ -43,7 +44,7 @@ class WebScreenConfigController extends Controller
     {
         $empresaId = $this->resolveEmpresaId();
         $saveSection = trim((string) $request->input('saveSection', ''));
-        $shouldProcessRightSidebarMedia = in_array($saveSection, ['', 'companyGalleryConfigSection'], true);
+        $shouldProcessRightSidebarMedia = in_array($saveSection, ['', 'companyGalleryConfigSection', 'fullScreenSlideConfig'], true);
         $shouldProcessGeneralConfig = in_array($saveSection, ['', 'generalConfigSection'], true);
         $shouldProcessVideoValidation = in_array($saveSection, ['', 'videoConfigSection'], true);
         $slideSelectionSubmitted = (bool) $request->boolean('suggestedSlideSelectionSubmitted', false);
@@ -118,8 +119,9 @@ class WebScreenConfigController extends Controller
         ]);
 
         $validated = $request->validate([
-            'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,imageSizeConfigSection,paginationConfigSection'],
-            'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig'],
+            'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,fullScreenSlideConfig,imageSizeConfigSection,paginationConfigSection'],
+            'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig,fullScreenSlideConfig'],
+            'apiRefreshInterval' => ['nullable', 'integer', 'min:5', 'max:3600'],
             'openRightSidebarImageScheduleUrl' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
@@ -163,6 +165,10 @@ class WebScreenConfigController extends Controller
             'rightSidebarMediaType' => ['nullable', 'in:video,image,hybrid'],
             'rightSidebarGlobalGalleryCode' => ['nullable', 'string', 'regex:/^\d{1,14}$/'],
             'rightSidebarImageUrls' => ['nullable', 'string', 'max:10000'],
+            'fullScreenSlideImageUrls' => ['nullable', 'string', 'max:10000'],
+            'fullScreenSlideInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
+            'fullScreenSlideReturnDelaySeconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
+            'fullScreenSlideEnabled' => ['nullable', 'boolean'],
             'rightSidebarImageSchedules' => ['nullable', 'array'],
             'rightSidebarImageSchedules.*.url' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageSchedules.*.name' => ['nullable', 'string', 'max:120'],
@@ -346,6 +352,7 @@ class WebScreenConfigController extends Controller
         $validated['isRoundedCornersEnabled'] = (bool) ($validated['isRoundedCornersEnabled'] ?? true);
         $validated['showRightSidebarBorder'] = (bool) ($validated['showRightSidebarBorder'] ?? true);
         $validated['videoMuted'] = (bool) ($validated['videoMuted'] ?? false);
+        $validated['apiRefreshInterval'] = (int) ($validated['apiRefreshInterval'] ?? 30);
         $validated['isPaginationEnabled'] = (bool) ($validated['isPaginationEnabled'] ?? false);
         $validated['mainBorderColor'] = (string) ($validated['mainBorderColor'] ?? '#000000');
         $validated['mainBorderWidth'] = (int) ($validated['mainBorderWidth'] ?? 1);
@@ -358,6 +365,10 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarMediaType'] = (string) ($validated['rightSidebarMediaType'] ?? 'video');
         $validated['rightSidebarGlobalGalleryCode'] = substr(preg_replace('/\D/', '', (string) ($validated['rightSidebarGlobalGalleryCode'] ?? '')) ?? '', 0, 14);
         $validated['rightSidebarImageUrls'] = $this->normalizeImageUrlsList((string) ($validated['rightSidebarImageUrls'] ?? ''));
+        $validated['fullScreenSlideImageUrls'] = $this->normalizeImageUrlsList((string) ($validated['fullScreenSlideImageUrls'] ?? ''));
+        $validated['fullScreenSlideInterval'] = (int) ($validated['fullScreenSlideInterval'] ?? 8);
+        $validated['fullScreenSlideReturnDelaySeconds'] = (int) ($validated['fullScreenSlideReturnDelaySeconds'] ?? 0);
+        $validated['fullScreenSlideEnabled'] = (bool) ($validated['fullScreenSlideEnabled'] ?? false);
         $validated['rightSidebarImageSchedules'] = collect((array) ($validated['rightSidebarImageSchedules'] ?? []))
             ->map(function (array $item) {
                 $normalizedUrl = $this->normalizeSingleImageUrl((string) ($item['url'] ?? ''));
@@ -747,6 +758,22 @@ class WebScreenConfigController extends Controller
             unset($validated['rightSidebarImageSchedules']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageUrls')) {
+            unset($validated['fullScreenSlideImageUrls']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideInterval')) {
+            unset($validated['fullScreenSlideInterval']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideReturnDelaySeconds')) {
+            unset($validated['fullScreenSlideReturnDelaySeconds']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenSlideEnabled')) {
+            unset($validated['fullScreenSlideEnabled']);
+        }
+
         if (! Schema::hasColumn('configuracoes', 'rightSidebarProductCarouselEnabled')) {
             unset($validated['rightSidebarProductCarouselEnabled']);
         }
@@ -841,11 +868,18 @@ class WebScreenConfigController extends Controller
 
         if ($saveSection !== '') {
             $redirect->with('success', 'Menu salvo com sucesso.');
-            $redirect->with('openConfigSection', $saveSection);
+            $openConfigSection = $saveSection === 'fullScreenSlideConfig'
+                ? 'companyGalleryConfigSection'
+                : $saveSection;
+            $redirect->with('openConfigSection', $openConfigSection);
+
+            if ($saveSection === 'fullScreenSlideConfig') {
+                $redirect->with('openCompanyGalleryTarget', 'fullScreenSlideConfig');
+            }
 
             if ($saveSection === 'companyGalleryConfigSection') {
                 $openCompanyGalleryTarget = trim((string) $request->input('openCompanyGalleryTarget', ''));
-                if (in_array($openCompanyGalleryTarget, ['companyGalleryCodeBlock', 'companyGalleryLibraryBlock', 'rightSidebarImageConfig'], true)) {
+                if (in_array($openCompanyGalleryTarget, ['companyGalleryCodeBlock', 'companyGalleryLibraryBlock', 'rightSidebarImageConfig', 'fullScreenSlideConfig'], true)) {
                     $redirect->with('openCompanyGalleryTarget', $openCompanyGalleryTarget);
                 }
 
@@ -899,6 +933,7 @@ class WebScreenConfigController extends Controller
     private function hydrateMissingInputsFromCurrentConfig(Request $request, Configuracao $config): void
     {
         $scalarFields = [
+            'apiRefreshInterval',
             'showVideoPanel',
             'showRightSidebarPanel',
             'showRightSidebarLogo',
@@ -935,6 +970,10 @@ class WebScreenConfigController extends Controller
             'rightSidebarMediaType',
             'rightSidebarGlobalGalleryCode',
             'rightSidebarImageUrls',
+            'fullScreenSlideImageUrls',
+            'fullScreenSlideInterval',
+            'fullScreenSlideReturnDelaySeconds',
+            'fullScreenSlideEnabled',
             'rightSidebarImageInterval',
             'rightSidebarImageFit',
             'rightSidebarImageHeight',
