@@ -468,6 +468,24 @@ class TvController extends Controller
         $configuredImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
         $rightSidebarImageUrls = $configuredImageUrls;
 
+        if ($rightSidebarImageUrls === '') {
+            $scheduleUrls = collect((array) ($config->rightSidebarImageSchedules ?? []))
+                ->map(fn ($item) => $this->normalizeSlideUrlForCompare((string) (($item['url'] ?? ''))))
+                ->filter(fn (string $url) => $url !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            if (! empty($scheduleUrls)) {
+                $rightSidebarImageUrls = $this->normalizeImageUrlsList(implode("\n", $scheduleUrls));
+            }
+        }
+
+        if ($rightSidebarImageUrls === '' && $globalGalleryCode !== '') {
+            $globalGalleryUrls = $this->resolveGlobalGalleryImageUrls($globalGalleryCode);
+            $rightSidebarImageUrls = $this->normalizeImageUrlsList(implode("\n", $globalGalleryUrls));
+        }
+
         $isAndroidRuntime = preg_match('/android/i', (string) ($request->userAgent() ?? '')) === 1;
         $rightSidebarImageUrls = $this->filterRightSidebarImageUrlsBySchedule(
             $rightSidebarImageUrls,

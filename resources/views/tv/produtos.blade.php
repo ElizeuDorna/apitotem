@@ -661,12 +661,12 @@
                 </div>
 
                 <div id="tvRightSidebarMediaWrap">
-                    <video id="tvVideo" class="w-full rounded-lg bg-black" controls autoplay playsinline>
+                    <video id="tvVideo" class="w-full rounded-lg" controls autoplay playsinline>
                         <source src="/tv/videos/demo.mp4" type="video/mp4">
                         Seu navegador não suporta vídeo HTML5.
                     </video>
-                    <iframe id="tvEmbed" class="hidden w-full rounded-lg bg-black" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                    <img id="tvImageSlide" class="hidden w-full rounded-lg bg-black" alt="Slide lateral" loading="eager">
+                    <iframe id="tvEmbed" class="hidden w-full rounded-lg" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    <img id="tvImageSlide" class="hidden w-full rounded-lg" alt="Slide lateral" loading="eager">
                 </div>
             </aside>
         </main>

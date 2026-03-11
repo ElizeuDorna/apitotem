@@ -432,6 +432,7 @@ const dedicatedFullScreenSlideModule = createDedicatedFullScreenSlideModule({
     resumeExternalTimersForDedicatedFullScreen,
     getReliableDeviceToken,
     getSidebarProductItems: () => sidebarProductItems,
+    getLatestProductsForPagination: () => latestProductsForPagination,
     applyRightSidebarMediaMode,
 });
 
@@ -503,6 +504,7 @@ const rightSidebarMediaModeModule = createRightSidebarMediaModeModule({
     hasStaleDedicatedFullScreenSlideSession,
     completeDedicatedFullScreenSlideCycle,
     startDedicatedFullScreenSlideMode,
+    isVideoFullscreenModeActive,
     clearSidebarProductTimer,
     hideSidebarProductCard,
     stopVideoPlaybackForImageMode,
@@ -1281,6 +1283,8 @@ function parseConfiguredImageSlideUrls() {
             windowsImageHeight: Math.max(0, Number(entry?.windowsImageHeight ?? legacyImageHeight) || 0),
             windowsImageWidth: Math.max(0, Number(entry?.windowsImageWidth ?? legacyImageWidth) || 0),
             windowsVerticalOffset: Math.max(-300, Math.min(300, Number(entry?.windowsVerticalOffset ?? legacyVerticalOffset) || 0)),
+            windowsImageFit: String(entry?.windowsImageFit || entry?.imageFit || 'scale-down').toLowerCase(),
+            windowsImageBackgroundColor: String(entry?.windowsImageBackgroundColor || '#000000').trim(),
             windowsShowName: parsePlatformEnabled(entry?.windowsShowName, false),
             windowsShowPrice: parsePlatformEnabled(entry?.windowsShowPrice, false),
             windowsPriceText: String(entry?.windowsPriceText || '').trim(),
@@ -1298,6 +1302,8 @@ function parseConfiguredImageSlideUrls() {
             androidImageHeight: Math.max(0, Number(entry?.androidImageHeight ?? legacyImageHeight) || 0),
             androidImageWidth: Math.max(0, Number(entry?.androidImageWidth ?? legacyImageWidth) || 0),
             androidVerticalOffset: Math.max(-300, Math.min(300, Number(entry?.androidVerticalOffset ?? legacyVerticalOffset) || 0)),
+            androidImageFit: String(entry?.androidImageFit || entry?.windowsImageFit || entry?.imageFit || 'scale-down').toLowerCase(),
+            androidImageBackgroundColor: String(entry?.androidImageBackgroundColor || entry?.windowsImageBackgroundColor || '#000000').trim(),
             androidShowName: parsePlatformEnabled(entry?.androidShowName, parsePlatformEnabled(entry?.windowsShowName, false)),
             androidShowPrice: parsePlatformEnabled(entry?.androidShowPrice, parsePlatformEnabled(entry?.windowsShowPrice, false)),
             androidPriceText: String(entry?.androidPriceText || entry?.windowsPriceText || '').trim(),
@@ -1368,11 +1374,21 @@ function parseConfiguredImageSlideUrls() {
         const selectedHeight = isAndroidRuntime ? schedule.androidImageHeight : schedule.windowsImageHeight;
         const selectedWidth = isAndroidRuntime ? schedule.androidImageWidth : schedule.windowsImageWidth;
         const selectedOffset = isAndroidRuntime ? schedule.androidVerticalOffset : schedule.windowsVerticalOffset;
+        const selectedFitRaw = isAndroidRuntime ? schedule.androidImageFit : schedule.windowsImageFit;
+        const selectedBackgroundColor = String(isAndroidRuntime
+            ? (schedule.androidImageBackgroundColor || '#000000')
+            : (schedule.windowsImageBackgroundColor || '#000000')
+        ).trim();
+        const selectedFit = selectedFitRaw === 'cover'
+            ? 'cover'
+            : (selectedFitRaw === 'contain' ? 'contain' : 'scale-down');
 
         const settings = {
             imageHeight: Math.max(0, Number(selectedHeight || 0) || 0),
             imageWidth: Math.max(0, Number(selectedWidth || 0) || 0),
             verticalOffset: Math.max(-300, Math.min(300, Number(selectedOffset || 0) || 0)),
+            imageFit: selectedFit,
+            imageBackgroundColor: selectedBackgroundColor,
             showName: isAndroidRuntime ? Boolean(schedule.androidShowName) : Boolean(schedule.windowsShowName),
             showPrice: isAndroidRuntime ? Boolean(schedule.androidShowPrice) : Boolean(schedule.windowsShowPrice),
             priceText: String(isAndroidRuntime ? (schedule.androidPriceText || '') : (schedule.windowsPriceText || '')).trim(),
@@ -1804,12 +1820,21 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
 
     const compactViewport = isCompactViewport();
 
-    const configuredFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
+    const perImageSettings = getImageSlideSettings(currentSlideUrl);
+    const configuredFit = String(perImageSettings?.imageFit || visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
     const fit = configuredFit === 'cover'
         ? 'cover'
         : (configuredFit === 'contain' ? 'contain' : 'scale-down');
+    const configuredBackgroundColor = String(perImageSettings?.imageBackgroundColor || '#000000').trim() || '#000000';
     tvImageSlide.style.objectFit = fit;
     tvImageSlide.style.objectPosition = 'center center';
+    tvImageSlide.style.setProperty('background-color', configuredBackgroundColor, 'important');
+    if (tvRightSidebarMediaWrap) {
+        tvRightSidebarMediaWrap.style.setProperty('background-color', configuredBackgroundColor, 'important');
+    }
+    if (tvVideoPanel) {
+        tvVideoPanel.style.setProperty('background-color', configuredBackgroundColor, 'important');
+    }
     tvImageSlide.style.maxWidth = '100%';
     tvImageSlide.style.maxHeight = '100%';
 
@@ -1818,7 +1843,6 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
     let imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
 
-    const perImageSettings = getImageSlideSettings(currentSlideUrl);
     const perImageHeight = Math.max(0, Number(perImageSettings?.imageHeight || 0) || 0);
     const perImageWidth = Math.max(0, Number(perImageSettings?.imageWidth || 0) || 0);
     const perImageVerticalOffset = Math.max(-300, Math.min(300, Number(perImageSettings?.verticalOffset || 0) || 0));
@@ -1876,15 +1900,15 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
         const compactConfiguredHeight = imgHeight > 0 ? Math.max(80, Math.min(compactMaxHeight, imgHeight)) : compactMaxHeight;
         tvImageSlide.style.maxWidth = `${compactConfiguredWidth}px`;
         tvImageSlide.style.maxHeight = `${compactConfiguredHeight}px`;
-        tvImageSlide.style.objectFit = 'contain';
+        tvImageSlide.style.objectFit = fit;
         return;
     }
 
-    // Auto mode: keep natural image size and only downscale when needed.
+    // Auto mode still needs a fixed render box, otherwise object-fit has no visual effect.
     if (imgHeight === 0 && imgWidth === 0) {
-        tvImageSlide.style.width = 'auto';
-        tvImageSlide.style.height = 'auto';
-        tvImageSlide.style.objectFit = 'scale-down';
+        tvImageSlide.style.width = '100%';
+        tvImageSlide.style.height = '100%';
+        tvImageSlide.style.objectFit = fit;
         return;
     }
 
@@ -2732,7 +2756,6 @@ function parseConfiguredVideoUrls() {
                 url: extractVideoUrl(String(item?.url || '').trim()),
                 muted: toBoolean(item?.muted, false),
                 active: toBoolean(item?.active, true),
-                fullscreen: toBoolean(item?.fullscreen, false),
                 durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
                 heightPx: Math.max(0, Number(item?.heightPx || 0)),
             }))
@@ -2749,7 +2772,7 @@ function parseConfiguredVideoUrls() {
         .split(/\r?\n|,|;\s*/)
         .map((item) => extractVideoUrl(item.trim()))
         .filter(Boolean)
-        .map((url) => ({ url, muted: Boolean(visualConfig.videoMuted), active: true, fullscreen: false, durationSeconds: 0, heightPx: 0 }));
+        .map((url) => ({ url, muted: Boolean(visualConfig.videoMuted), active: true, durationSeconds: 0, heightPx: 0 }));
 }
 
 function extractVideoUrl(input) {
@@ -2789,8 +2812,6 @@ function applyVideoSource(videoItem) {
     const itemMuted = toBoolean(typeof videoItem === 'object' ? videoItem?.muted : visualConfig.videoMuted, false);
     const shouldForceFirstPlaybackMuted = forceMuteOnFirstPlayback && Boolean(videoUrl);
     const effectiveMuted = shouldForceFirstPlaybackMuted ? true : itemMuted;
-    const itemFullscreen = toBoolean(typeof videoItem === 'object' ? videoItem?.fullscreen : false, false);
-    const effectiveFullscreen = itemFullscreen;
     const itemDurationSeconds = Math.max(0, Number(typeof videoItem === 'object' ? videoItem?.durationSeconds : 0) || 0);
     const itemHeightPx = Math.max(0, Number(typeof videoItem === 'object' ? videoItem?.heightPx : 0) || 0);
     const youTubeVideoId = getYouTubeVideoId(videoUrl);
@@ -2801,23 +2822,8 @@ function applyVideoSource(videoItem) {
     }
 
     clearVideoFallbackTimer();
-    document.body.classList.toggle('tv-video-fullscreen', effectiveFullscreen);
-    applyCurrentVideoHeight(effectiveFullscreen ? 0 : itemHeightPx);
-
-    if (effectiveFullscreen) {
-        setTimeout(() => {
-            if (tvVideo && !tvVideo.classList.contains('hidden') && tvVideo.paused) {
-                playHtmlVideoWithAutoplayFallback(effectiveMuted);
-            }
-
-            if (tvEmbed && !tvEmbed.classList.contains('hidden') && youTubePlayer && typeof youTubePlayer.playVideo === 'function') {
-                try {
-                    youTubePlayer.playVideo();
-                } catch (_error) {
-                }
-            }
-        }, 250);
-    }
+    document.body.classList.remove('tv-video-fullscreen');
+    applyCurrentVideoHeight(itemHeightPx);
 
     if (!videoUrl) {
         if (tvVideo) {
@@ -2951,7 +2957,6 @@ function startVideoPlaylist(videoUrls) {
                 url: String(item?.url || '').trim(),
                 muted: toBoolean(item?.muted, false),
                 active: toBoolean(item?.active, true),
-                fullscreen: toBoolean(item?.fullscreen, false),
                 durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
                 heightPx: Math.max(0, Number(item?.heightPx || 0)),
             };
@@ -2962,7 +2967,6 @@ function startVideoPlaylist(videoUrls) {
         url: item.url,
         muted: item.muted,
         active: item.active,
-        fullscreen: item.fullscreen,
         durationSeconds: item.durationSeconds,
         heightPx: item.heightPx,
     })));
@@ -3580,7 +3584,9 @@ function applyVideoBackground() {
     const color = visualConfig.videoBackgroundColor || '#000000';
     const resolvedColor = visualConfig.isVideoPanelTransparent ? 'transparent' : color;
 
-    if (tvVideoPanel) {
+    const isImageSlideVisible = Boolean(tvImageSlide && !tvImageSlide.classList.contains('hidden'));
+
+    if (!isImageSlideVisible && tvVideoPanel) {
         tvVideoPanel.style.backgroundColor = resolvedColor;
     }
 
@@ -3592,7 +3598,11 @@ function applyVideoBackground() {
         tvEmbed.style.backgroundColor = resolvedColor;
     }
 
-    if (tvImageSlide) {
+    if (!isImageSlideVisible && tvRightSidebarMediaWrap) {
+        tvRightSidebarMediaWrap.style.backgroundColor = resolvedColor;
+    }
+
+    if (!isImageSlideVisible && tvImageSlide) {
         tvImageSlide.style.backgroundColor = resolvedColor;
     }
 }

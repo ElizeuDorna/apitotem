@@ -33,7 +33,6 @@ export function createRightSidebarMixedModeModule(deps) {
             videos: nextVideoItems.map((item) => ({
                 url: String(item?.url || ''),
                 muted: deps.toBoolean(item?.muted, false),
-                fullscreen: deps.toBoolean(item?.fullscreen, false),
                 durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
                 heightPx: Math.max(0, Number(item?.heightPx || 0)),
             })),

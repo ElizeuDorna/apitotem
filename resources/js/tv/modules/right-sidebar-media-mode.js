@@ -117,6 +117,11 @@ export function createRightSidebarMediaModeModule(deps) {
             return;
         }
 
+        // Fullscreen video has priority over dedicated fullscreen slide.
+        if (hasDedicatedFullScreenSlide && !state.forceFullScreenSlideModeActive && deps.isVideoFullscreenModeActive()) {
+            return;
+        }
+
         if (hasDedicatedFullScreenSlide && !state.forceFullScreenSlideModeActive && !shouldSkipDedicatedForCurrentLoad) {
             deps.clearSidebarProductTimer();
             state.sidebarMixedModeSignature = '';

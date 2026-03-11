@@ -44,7 +44,6 @@
                                 'url' => (string) ($item['url'] ?? ''),
                                 'muted' => (bool) ($item['muted'] ?? false),
                                 'active' => (bool) ($item['active'] ?? false),
-                                'fullscreen' => (bool) ($item['fullscreen'] ?? false),
                                 'durationSeconds' => (int) ($item['durationSeconds'] ?? 0),
                                 'heightPx' => (int) ($item['heightPx'] ?? 0),
                             ];
@@ -91,15 +90,16 @@
                         <div class="grid grid-cols-1 gap-4 items-start">
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="generalConfigSection">Configuração geral</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="videoConfigSection">Configuração de Vídeos</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="colorConfigSection">Configuração de Cores</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="rightSidebarConfigSection">Configuração Tela Lateral Direita</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="videoConfigSection">Configuração de Vídeos lateral direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Galeria de Imagem</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="fullScreenSlideConfig">Slide de Tela Inteira</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Configuracao da lista produto</button>
                             </aside>
 
                             <div id="configPanelsStorage" class="space-y-4 hidden">
-                        <div id="generalConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                        <div id="generalConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Configuração geral</h3>
                                 <button type="button" data-save-section="generalConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
@@ -406,9 +406,9 @@
                             </div>
                         </div>
 
-                        <div id="videoConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3 hidden">
+                        <div id="videoConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3">
                             <div class="flex items-center justify-between gap-2">
-                                <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos</h3>
+                                <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos lateral direita</h3>
                                 <button type="button" data-save-section="videoConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
                             </div>
 
@@ -466,18 +466,6 @@
                                         </label>
 
                                         <label class="mt-2 inline-flex items-center gap-2">
-                                            <input type="hidden" name="video_fullscreen_flags[{{ $index }}]" value="0">
-                                            <input
-                                                type="checkbox"
-                                                name="video_fullscreen_flags[{{ $index }}]"
-                                                value="1"
-                                                class="rounded border-gray-300 text-indigo-600"
-                                                @checked(old('video_fullscreen_flags.' . $index, ($savedPlaylist[$index]['url'] ?? '') !== '' ? ($savedPlaylist[$index]['fullscreen'] ?? false) : false))
-                                            >
-                                            <span class="text-xs text-gray-700">Abrir em tela cheia (somente este vídeo)</span>
-                                        </label>
-
-                                        <label class="mt-2 inline-flex items-center gap-2">
                                             <input type="hidden" name="video_muted_flags[{{ $index }}]" value="0">
                                             <input
                                                 type="checkbox"
@@ -522,7 +510,7 @@
                             </div>
                         </div>
 
-                        <div id="colorConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                        <div id="colorConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Configuração de Cores</h3>
                                 <button type="button" data-save-section="colorConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
@@ -600,7 +588,7 @@
                             </label>
                         </div>
 
-                        <div id="rightSidebarConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                        <div id="rightSidebarConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Configuração Tela Lateral Direita</h3>
                                 <button type="button" data-save-section="rightSidebarConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
@@ -649,7 +637,7 @@
                             <div id="rightSidebarHybridConfig" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Tempo de alternância no modo híbrido</h4>
                                 <p class="text-xs text-gray-600">Quando em híbrido, alterna por quantidade: N vídeos → M imagens → N vídeos, em loop.</p>
-                                <p class="text-xs text-gray-600">A contagem de vídeos considera apenas os vídeos marcados como ativos em "Configuração de Vídeos".</p>
+                                <p class="text-xs text-gray-600">A contagem de vídeos considera apenas os vídeos marcados como ativos em "Configuração de Vídeos lateral direita".</p>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -847,7 +835,7 @@
 
                         </div>
 
-                        <div id="companyGalleryConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                        <div id="companyGalleryConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Galeria de Imagem</h3>
                                 <button type="button" data-save-section="companyGalleryConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
@@ -1003,118 +991,119 @@
                                 </div>
                             </div>
 
-                            <div id="fullScreenSlideConfig" data-company-gallery-name="Slide de Tela Inteira" class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
-                                <div class="flex items-center justify-between gap-2">
-                                    <h4 class="text-sm font-semibold text-gray-800">Slide de Tela Inteira</h4>
-                                    <button type="button" data-save-section="fullScreenSlideConfig" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
-                                </div>
-                                <p class="text-xs text-gray-600">Use este slide separado para imagens em tela cheia. Uma URL por linha.</p>
+                        </div>
 
+                        <div id="fullScreenSlideConfig" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Slide de Tela Inteira</h3>
+                                <button type="button" data-save-section="fullScreenSlideConfig" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
+                            <p class="text-xs text-gray-600">Use este slide separado para imagens em tela cheia. Uma URL por linha.</p>
+
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="fullScreenSlideEnabled" value="0">
+                                <input type="checkbox" id="fullScreenSlideEnabled" name="fullScreenSlideEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabled', $config->fullScreenSlideEnabled ?? false))>
+                                <span class="text-sm text-gray-700">Ativar Slide de Tela Inteira</span>
+                            </label>
+                            @error('fullScreenSlideEnabled')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideStartDate">Data inicio</label>
+                                    <input type="date" id="fullScreenSlideStartDate" name="fullScreenSlideStartDate" value="{{ old('fullScreenSlideStartDate', $config->fullScreenSlideStartDate ?? '') }}" class="w-full border rounded px-3 py-2">
+                                    @error('fullScreenSlideStartDate')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideEndDate">Data fim</label>
+                                    <input type="date" id="fullScreenSlideEndDate" name="fullScreenSlideEndDate" value="{{ old('fullScreenSlideEndDate', $config->fullScreenSlideEndDate ?? '') }}" class="w-full border rounded px-3 py-2">
+                                    @error('fullScreenSlideEndDate')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <label class="inline-flex items-center gap-2">
-                                    <input type="hidden" name="fullScreenSlideEnabled" value="0">
-                                    <input type="checkbox" id="fullScreenSlideEnabled" name="fullScreenSlideEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabled', $config->fullScreenSlideEnabled ?? false))>
-                                    <span class="text-sm text-gray-700">Ativar Slide de Tela Inteira</span>
+                                    <input type="hidden" name="fullScreenSlideEnabledWindows" value="0">
+                                    <input type="checkbox" id="fullScreenSlideEnabledWindows" name="fullScreenSlideEnabledWindows" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabledWindows', $config->fullScreenSlideEnabledWindows ?? true))>
+                                    <span class="text-sm text-gray-700">Ativar no Windows</span>
                                 </label>
-                                @error('fullScreenSlideEnabled')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="fullScreenSlideEnabledAndroid" value="0">
+                                    <input type="checkbox" id="fullScreenSlideEnabledAndroid" name="fullScreenSlideEnabledAndroid" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabledAndroid', $config->fullScreenSlideEnabledAndroid ?? true))>
+                                    <span class="text-sm text-gray-700">Ativar no Android</span>
+                                </label>
+                            </div>
+                            @error('fullScreenSlideEnabledWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                            @error('fullScreenSlideEnabledAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
 
+                            <div class="rounded border border-gray-200 bg-gray-50 p-3 space-y-3">
+                                <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Dimensoes da imagem (0 = automatico)</p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideStartDate">Data inicio</label>
-                                        <input type="date" id="fullScreenSlideStartDate" name="fullScreenSlideStartDate" value="{{ old('fullScreenSlideStartDate', $config->fullScreenSlideStartDate ?? '') }}" class="w-full border rounded px-3 py-2">
-                                        @error('fullScreenSlideStartDate')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageWidthWindows">Largura Windows (px)</label>
+                                        <input type="number" id="fullScreenSlideImageWidthWindows" name="fullScreenSlideImageWidthWindows" min="0" max="3840" value="{{ old('fullScreenSlideImageWidthWindows', $config->fullScreenSlideImageWidthWindows ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                        @error('fullScreenSlideImageWidthWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideEndDate">Data fim</label>
-                                        <input type="date" id="fullScreenSlideEndDate" name="fullScreenSlideEndDate" value="{{ old('fullScreenSlideEndDate', $config->fullScreenSlideEndDate ?? '') }}" class="w-full border rounded px-3 py-2">
-                                        @error('fullScreenSlideEndDate')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageHeightWindows">Altura Windows (px)</label>
+                                        <input type="number" id="fullScreenSlideImageHeightWindows" name="fullScreenSlideImageHeightWindows" min="0" max="2160" value="{{ old('fullScreenSlideImageHeightWindows', $config->fullScreenSlideImageHeightWindows ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                        @error('fullScreenSlideImageHeightWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageWidthAndroid">Largura Android (px)</label>
+                                        <input type="number" id="fullScreenSlideImageWidthAndroid" name="fullScreenSlideImageWidthAndroid" min="0" max="3840" value="{{ old('fullScreenSlideImageWidthAndroid', $config->fullScreenSlideImageWidthAndroid ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                        @error('fullScreenSlideImageWidthAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageHeightAndroid">Altura Android (px)</label>
+                                        <input type="number" id="fullScreenSlideImageHeightAndroid" name="fullScreenSlideImageHeightAndroid" min="0" max="2160" value="{{ old('fullScreenSlideImageHeightAndroid', $config->fullScreenSlideImageHeightAndroid ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                        @error('fullScreenSlideImageHeightAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <label class="inline-flex items-center gap-2">
-                                        <input type="hidden" name="fullScreenSlideEnabledWindows" value="0">
-                                        <input type="checkbox" id="fullScreenSlideEnabledWindows" name="fullScreenSlideEnabledWindows" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabledWindows', $config->fullScreenSlideEnabledWindows ?? true))>
-                                        <span class="text-sm text-gray-700">Ativar no Windows</span>
-                                    </label>
-                                    <label class="inline-flex items-center gap-2">
-                                        <input type="hidden" name="fullScreenSlideEnabledAndroid" value="0">
-                                        <input type="checkbox" id="fullScreenSlideEnabledAndroid" name="fullScreenSlideEnabledAndroid" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('fullScreenSlideEnabledAndroid', $config->fullScreenSlideEnabledAndroid ?? true))>
-                                        <span class="text-sm text-gray-700">Ativar no Android</span>
-                                    </label>
-                                </div>
-                                @error('fullScreenSlideEnabledWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                @error('fullScreenSlideEnabledAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageUrls">Imagens da tela inteira (links)</label>
+                                <textarea
+                                    id="fullScreenSlideImageUrls"
+                                    name="fullScreenSlideImageUrls"
+                                    rows="6"
+                                    class="w-full border rounded px-3 py-2 font-mono text-xs"
+                                    placeholder="https://exemplo.com/imagem1.jpg&#10;https://exemplo.com/imagem2.jpg"
+                                >{{ old('fullScreenSlideImageUrls', $config->fullScreenSlideImageUrls ?? '') }}</textarea>
+                                @error('fullScreenSlideImageUrls')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                            </div>
 
-                                <div class="rounded border border-gray-200 bg-gray-50 p-3 space-y-3">
-                                    <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Dimensoes da imagem (0 = automatico)</p>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageWidthWindows">Largura Windows (px)</label>
-                                            <input type="number" id="fullScreenSlideImageWidthWindows" name="fullScreenSlideImageWidthWindows" min="0" max="3840" value="{{ old('fullScreenSlideImageWidthWindows', $config->fullScreenSlideImageWidthWindows ?? 0) }}" class="w-full border rounded px-3 py-2">
-                                            @error('fullScreenSlideImageWidthWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageHeightWindows">Altura Windows (px)</label>
-                                            <input type="number" id="fullScreenSlideImageHeightWindows" name="fullScreenSlideImageHeightWindows" min="0" max="2160" value="{{ old('fullScreenSlideImageHeightWindows', $config->fullScreenSlideImageHeightWindows ?? 0) }}" class="w-full border rounded px-3 py-2">
-                                            @error('fullScreenSlideImageHeightWindows')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageWidthAndroid">Largura Android (px)</label>
-                                            <input type="number" id="fullScreenSlideImageWidthAndroid" name="fullScreenSlideImageWidthAndroid" min="0" max="3840" value="{{ old('fullScreenSlideImageWidthAndroid', $config->fullScreenSlideImageWidthAndroid ?? 0) }}" class="w-full border rounded px-3 py-2">
-                                            @error('fullScreenSlideImageWidthAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageHeightAndroid">Altura Android (px)</label>
-                                            <input type="number" id="fullScreenSlideImageHeightAndroid" name="fullScreenSlideImageHeightAndroid" min="0" max="2160" value="{{ old('fullScreenSlideImageHeightAndroid', $config->fullScreenSlideImageHeightAndroid ?? 0) }}" class="w-full border rounded px-3 py-2">
-                                            @error('fullScreenSlideImageHeightAndroid')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
-                                    </div>
-                                </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideInterval">Tempo por imagem (segundos)</label>
+                                <input
+                                    type="number"
+                                    id="fullScreenSlideInterval"
+                                    name="fullScreenSlideInterval"
+                                    min="1"
+                                    max="300"
+                                    value="{{ old('fullScreenSlideInterval', $config->fullScreenSlideInterval ?? 8) }}"
+                                    class="w-full border rounded px-3 py-2"
+                                >
+                                @error('fullScreenSlideInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                            </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideImageUrls">Imagens da tela inteira (links)</label>
-                                    <textarea
-                                        id="fullScreenSlideImageUrls"
-                                        name="fullScreenSlideImageUrls"
-                                        rows="6"
-                                        class="w-full border rounded px-3 py-2 font-mono text-xs"
-                                        placeholder="https://exemplo.com/imagem1.jpg&#10;https://exemplo.com/imagem2.jpg"
-                                    >{{ old('fullScreenSlideImageUrls', $config->fullScreenSlideImageUrls ?? '') }}</textarea>
-                                    @error('fullScreenSlideImageUrls')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideInterval">Tempo por imagem (segundos)</label>
-                                    <input
-                                        type="number"
-                                        id="fullScreenSlideInterval"
-                                        name="fullScreenSlideInterval"
-                                        min="1"
-                                        max="300"
-                                        value="{{ old('fullScreenSlideInterval', $config->fullScreenSlideInterval ?? 8) }}"
-                                        class="w-full border rounded px-3 py-2"
-                                    >
-                                    @error('fullScreenSlideInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideReturnDelaySeconds">Voltar para slide tela inteira após sair (segundos)</label>
-                                    <input
-                                        type="number"
-                                        id="fullScreenSlideReturnDelaySeconds"
-                                        name="fullScreenSlideReturnDelaySeconds"
-                                        min="0"
-                                        max="86400"
-                                        value="{{ old('fullScreenSlideReturnDelaySeconds', $config->fullScreenSlideReturnDelaySeconds ?? 0) }}"
-                                        class="w-full border rounded px-3 py-2"
-                                    >
-                                    <p class="text-xs text-gray-500 mt-1">Use 0 para não voltar automaticamente. Exemplo: 300 = volta após 5 minutos.</p>
-                                    @error('fullScreenSlideReturnDelaySeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenSlideReturnDelaySeconds">Voltar para slide tela inteira após sair (segundos)</label>
+                                <input
+                                    type="number"
+                                    id="fullScreenSlideReturnDelaySeconds"
+                                    name="fullScreenSlideReturnDelaySeconds"
+                                    min="0"
+                                    max="86400"
+                                    value="{{ old('fullScreenSlideReturnDelaySeconds', $config->fullScreenSlideReturnDelaySeconds ?? 0) }}"
+                                    class="w-full border rounded px-3 py-2"
+                                >
+                                <p class="text-xs text-gray-500 mt-1">Use 0 para não voltar automaticamente. Exemplo: 300 = volta após 5 minutos.</p>
+                                @error('fullScreenSlideReturnDelaySeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                             </div>
                         </div>
 
-                        <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4 hidden">
+                        <div id="imageSizeConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Fonte do produto</h3>
                                 <button type="button" data-save-section="imageSizeConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
@@ -1482,6 +1471,8 @@
                     windowsImageHeight: Number(entry?.windowsImageHeight ?? entry?.imageHeight ?? 0) || 0,
                     windowsImageWidth: Number(entry?.windowsImageWidth ?? entry?.imageWidth ?? 0) || 0,
                     windowsVerticalOffset: Number(entry?.windowsVerticalOffset ?? entry?.verticalOffset ?? 0) || 0,
+                    windowsImageFit: String(entry?.windowsImageFit ?? entry?.imageFit ?? 'scale-down').trim().toLowerCase(),
+                    windowsImageBackgroundColor: String(entry?.windowsImageBackgroundColor || '#000000').trim(),
                     windowsShowName: parsePlatformEnabled(entry?.windowsShowName, false),
                     windowsShowPrice: parsePlatformEnabled(entry?.windowsShowPrice, false),
                     windowsPriceText: String(entry?.windowsPriceText || '').trim(),
@@ -1499,6 +1490,8 @@
                     androidImageHeight: Number(entry?.androidImageHeight ?? entry?.imageHeight ?? 0) || 0,
                     androidImageWidth: Number(entry?.androidImageWidth ?? entry?.imageWidth ?? 0) || 0,
                     androidVerticalOffset: Number(entry?.androidVerticalOffset ?? entry?.verticalOffset ?? 0) || 0,
+                    androidImageFit: String(entry?.androidImageFit ?? entry?.windowsImageFit ?? entry?.imageFit ?? 'scale-down').trim().toLowerCase(),
+                    androidImageBackgroundColor: String(entry?.androidImageBackgroundColor ?? entry?.windowsImageBackgroundColor ?? '#000000').trim(),
                     androidShowName: parsePlatformEnabled(entry?.androidShowName, false),
                     androidShowPrice: parsePlatformEnabled(entry?.androidShowPrice, false),
                     androidPriceText: String(entry?.androidPriceText || '').trim(),
@@ -1519,6 +1512,18 @@
             return map;
         }
         const initialRightSidebarImageSchedules = @json(old('rightSidebarImageSchedules', $config->rightSidebarImageSchedules ?? []));
+
+        function getInitialScheduleUrls() {
+            if (!Array.isArray(initialRightSidebarImageSchedules)) {
+                return [];
+            }
+
+            return Array.from(new Set(
+                initialRightSidebarImageSchedules
+                    .map((entry) => normalizeSlideUrlForCompare(String(entry?.url || '').trim()))
+                    .filter((url) => url !== '')
+            ));
+        }
 
         function updateGradientVisibility() {
             if (!useGradient || !gradientFields) return;
@@ -1856,10 +1861,9 @@
 
         function updateRightSidebarMediaConfigState() {
             if (!rightSidebarImageConfig) return;
-            const isImageMode = Boolean(rightSidebarMediaTypeImage && rightSidebarMediaTypeImage.checked);
             const isHybridMode = Boolean(rightSidebarMediaTypeHybrid && rightSidebarMediaTypeHybrid.checked);
             const isSlideSubmenuActive = activeCompanyGalleryTargetId === 'rightSidebarImageConfig';
-            rightSidebarImageConfig.style.display = (isImageMode || isHybridMode) && isSlideSubmenuActive ? 'block' : 'none';
+            rightSidebarImageConfig.style.display = isSlideSubmenuActive ? '' : 'none';
 
             if (rightSidebarHybridConfig) {
                 rightSidebarHybridConfig.style.display = isHybridMode ? 'block' : 'none';
@@ -1891,10 +1895,16 @@
                 return [];
             }
 
-            return String(rightSidebarImageUrls.value || '')
+            const parsed = String(rightSidebarImageUrls.value || '')
                 .split(/\r?\n/)
                 .map((value) => value.trim())
                 .filter((value) => /^https?:\/\//i.test(value) || /^\/storage\//i.test(value) || /^storage\//i.test(value));
+
+            if (parsed.length > 0) {
+                return parsed;
+            }
+
+            return getInitialScheduleUrls();
         }
 
         function collectScheduleStateFromEditor() {
@@ -1917,6 +1927,8 @@
                 const windowsHeightInput = row.querySelector('input[data-schedule-height-windows]');
                 const windowsWidthInput = row.querySelector('input[data-schedule-width-windows]');
                 const windowsOffsetInput = row.querySelector('input[data-schedule-offset-windows]');
+                const windowsFitInput = row.querySelector('select[data-schedule-fit-windows]');
+                const windowsBackgroundColorInput = row.querySelector('input[data-schedule-background-color-windows]');
                 const windowsShowNameInput = row.querySelector('input[data-schedule-show-name-windows]');
                 const windowsShowPriceInput = row.querySelector('input[data-schedule-show-price-windows]');
                 const windowsPriceTextInput = row.querySelector('input[data-schedule-price-text-windows]');
@@ -1934,6 +1946,8 @@
                 const androidHeightInput = row.querySelector('input[data-schedule-height-android]');
                 const androidWidthInput = row.querySelector('input[data-schedule-width-android]');
                 const androidOffsetInput = row.querySelector('input[data-schedule-offset-android]');
+                const androidFitInput = row.querySelector('select[data-schedule-fit-android]');
+                const androidBackgroundColorInput = row.querySelector('input[data-schedule-background-color-android]');
                 const androidShowNameInput = row.querySelector('input[data-schedule-show-name-android]');
                 const androidShowPriceInput = row.querySelector('input[data-schedule-show-price-android]');
                 const androidPriceTextInput = row.querySelector('input[data-schedule-price-text-android]');
@@ -1957,6 +1971,8 @@
                     windowsImageHeight: windowsHeightInput instanceof HTMLInputElement ? Math.max(0, Number(windowsHeightInput.value || 0) || 0) : 0,
                     windowsImageWidth: windowsWidthInput instanceof HTMLInputElement ? Math.max(0, Number(windowsWidthInput.value || 0) || 0) : 0,
                     windowsVerticalOffset: windowsOffsetInput instanceof HTMLInputElement ? Math.max(-300, Math.min(300, Number(windowsOffsetInput.value || 0) || 0)) : 0,
+                    windowsImageFit: windowsFitInput instanceof HTMLSelectElement ? String(windowsFitInput.value || 'scale-down').toLowerCase() : 'scale-down',
+                    windowsImageBackgroundColor: windowsBackgroundColorInput instanceof HTMLInputElement ? String(windowsBackgroundColorInput.value || '#000000').trim() : '#000000',
                     windowsShowName: windowsShowNameInput instanceof HTMLInputElement ? Boolean(windowsShowNameInput.checked) : false,
                     windowsShowPrice: windowsShowPriceInput instanceof HTMLInputElement ? Boolean(windowsShowPriceInput.checked) : false,
                     windowsPriceText: windowsPriceTextInput instanceof HTMLInputElement ? String(windowsPriceTextInput.value || '').trim() : '',
@@ -1974,6 +1990,8 @@
                     androidImageHeight: androidHeightInput instanceof HTMLInputElement ? Math.max(0, Number(androidHeightInput.value || 0) || 0) : 0,
                     androidImageWidth: androidWidthInput instanceof HTMLInputElement ? Math.max(0, Number(androidWidthInput.value || 0) || 0) : 0,
                     androidVerticalOffset: androidOffsetInput instanceof HTMLInputElement ? Math.max(-300, Math.min(300, Number(androidOffsetInput.value || 0) || 0)) : 0,
+                    androidImageFit: androidFitInput instanceof HTMLSelectElement ? String(androidFitInput.value || 'scale-down').toLowerCase() : 'scale-down',
+                    androidImageBackgroundColor: androidBackgroundColorInput instanceof HTMLInputElement ? String(androidBackgroundColorInput.value || '#000000').trim() : '#000000',
                     androidShowName: androidShowNameInput instanceof HTMLInputElement ? Boolean(androidShowNameInput.checked) : false,
                     androidShowPrice: androidShowPriceInput instanceof HTMLInputElement ? Boolean(androidShowPriceInput.checked) : false,
                     androidPriceText: androidPriceTextInput instanceof HTMLInputElement ? String(androidPriceTextInput.value || '').trim() : '',
@@ -2034,6 +2052,8 @@
                     windowsImageHeight: 0,
                     windowsImageWidth: 0,
                     windowsVerticalOffset: 0,
+                    windowsImageFit: 'scale-down',
+                    windowsImageBackgroundColor: '#000000',
                     windowsShowName: false,
                     windowsShowPrice: false,
                     windowsPriceText: '',
@@ -2051,6 +2071,8 @@
                     androidImageHeight: 0,
                     androidImageWidth: 0,
                     androidVerticalOffset: 0,
+                    androidImageFit: 'scale-down',
+                    androidImageBackgroundColor: '#000000',
                     androidShowName: false,
                     androidShowPrice: false,
                     androidPriceText: '',
@@ -2200,6 +2222,8 @@
                     imageHeight,
                     imageWidth,
                     verticalOffset,
+                    imageFit,
+                    imageBackgroundColor,
                     showName,
                     showPrice,
                     priceText,
@@ -2221,6 +2245,8 @@
                     const heightData = platform === 'android' ? 'data-schedule-height-android' : 'data-schedule-height-windows';
                     const widthData = platform === 'android' ? 'data-schedule-width-android' : 'data-schedule-width-windows';
                     const offsetData = platform === 'android' ? 'data-schedule-offset-android' : 'data-schedule-offset-windows';
+                    const fitData = platform === 'android' ? 'data-schedule-fit-android' : 'data-schedule-fit-windows';
+                    const backgroundColorData = platform === 'android' ? 'data-schedule-background-color-android' : 'data-schedule-background-color-windows';
 
                     const wrap = document.createElement('div');
                     wrap.className = 'rounded border border-gray-200 bg-gray-50 p-2 space-y-2';
@@ -2302,9 +2328,42 @@
                     offsetInput.setAttribute(offsetData, '1');
                     offsetWrap.appendChild(offsetInput);
 
+                    const fitWrap = document.createElement('label');
+                    fitWrap.className = 'block text-[11px] text-gray-600';
+                    fitWrap.textContent = 'Ajuste da imagem';
+                    const fitInput = document.createElement('select');
+                    fitInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ImageFit]`;
+                    fitInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    fitInput.setAttribute(fitData, '1');
+                    [
+                        { value: 'contain', label: 'Mostrar inteira (contain)' },
+                        { value: 'scale-down', label: 'Mostrar inteira sem ampliar' },
+                        { value: 'cover', label: 'Preencher area (cover)' },
+                    ].forEach((item) => {
+                        const option = document.createElement('option');
+                        option.value = item.value;
+                        option.textContent = item.label;
+                        option.selected = String(imageFit || 'scale-down').toLowerCase() === item.value;
+                        fitInput.appendChild(option);
+                    });
+                    fitWrap.appendChild(fitInput);
+
+                    const backgroundColorWrap = document.createElement('label');
+                    backgroundColorWrap.className = 'block text-[11px] text-gray-600';
+                    backgroundColorWrap.textContent = 'Cor de fundo da imagem';
+                    const backgroundColorInput = document.createElement('input');
+                    backgroundColorInput.type = 'color';
+                    backgroundColorInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}ImageBackgroundColor]`;
+                    backgroundColorInput.value = String(imageBackgroundColor || '#000000');
+                    backgroundColorInput.className = 'w-full h-8 border rounded';
+                    backgroundColorInput.setAttribute(backgroundColorData, '1');
+                    backgroundColorWrap.appendChild(backgroundColorInput);
+
                     platformGrid.appendChild(heightWrap);
                     platformGrid.appendChild(widthWrap);
                     platformGrid.appendChild(offsetWrap);
+                    platformGrid.appendChild(fitWrap);
+                    platformGrid.appendChild(backgroundColorWrap);
 
                     const showNameWrap = document.createElement('label');
                     showNameWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-3';
@@ -2639,6 +2698,8 @@
                         heightInput.disabled = !enabled;
                         widthInput.disabled = !enabled;
                         offsetInput.disabled = !enabled;
+                        fitInput.disabled = !enabled;
+                        backgroundColorInput.disabled = !enabled;
                         showNameInput.disabled = !enabled;
                         showPriceInput.disabled = !enabled;
                         priceTextInput.disabled = !enabled;
@@ -2654,6 +2715,7 @@
                         priceBadgeEnabledInput.disabled = !enabled;
                         priceBadgeColorInput.disabled = !enabled || !priceBadgeEnabledInput.checked;
                         previewFrame.style.opacity = enabled ? '1' : '0.45';
+                        previewFrame.style.background = String(backgroundColorInput.value || '#000000');
                         updatePreview();
                     };
 
@@ -2674,6 +2736,7 @@
                     priceColorInput.addEventListener('input', updatePreview);
                     priceBadgeEnabledInput.addEventListener('change', updatePreview);
                     priceBadgeColorInput.addEventListener('input', updatePreview);
+                    backgroundColorInput.addEventListener('input', updatePreview);
                     updatePreview();
 
                     return {
@@ -2682,6 +2745,8 @@
                         heightInput,
                         widthInput,
                         offsetInput,
+                        fitInput,
+                        backgroundColorInput,
                         showNameInput,
                         showPriceInput,
                         priceTextInput,
@@ -2713,6 +2778,8 @@
                     imageHeight: state.windowsImageHeight,
                     imageWidth: state.windowsImageWidth,
                     verticalOffset: state.windowsVerticalOffset,
+                    imageFit: state.windowsImageFit,
+                    imageBackgroundColor: state.windowsImageBackgroundColor,
                     showName: state.windowsShowName,
                     showPrice: state.windowsShowPrice,
                     priceText: state.windowsPriceText,
@@ -2736,6 +2803,8 @@
                     imageHeight: state.androidImageHeight,
                     imageWidth: state.androidImageWidth,
                     verticalOffset: state.androidVerticalOffset,
+                    imageFit: state.androidImageFit,
+                    imageBackgroundColor: state.androidImageBackgroundColor,
                     showName: state.androidShowName,
                     showPrice: state.androidShowPrice,
                     priceText: state.androidPriceText,
@@ -2764,6 +2833,8 @@
                         windowsImageHeight: Math.max(0, Number(windowsConfig.heightInput.value || 0) || 0),
                         windowsImageWidth: Math.max(0, Number(windowsConfig.widthInput.value || 0) || 0),
                         windowsVerticalOffset: Math.max(-300, Math.min(300, Number(windowsConfig.offsetInput.value || 0) || 0)),
+                        windowsImageFit: String(windowsConfig.fitInput.value || 'scale-down').toLowerCase(),
+                        windowsImageBackgroundColor: String(windowsConfig.backgroundColorInput.value || '#000000'),
                         windowsShowName: Boolean(windowsConfig.showNameInput.checked),
                         windowsShowPrice: Boolean(windowsConfig.showPriceInput.checked),
                         windowsPriceText: String(windowsConfig.priceTextInput.value || '').trim(),
@@ -2781,6 +2852,8 @@
                         androidImageHeight: Math.max(0, Number(androidConfig.heightInput.value || 0) || 0),
                         androidImageWidth: Math.max(0, Number(androidConfig.widthInput.value || 0) || 0),
                         androidVerticalOffset: Math.max(-300, Math.min(300, Number(androidConfig.offsetInput.value || 0) || 0)),
+                        androidImageFit: String(androidConfig.fitInput.value || 'scale-down').toLowerCase(),
+                        androidImageBackgroundColor: String(androidConfig.backgroundColorInput.value || '#000000'),
                         androidShowName: Boolean(androidConfig.showNameInput.checked),
                         androidShowPrice: Boolean(androidConfig.showPriceInput.checked),
                         androidPriceText: String(androidConfig.priceTextInput.value || '').trim(),
@@ -2843,6 +2916,8 @@
                 windowsConfig.heightInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.widthInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.offsetInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.fitInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.backgroundColorInput.addEventListener('input', syncStateFromInputs);
                 windowsConfig.showNameInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.showPriceInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.priceTextInput.addEventListener('input', syncStateFromInputs);
@@ -2866,6 +2941,8 @@
                 androidConfig.heightInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.widthInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.offsetInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.fitInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.backgroundColorInput.addEventListener('input', syncStateFromInputs);
                 androidConfig.showNameInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.showPriceInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.priceTextInput.addEventListener('input', syncStateFromInputs);
@@ -2941,7 +3018,7 @@
             });
 
             rightSidebarImageScheduleState = preservedState;
-            rightSidebarImageScheduleHint.textContent = `${urls.length} imagem(ns) com configuracao separada para Windows e Android.`;
+            rightSidebarImageScheduleHint.textContent = `${urls.length} imagem(ns) com configuracao separada para Windows e Android (tamanho, ajuste e cor de fundo).`;
         }
 
         function normalizeSlideUrlForCompare(url) {
@@ -3095,6 +3172,14 @@
         updateRightSidebarMediaConfigState();
         updateRightSidebarMediaTypeAvailability();
         rightSidebarImageScheduleState = getNormalizedScheduleStateFromInitialData();
+
+        if (rightSidebarImageUrls && String(rightSidebarImageUrls.value || '').trim() === '') {
+            const scheduleUrls = getInitialScheduleUrls();
+            if (scheduleUrls.length > 0) {
+                rightSidebarImageUrls.value = scheduleUrls.join('\n');
+            }
+        }
+
         renderRightSidebarImageScheduleEditor();
 
         function getOldSuggestedSlideSources() {
@@ -3354,6 +3439,16 @@
                     suggestedSlideSelectionSubmittedInput.value = '1';
                 }
                 syncSelectedSlideUrlsToTextarea();
+
+                if (target.checked) {
+                    const selectedUrl = normalizeSlideUrlForCompare(target.getAttribute('data-source-url'));
+                    openCompanyGalleryTargetBlock('rightSidebarImageConfig');
+                    if (selectedUrl) {
+                        openRightSidebarImageScheduleUrl = selectedUrl;
+                        pendingScheduleRowHighlightUrl = selectedUrl;
+                    }
+                    renderRightSidebarImageScheduleEditor();
+                }
             }
         });
 
@@ -3410,6 +3505,7 @@
                 block.style.display = 'none';
             });
             companyGallerySubmenuButtons.forEach((button) => setCompanyGallerySubmenuButtonState(button, false));
+            updateRightSidebarMediaConfigState();
         }
 
             function openCompanyGalleryTargetBlock(targetId) {

@@ -154,7 +154,15 @@ export function createDedicatedFullScreenSlideModule(deps) {
                 return;
             }
 
-            deps.applyRightSidebarMediaMode(token, deps.getSidebarProductItems(), { ignoreDedicatedLoadSkip: true });
+            const sidebarItems = Array.isArray(deps.getSidebarProductItems()) ? deps.getSidebarProductItems() : [];
+            const latestItems = typeof deps.getLatestProductsForPagination === 'function'
+                ? deps.getLatestProductsForPagination()
+                : [];
+            const resumeItems = sidebarItems.length > 0
+                ? sidebarItems
+                : (Array.isArray(latestItems) ? latestItems : []);
+
+            deps.applyRightSidebarMediaMode(token, resumeItems, { ignoreDedicatedLoadSkip: true });
         };
 
         state.fullScreenSlideReturnTimer = setTimeout(tryRestart, delaySeconds * 1000);
@@ -173,7 +181,15 @@ export function createDedicatedFullScreenSlideModule(deps) {
 
         const token = deps.getReliableDeviceToken();
         if (token) {
-            deps.applyRightSidebarMediaMode(token, deps.getSidebarProductItems());
+            const sidebarItems = Array.isArray(deps.getSidebarProductItems()) ? deps.getSidebarProductItems() : [];
+            const latestItems = typeof deps.getLatestProductsForPagination === 'function'
+                ? deps.getLatestProductsForPagination()
+                : [];
+            const resumeItems = sidebarItems.length > 0
+                ? sidebarItems
+                : (Array.isArray(latestItems) ? latestItems : []);
+
+            deps.applyRightSidebarMediaMode(token, resumeItems);
         }
 
         deps.resumeExternalTimersForDedicatedFullScreen();
@@ -196,6 +212,10 @@ export function createDedicatedFullScreenSlideModule(deps) {
 
     api.startDedicatedFullScreenSlideMode = function startDedicatedFullScreenSlideMode() {
         if (!deps.tvImageSlide) {
+            return false;
+        }
+
+        if (deps.isVideoFullscreenModeActive()) {
             return false;
         }
 

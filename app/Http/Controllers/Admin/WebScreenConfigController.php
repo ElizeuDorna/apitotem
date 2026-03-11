@@ -28,6 +28,18 @@ class WebScreenConfigController extends Controller
 
         $config = $config->fresh();
         $config->rightSidebarImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
+        if ($config->rightSidebarImageUrls === '') {
+            $scheduleUrls = collect((array) ($config->rightSidebarImageSchedules ?? []))
+                ->map(fn (array $item) => $this->normalizeSingleImageUrl((string) ($item['url'] ?? '')))
+                ->filter(fn (string $url) => $url !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            if (!empty($scheduleUrls)) {
+                $config->rightSidebarImageUrls = implode("\n", $scheduleUrls);
+            }
+        }
         $config->fullScreenSlideImageUrls = $this->normalizeImageUrlsList((string) ($config->fullScreenSlideImageUrls ?? ''));
 
         return view('admin.web-screen-config', [
@@ -66,10 +78,6 @@ class WebScreenConfigController extends Controller
             ->map(fn ($value) => (string) $value === '1')
             ;
 
-        $rawFullscreenFlags = collect($request->input('video_fullscreen_flags', []))
-            ->map(fn ($value) => (string) $value === '1')
-            ;
-
         $rawDurationSeconds = collect($request->input('video_duration_seconds', []))
             ->map(function ($value) {
                 if ($value === null || $value === '') {
@@ -91,7 +99,7 @@ class WebScreenConfigController extends Controller
             ;
 
         $playlist = collect(range(0, 9))
-            ->map(function (int $index) use ($rawVideoUrls, $rawMutedFlags, $rawActiveFlags, $rawFullscreenFlags, $rawDurationSeconds, $rawVideoHeights) {
+            ->map(function (int $index) use ($rawVideoUrls, $rawMutedFlags, $rawActiveFlags, $rawDurationSeconds, $rawVideoHeights) {
                 $url = trim((string) ($rawVideoUrls->get($index) ?? ''));
 
                 $isActive = (bool) ($rawActiveFlags->get($index) ?? false);
@@ -100,7 +108,6 @@ class WebScreenConfigController extends Controller
                     'url' => $url,
                     'muted' => (bool) ($rawMutedFlags->get($index) ?? false),
                     'active' => $url !== '' ? $isActive : false,
-                    'fullscreen' => $url !== '' ? (bool) ($rawFullscreenFlags->get($index) ?? false) : false,
                     'durationSeconds' => $url !== '' ? (int) ($rawDurationSeconds->get($index) ?? 0) : 0,
                     'heightPx' => $url !== '' ? (int) ($rawVideoHeights->get($index) ?? 0) : 0,
                 ];
@@ -133,7 +140,6 @@ class WebScreenConfigController extends Controller
             'videoPlaylist.*.url' => ['nullable', 'url', 'max:1000'],
             'videoPlaylist.*.muted' => ['required', 'boolean'],
             'videoPlaylist.*.active' => ['required', 'boolean'],
-            'videoPlaylist.*.fullscreen' => ['required', 'boolean'],
             'videoPlaylist.*.durationSeconds' => ['required', 'integer', 'min:0', 'max:86400'],
             'videoPlaylist.*.heightPx' => ['required', 'integer', 'min:0', 'max:2000'],
             'video_urls' => ['nullable', 'array', 'max:10'],
@@ -190,9 +196,13 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageSchedules.*.windowsImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageSchedules.*.windowsImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageSchedules.*.windowsVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
+            'rightSidebarImageSchedules.*.windowsImageFit' => ['nullable', 'in:contain,cover,scale-down'],
+            'rightSidebarImageSchedules.*.windowsImageBackgroundColor' => ['nullable', 'string', 'max:9'],
             'rightSidebarImageSchedules.*.androidImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageSchedules.*.androidImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageSchedules.*.androidVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
+            'rightSidebarImageSchedules.*.androidImageFit' => ['nullable', 'in:contain,cover,scale-down'],
+            'rightSidebarImageSchedules.*.androidImageBackgroundColor' => ['nullable', 'string', 'max:9'],
             'rightSidebarImageSchedules.*.windowsShowName' => ['nullable', 'boolean'],
             'rightSidebarImageSchedules.*.windowsShowPrice' => ['nullable', 'boolean'],
             'rightSidebarImageSchedules.*.windowsPriceText' => ['nullable', 'string', 'max:60'],
@@ -409,10 +419,14 @@ class WebScreenConfigController extends Controller
                 $windowsImageHeight = max(0, min(1000, (int) ($item['windowsImageHeight'] ?? $legacyImageHeight)));
                 $windowsImageWidth = max(0, min(1000, (int) ($item['windowsImageWidth'] ?? $legacyImageWidth)));
                 $windowsVerticalOffset = max(-300, min(300, (int) ($item['windowsVerticalOffset'] ?? $legacyVerticalOffset)));
+                $windowsImageFit = (string) ($item['windowsImageFit'] ?? 'scale-down');
+                $windowsImageBackgroundColor = $this->normalizeHexColor((string) ($item['windowsImageBackgroundColor'] ?? '#000000'), '#000000');
 
                 $androidImageHeight = max(0, min(1000, (int) ($item['androidImageHeight'] ?? $legacyImageHeight)));
                 $androidImageWidth = max(0, min(1000, (int) ($item['androidImageWidth'] ?? $legacyImageWidth)));
                 $androidVerticalOffset = max(-300, min(300, (int) ($item['androidVerticalOffset'] ?? $legacyVerticalOffset)));
+                $androidImageFit = (string) ($item['androidImageFit'] ?? $windowsImageFit);
+                $androidImageBackgroundColor = $this->normalizeHexColor((string) ($item['androidImageBackgroundColor'] ?? $windowsImageBackgroundColor), $windowsImageBackgroundColor);
 
                 $windowsShowName = isset($item['windowsShowName']) ? (bool) $item['windowsShowName'] : false;
                 $windowsShowPrice = isset($item['windowsShowPrice']) ? (bool) $item['windowsShowPrice'] : false;
@@ -457,9 +471,13 @@ class WebScreenConfigController extends Controller
                     'windowsImageHeight' => $windowsImageHeight,
                     'windowsImageWidth' => $windowsImageWidth,
                     'windowsVerticalOffset' => $windowsVerticalOffset,
+                    'windowsImageFit' => in_array($windowsImageFit, ['contain', 'cover', 'scale-down'], true) ? $windowsImageFit : 'scale-down',
+                    'windowsImageBackgroundColor' => $windowsImageBackgroundColor,
                     'androidImageHeight' => $androidImageHeight,
                     'androidImageWidth' => $androidImageWidth,
                     'androidVerticalOffset' => $androidVerticalOffset,
+                    'androidImageFit' => in_array($androidImageFit, ['contain', 'cover', 'scale-down'], true) ? $androidImageFit : 'scale-down',
+                    'androidImageBackgroundColor' => $androidImageBackgroundColor,
                     'windowsShowName' => $windowsShowName,
                     'windowsShowPrice' => $windowsShowPrice,
                     'windowsPriceText' => $windowsPriceText,
@@ -686,9 +704,19 @@ class WebScreenConfigController extends Controller
 
 
         if ($shouldProcessRightSidebarMedia) {
+            $scheduleSubmittedUrls = collect((array) ($validated['rightSidebarImageSchedules'] ?? []))
+                ->map(fn (array $item) => $this->normalizeSingleImageUrl((string) ($item['url'] ?? '')))
+                ->filter(fn (string $url) => $url !== '')
+                ->values()
+                ->all();
+
             $manualSlideUrls = collect(preg_split('/\r?\n/', (string) ($validated['rightSidebarImageUrls'] ?? '')) ?: [])
                 ->map(fn (string $line) => trim($line))
                 ->filter(fn (string $line) => $line !== '')
+                ->map(fn (string $line) => $this->normalizeSingleImageUrl($line))
+                ->filter(fn (string $line) => $line !== '')
+                ->merge($scheduleSubmittedUrls)
+                ->unique()
                 ->values()
                 ->all();
 
@@ -713,6 +741,9 @@ class WebScreenConfigController extends Controller
             if ($request->hasFile('companyGalleryUpload')) {
                 $companyUploadPath = $this->storeCompanyGalleryImage($request, $validated['rightSidebarGlobalGalleryCode'] ?: 'manual');
                 $companyUploadUrl = $this->publicStorageUrl($companyUploadPath);
+                if ($companyUploadUrl !== '' && !in_array($companyUploadUrl, $manualSlideUrls, true)) {
+                    $manualSlideUrls[] = $companyUploadUrl;
+                }
             }
 
             $companyDirectUrl = $this->normalizeSingleImageUrl((string) ($validated['companyGalleryDirectUrl'] ?? ''));
@@ -757,6 +788,10 @@ class WebScreenConfigController extends Controller
                 $finalSlideUrls = array_values($availableGalleryImages);
             }
 
+            // Keep list and editor in sync: any URL present in schedule payload must
+            // also remain in the slide URLs list shown in the UI.
+            $finalSlideUrls = array_values(array_unique(array_merge($finalSlideUrls, $scheduleSubmittedUrls)));
+
             $validated['rightSidebarImageUrls'] = implode("\n", $finalSlideUrls);
 
             $validated['rightSidebarImageUrls'] = $this->normalizeImageUrlsList((string) ($validated['rightSidebarImageUrls'] ?? ''));
@@ -770,6 +805,17 @@ class WebScreenConfigController extends Controller
                 ->filter(fn (array $item) => in_array((string) ($item['url'] ?? ''), $finalSlideUrlSet, true))
                 ->values()
                 ->all();
+
+            // When the slide section is saved with images, keep media mode aligned so
+            // the right sidebar actually renders the configured slide.
+            if (
+                $saveSection === 'companyGalleryConfigSection'
+                && ! empty($finalSlideUrlSet)
+                && ($validated['rightSidebarProductCarouselEnabled'] ?? false) === false
+                && (string) ($validated['rightSidebarMediaType'] ?? 'video') === 'video'
+            ) {
+                $validated['rightSidebarMediaType'] = 'image';
+            }
 
         }
 
@@ -919,14 +965,7 @@ class WebScreenConfigController extends Controller
 
         if ($saveSection !== '') {
             $redirect->with('success', 'Menu salvo com sucesso.');
-            $openConfigSection = $saveSection === 'fullScreenSlideConfig'
-                ? 'companyGalleryConfigSection'
-                : $saveSection;
-            $redirect->with('openConfigSection', $openConfigSection);
-
-            if ($saveSection === 'fullScreenSlideConfig') {
-                $redirect->with('openCompanyGalleryTarget', 'fullScreenSlideConfig');
-            }
+            $redirect->with('openConfigSection', $saveSection);
 
             if ($saveSection === 'companyGalleryConfigSection') {
                 $openCompanyGalleryTarget = trim((string) $request->input('openCompanyGalleryTarget', ''));
@@ -1132,7 +1171,6 @@ class WebScreenConfigController extends Controller
             $merge['video_urls'] = collect(range(0, 9))->map(fn (int $index) => (string) ($playlist->get($index)['url'] ?? ''))->all();
             $merge['video_muted_flags'] = collect(range(0, 9))->map(fn (int $index) => (int) ((bool) ($playlist->get($index)['muted'] ?? false)))->all();
             $merge['video_active_flags'] = collect(range(0, 9))->map(fn (int $index) => (int) ((bool) ($playlist->get($index)['active'] ?? false)))->all();
-            $merge['video_fullscreen_flags'] = collect(range(0, 9))->map(fn (int $index) => (int) ((bool) ($playlist->get($index)['fullscreen'] ?? false)))->all();
             $merge['video_duration_seconds'] = collect(range(0, 9))->map(fn (int $index) => (int) ($playlist->get($index)['durationSeconds'] ?? 0))->all();
             $merge['video_heights'] = collect(range(0, 9))->map(fn (int $index) => (int) ($playlist->get($index)['heightPx'] ?? 0))->all();
         }
