@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # System deps + PHP extensions needed by Laravel/Filament.
 RUN apk add --no-cache \
