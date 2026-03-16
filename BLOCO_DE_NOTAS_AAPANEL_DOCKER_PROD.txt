@@ -1,350 +1,305 @@
-BLOCO DE NOTAS - DEPLOY NO AAPANEL COM DOCKER (LARAVEL)
-Data: 2026-03-12
-Servidor: 77.237.240.202
-Dominio: elktecnologia.com.br
-Cloudflare: DNS ja apontando para 77.237.240.202
+BLOCO DE NOTAS - DEPLOY PADRAO (AAPANEL + DOCKER + LARAVEL + MYSQL + REDIS + PHPMYADMIN)
+Data: 2026-03-13
 
 ================================================================
-OBJETIVO
+CENARIO
 ================================================================
-Subir no servidor o MESMO ambiente Docker usado no projeto local,
-com docker-compose.prod.yml, Laravel, MySQL, Redis, queue e scheduler.
+- Servidor com aaPanel
+- Projeto Laravel em /www/wwwroot/api
+- Docker Compose de producao: docker-compose.prod.yml
+- Dominio: elktecnologia.com.br
+- Porta interna do app (nginx do container): 8080
+- phpMyAdmin na porta 8081
 
 ================================================================
 0) ACESSO AO SERVIDOR
 ================================================================
-No seu computador local:
-
-ssh root@77.237.240.202
-
-Se usar outro usuario:
-
-ssh seu_usuario@77.237.240.202
-sudo -i
+ssh root@SEU_IP
+cd /www/wwwroot/api
 
 ================================================================
-1) PRE-CHECK (DOCKER E DOCKER COMPOSE)
+1) PRE-CHECK RAPIDO
 ================================================================
-No servidor:
-
-cd /www/wwwroot
-
 docker --version
 docker compose version
+git --version
 
-Se aparecer versao para os dois comandos, continue.
-Se o comando docker compose nao existir, tente:
+================================================================
+2) BAIXAR CODIGO
+================================================================
+Se repositorio ja existe:
+git fetch origin
+git pull origin main
 
-docker-compose --version
+Se for primeira vez:
+cd /www/wwwroot
+git clone URL_DO_REPO api
+cd /www/wwwroot/api
 
-Observacao: no seu caso voce informou que o Docker ja esta no aaPanel.
+================================================================
+3) CONFERIR ARQUIVOS CRITICOS
+================================================================
+3.1) PHP da imagem de producao deve ser 8.4:
+head -n 1 docker/prod/php/Dockerfile
+Esperado: FROM php:8.4-fpm-alpine
 
-1.1) Se Docker NAO estiver instalado, rode:
+3.2) Compose de producao existe:
+ls -la docker-compose.prod.yml
 
+================================================================
+4) CRIAR/ATUALIZAR .ENV DE PRODUCAO
+================================================================
+cp -n .env .env.backup.$(date +%Y%m%d%H%M%S) 2>/dev/null || true
+cp -n .env.example .env 2>/dev/null || true
+
+Editar .env e deixar no minimo assim:
+
+APP_NAME=Laravel
+APP_ENV=production
+APP_KEY=base64:COLE_AQUI_A_KEY
+APP_DEBUG=false
+APP_URL=https://elktecnologia.com.br
+APP_PORT=8080
+
+TRUSTED_PROXIES=*
+
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+
+SESSION_DRIVER=redis
+SESSION_DOMAIN=.elktecnologia.com.br
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE=lax
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=redis
+REDIS_PASSWORD=
+REDIS_PORT=6379
+
+DEFAULT_ADMIN_EMAIL=seu_email@dominio.com
+DEFAULT_ADMIN_DOCUMENT=12345678901
+DEFAULT_ADMIN_PASSWORD=SENHA_FORTE
+
+L5_SWAGGER_TITLE="API Totem"
+L5_SWAGGER_CONST_HOST=https://elktecnologia.com.br
+
+Importante:
+- Nao repetir SESSION_DRIVER duas vezes.
+- Nao usar https:// em SESSION_DOMAIN.
+- Nao deixar espaco antes das variaveis DB_.
+
+================================================================
+5) SUBIR/RECRIAR STACK DE PRODUCAO
+================================================================
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml build --no-cache app queue scheduler
+docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx queue scheduler mysql redis phpmyadmin
+
+Conferir:
+docker compose -f docker-compose.prod.yml ps
+
+================================================================
+6) VALIDAR VERSAO DE PHP NOS 3 SERVICOS
+================================================================
+docker compose -f docker-compose.prod.yml exec app php -v
+docker compose -f docker-compose.prod.yml exec queue php -v
+docker compose -f docker-compose.prod.yml exec scheduler php -v
+
+Esperado: PHP 8.4.x nos tres.
+
+================================================================
+7) PREPARAR LARAVEL
+================================================================
+docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear
+docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+
+Opcional seed:
+docker compose -f docker-compose.prod.yml exec app php artisan db:seed --force
+
+================================================================
+8) AAPANEL - REVERSE PROXY (OBRIGATORIO)
+================================================================
+No site do dominio no aaPanel, configurar reverse proxy para:
+http://127.0.0.1:8080
+
+Headers recomendados no bloco de proxy:
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Port $server_port;
+
+Nao duplicar bloco location / no mesmo vhost.
+
+================================================================
+9) SSL E DOMINIO
+================================================================
+- Ativar SSL no aaPanel para elktecnologia.com.br (e www se usar).
+- Definir dominio canonico (com ou sem www).
+- Se usar ambos, preferir redirect para um so.
+
+================================================================
+10) TESTES POS-DEPLOY
+================================================================
+10.1) Teste app local no servidor:
+curl -I http://127.0.0.1:8080
+
+10.2) Teste publico:
+curl -I https://elktecnologia.com.br/login
+
+10.3) Teste de login:
+- Abrir aba anonima
+- Acessar somente https://elktecnologia.com.br/login
+- Logar
+
+================================================================
+11) CHECKLIST DE ERROS COMUNS
+================================================================
+Erro: 419 Page Expired
+- Conferir SESSION_DOMAIN=.elktecnologia.com.br
+- Conferir TRUSTED_PROXIES=*
+- Conferir reverse proxy com X-Forwarded-Proto
+- Rodar: docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear
+- Recriar app/queue/scheduler quando alterar .env:
+  docker compose -f docker-compose.prod.yml up -d --force-recreate app queue scheduler
+
+Erro: Composer detected PHP >= 8.4.0, running 8.3.x
+- Rebuild sem cache de app/queue/scheduler
+- Validar php -v nos tres servicos
+
+Erro: no such service: phpmyadmin
+- Atualizar codigo com compose mais recente
+- Subir com: docker compose -f docker-compose.prod.yml up -d phpmyadmin
+
+Erro: Table users does not exist
+- Rodar migrations:
+  docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+
+Erro: The environment file is invalid
+- Corrigir linhas com espaco no valor sem aspas
+- Exemplo correto: L5_SWAGGER_TITLE="API Totem"
+
+================================================================
+12) COMANDOS DE SUPORTE
+================================================================
+Status:
+docker compose -f docker-compose.prod.yml ps
+
+Logs:
+docker compose -f docker-compose.prod.yml logs --tail=100 app
+docker compose -f docker-compose.prod.yml logs --tail=100 nginx
+docker compose -f docker-compose.prod.yml logs --tail=100 queue
+docker compose -f docker-compose.prod.yml logs --tail=100 scheduler
+
+Env dentro do app:
+docker compose -f docker-compose.prod.yml exec app sh -lc "printenv | grep -E 'APP_URL|SESSION_|TRUSTED_PROXIES'"
+
+================================================================
+13) DEPLOY FUTURO (ROTINA)
+================================================================
+cd /www/wwwroot/api
+git pull origin main
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear
+
+================================================================
+14) ACESSOS FINAIS
+================================================================
+App: https://elktecnologia.com.br
+Login: https://elktecnologia.com.br/login
+Swagger: https://elktecnologia.com.br/api/documentation
+phpMyAdmin: http://SEU_IP:8081
+
+================================================================
+15) MANUAL ENXUTO (COPIAR E EXECUTAR)
+================================================================
+
+PASSO 1 - PREPARAR SERVIDOR
+apt update -y
+apt install -y git curl
 curl -fsSL https://get.docker.com | sh
 systemctl enable docker
 systemctl start docker
 
-1.2) Testar instalacao:
-
-docker --version
-docker compose version
-
-1.3) Se "docker compose" ainda nao existir, instalar plugin Compose:
-
-apt-get update && apt-get install -y docker-compose-plugin || yum install -y docker-compose-plugin
-
-1.4) Validar novamente:
-
-docker compose version
-
-================================================================
-2) COLOCAR O CODIGO NO SERVIDOR
-================================================================
-Opcao A (se a pasta ja existe no servidor):
-
-cd /www/wwwroot/api
-git pull
-
-Opcao B (se vai clonar do zero):
-
+PASSO 2 - BAIXAR PROJETO
 cd /www/wwwroot
-git clone URL_DO_SEU_REPOSITORIO api
+git clone URL_DO_REPOSITORIO api
 cd /www/wwwroot/api
 
-================================================================
-3) CRIAR/ATUALIZAR .ENV DE PRODUCAO
-================================================================
-3.1) Se ainda nao existir .env:
-
-cd /www/wwwroot/api
+PASSO 3 - CONFIGURAR .ENV
 cp .env.example .env
-
-3.2) Criar .env automaticamente (RECOMENDADO):
-
-cd /www/wwwroot/api
-
-cp -n .env .env.backup.$(date +%Y%m%d%H%M%S) 2>/dev/null || true
-
-cat > .env <<'EOF'
-APP_NAME=Laravel
-APP_ENV=production
-APP_KEY=
-APP_DEBUG=false
-APP_TIMEZONE=UTC
-APP_URL=https://elktecnologia.com.br
-APP_PORT=8080
-
-APP_LOCALE=en
-APP_FALLBACK_LOCALE=en
-APP_FAKER_LOCALE=en_US
-
-APP_MAINTENANCE_DRIVER=file
-APP_MAINTENANCE_STORE=database
-
-BCRYPT_ROUNDS=12
-
-LOG_CHANNEL=stack
-LOG_STACK=single
-LOG_DEPRECATIONS_CHANNEL=null
-LOG_LEVEL=info
-
-DB_CONNECTION=mysql
-DB_HOST=mysql
-DB_PORT=3306
-DB_DATABASE=api_db
-DB_USERNAME=api_user
-DB_PASSWORD=TROCAR_SENHA_FORTE
-
-SESSION_DRIVER=redis
-SESSION_LIFETIME=120
-SESSION_ENCRYPT=false
-SESSION_PATH=/
-SESSION_DOMAIN=null
-
-BROADCAST_CONNECTION=log
-FILESYSTEM_DISK=local
-QUEUE_CONNECTION=redis
-
-CACHE_STORE=redis
-CACHE_PREFIX=
-
-MEMCACHED_HOST=127.0.0.1
-
-REDIS_CLIENT=phpredis
-REDIS_HOST=redis
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-
-MAIL_MAILER=log
-MAIL_HOST=127.0.0.1
-MAIL_PORT=2525
-MAIL_USERNAME=null
-MAIL_PASSWORD=null
-MAIL_ENCRYPTION=null
-MAIL_FROM_ADDRESS="hello@example.com"
-MAIL_FROM_NAME="${APP_NAME}"
-
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_DEFAULT_REGION=us-east-1
-AWS_BUCKET=
-AWS_USE_PATH_STYLE_ENDPOINT=false
-
-VITE_APP_NAME="${APP_NAME}"
-
-DEFAULT_ADMIN_EMAIL=seu_email_admin@dominio.com
-DEFAULT_ADMIN_DOCUMENT=12345678901
-DEFAULT_ADMIN_PASSWORD=TROCAR_SENHA_ADMIN_FORTE
-
-L5_SWAGGER_TITLE="API Totem"
-L5_SWAGGER_CONST_HOST="https://elktecnologia.com.br"
-EOF
-
-3.3) Gerar APP_KEY automaticamente:
-
-docker compose -f docker-compose.prod.yml run --rm app php artisan key:generate --force
-
-3.4) Se quiser editar manualmente, use:
-
 nano .env
 
-Use base minima abaixo (ajuste senhas e valores):
-
-APP_NAME=Laravel
+Bloco minimo de producao no .env:
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://elktecnologia.com.br
+APP_URL=https://SEU_DOMINIO
 APP_PORT=8080
+TRUSTED_PROXIES=*
 
 DB_CONNECTION=mysql
 DB_HOST=mysql
 DB_PORT=3306
-DB_DATABASE=api_db
-DB_USERNAME=api_user
-DB_PASSWORD=TROCAR_SENHA_FORTE
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
 
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
+
 SESSION_DRIVER=redis
+SESSION_DOMAIN=.SEU_DOMINIO
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE=lax
 
 REDIS_CLIENT=phpredis
 REDIS_HOST=redis
-REDIS_PASSWORD=null
+REDIS_PASSWORD=
 REDIS_PORT=6379
 
-DEFAULT_ADMIN_EMAIL=seu_email_admin@dominio.com
-DEFAULT_ADMIN_DOCUMENT=12345678901
-DEFAULT_ADMIN_PASSWORD=TROCAR_SENHA_ADMIN_FORTE
-
 L5_SWAGGER_TITLE="API Totem"
-L5_SWAGGER_CONST_HOST="https://elktecnologia.com.br"
+L5_SWAGGER_CONST_HOST=https://SEU_DOMINIO
 
-Importante:
-- APP_PORT=8080 porque o container nginx publica 8080 no host.
-- DB_HOST=mysql e REDIS_HOST=redis devem ficar assim no Docker.
-
-================================================================
-4) SUBIR STACK DOCKER DE PRODUCAO
-================================================================
-cd /www/wwwroot/api
-
+PASSO 4 - SUBIR CONTAINERS
 docker compose -f docker-compose.prod.yml down
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml build --no-cache app queue scheduler
+docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx queue scheduler mysql redis phpmyadmin
 
-docker compose -f docker-compose.prod.yml ps
-
-================================================================
-5) PREPARAR LARAVEL DENTRO DO CONTAINER APP
-================================================================
-cd /www/wwwroot/api
-
-docker compose -f docker-compose.prod.yml exec app composer install --no-dev --optimize-autoloader --no-interaction
-
+PASSO 5 - PREPARAR LARAVEL
 docker compose -f docker-compose.prod.yml exec app php artisan key:generate --force
 docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class=UserSeeder --force
+docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear
 
-docker compose -f docker-compose.prod.yml exec app php artisan config:cache
-docker compose -f docker-compose.prod.yml exec app php artisan route:cache
-docker compose -f docker-compose.prod.yml exec app php artisan view:cache
-
-docker compose -f docker-compose.prod.yml exec app php artisan l5-swagger:generate
-
-================================================================
-6) BUILD DO FRONTEND (VITE)
-================================================================
-cd /www/wwwroot/api
-
-docker compose -f docker-compose.prod.yml exec app npm ci
-docker compose -f docker-compose.prod.yml exec app npm run build
-
-================================================================
-7) CONFIGURAR SITE NO AAPANEL (REVERSE PROXY)
-================================================================
-No painel aaPanel:
-
-1. Websites -> Add Site
-   Domain: elktecnologia.com.br
-   (adicione tambem www.elktecnologia.com.br se quiser)
-
-2. No site criado, abra Reverse Proxy
-   Target URL: http://127.0.0.1:8080
-   Enable reverse proxy
-
-3. Salvar configuracao
-
-Observacao:
-- Seu Nginx do Docker escuta na porta 8080 do host.
-- O aaPanel vai receber 80/443 e repassar para 127.0.0.1:8080.
-
-================================================================
-8) CLOUDFLARE (PAINEL WEB)
-================================================================
-No Cloudflare:
-
-1. DNS
-   Tipo A
-   Nome: @
-   Conteudo: 77.237.240.202
-   Proxy: Proxied (nuvem laranja) ou DNS only (teste inicial)
-
-2. SSL/TLS
-   Modo recomendado: Full (strict) quando tiver certificado valido no aaPanel.
-
-3. Se usar tambem www:
-   Criar CNAME www -> elktecnologia.com.br
-
-================================================================
-9) SSL NO AAPANEL
-================================================================
-No aaPanel, dentro do site:
-
-1. SSL -> Let\'s Encrypt (ou Cloudflare Origin Certificate)
-2. Emitir certificado para:
-   - elktecnologia.com.br
-   - www.elktecnologia.com.br (se usar)
-3. Ativar HTTPS
-4. Ativar redirecionamento HTTP -> HTTPS
-
-Se o Let\'s Encrypt falhar com proxy ativo no Cloudflare:
-- Temporariamente deixe DNS only (nuvem cinza), emita certificado, depois volte para Proxied.
-
-================================================================
-10) VALIDACAO RAPIDA
-================================================================
-No servidor:
-
-cd /www/wwwroot/api
-
+PASSO 6 - VALIDAR
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs --tail=100 app
-docker compose -f docker-compose.prod.yml logs --tail=100 nginx
-docker compose -f docker-compose.prod.yml logs --tail=100 mysql
-docker compose -f docker-compose.prod.yml logs --tail=100 redis
-docker compose -f docker-compose.prod.yml logs --tail=100 queue
-docker compose -f docker-compose.prod.yml logs --tail=100 scheduler
-
-Teste HTTP local no servidor:
-
+docker compose -f docker-compose.prod.yml exec app php -v
+docker compose -f docker-compose.prod.yml exec queue php -v
+docker compose -f docker-compose.prod.yml exec scheduler php -v
 curl -I http://127.0.0.1:8080
+curl -I http://127.0.0.1:8081
 
-Teste publico:
+PASSO 7 - AAPANEL
+No site do dominio, configurar reverse proxy para http://127.0.0.1:8080
+Ativar SSL no dominio
 
-curl -I https://elktecnologia.com.br
+PASSO 8 - TESTAR NO NAVEGADOR
+App: https://SEU_DOMINIO
+Login: https://SEU_DOMINIO/login
+Swagger: https://SEU_DOMINIO/api/documentation
+phpMyAdmin: http://SEU_IP:8081
 
-================================================================
-11) COMANDOS DE MANUTENCAO (DEPLOY FUTURO)
-================================================================
+PASSO 9 - DEPLOY FUTURO (RAPIDO)
 cd /www/wwwroot/api
-git pull
-
+git pull origin main
 docker compose -f docker-compose.prod.yml up -d --build
-
 docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec app php artisan optimize
-
-docker compose -f docker-compose.prod.yml ps
-
-================================================================
-12) ROLLBACK RAPIDO (SE DER PROBLEMA)
-================================================================
-cd /www/wwwroot/api
-git log --oneline -n 5
-
-git checkout HASH_DO_COMMIT_ANTERIOR
-
-docker compose -f docker-compose.prod.yml up -d --build
-
-================================================================
-13) CHECKLIST FINAL
-================================================================
-[ ] Containers up (app, nginx, mysql, redis, queue, scheduler)
-[ ] Migration executada
-[ ] Seeder do usuario admin executado
-[ ] Frontend buildado
-[ ] Reverse proxy no aaPanel para 127.0.0.1:8080
-[ ] SSL ativo no dominio
-[ ] Cloudflare DNS ok
-[ ] API abrindo em https://elktecnologia.com.br
-[ ] Swagger abrindo em https://elktecnologia.com.br/api/documentation
+docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear

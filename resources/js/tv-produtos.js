@@ -3664,6 +3664,7 @@ function applyRightSidebarPanelVisibility() {
 function applyCompactRightSidebarLayout() {
     const compactViewport = isCompactViewport();
     const compactSidebarActive = isCompactSidebarActive();
+    const showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
     const isAndroid = isAndroidDevice();
     const sidebarLayout = getRightSidebarLayoutDimensions();
 
@@ -3672,8 +3673,13 @@ function applyCompactRightSidebarLayout() {
     }
 
     if (!compactViewport) {
-        tvMain.style.gridTemplateColumns = '';
-        tvMain.style.gridTemplateRows = '';
+        if (showRightSidebarPanel) {
+            tvMain.style.gridTemplateColumns = '';
+            tvMain.style.gridTemplateRows = '';
+        } else {
+            tvMain.style.gridTemplateColumns = 'minmax(0, 1fr)';
+            tvMain.style.gridTemplateRows = '1fr';
+        }
         tvVideoPanel.style.order = '';
         tvVideoPanel.style.padding = '';
         tvVideoPanel.style.gap = '';
@@ -3687,8 +3693,8 @@ function applyCompactRightSidebarLayout() {
         tvRightSidebarMediaWrap.style.maxHeight = '';
         tvRightSidebarMediaWrap.style.height = '';
         tvProductsPanel.style.padding = '';
-        tvProductsPanel.style.width = '';
-        tvProductsPanel.style.maxWidth = '';
+        tvProductsPanel.style.width = showRightSidebarPanel ? '' : '100%';
+        tvProductsPanel.style.maxWidth = showRightSidebarPanel ? '' : '100%';
 
         [tvVideo, tvEmbed, tvImageSlide].forEach((element) => {
             if (!element) {
@@ -3708,7 +3714,7 @@ function applyCompactRightSidebarLayout() {
         tvMain.style.gridTemplateRows = '1fr';
     } else {
         tvMain.style.gridTemplateColumns = '1fr';
-        tvMain.style.gridTemplateRows = 'auto auto';
+        tvMain.style.gridTemplateRows = showRightSidebarPanel ? 'auto auto' : '1fr';
     }
     tvVideoPanel.style.order = '';
     tvVideoPanel.style.padding = '10px';
@@ -3719,8 +3725,8 @@ function applyCompactRightSidebarLayout() {
     tvVideoPanel.style.marginTop = compactSidebarActive && androidVerticalOffset !== 0
         ? `${androidVerticalOffset}px`
         : '';
-    tvVideoPanel.style.width = compactSidebarActive ? `${sidebarLayout.compactWidthPx}px` : '100%';
-    tvVideoPanel.style.maxWidth = compactSidebarActive ? `${sidebarLayout.compactWidthPx}px` : '100%';
+    tvVideoPanel.style.width = compactSidebarActive ? `${sidebarLayout.compactWidthPx}px` : (showRightSidebarPanel ? '100%' : '');
+    tvVideoPanel.style.maxWidth = compactSidebarActive ? `${sidebarLayout.compactWidthPx}px` : (showRightSidebarPanel ? '100%' : '');
     tvVideoPanel.style.minHeight = compactSidebarActive ? `${sidebarLayout.compactMaxHeightPx}px` : '';
     tvVideoPanel.style.maxHeight = compactSidebarActive ? `${sidebarLayout.compactMaxHeightPx}px` : '';
     tvVideoPanel.style.height = compactSidebarActive ? `${sidebarLayout.compactMaxHeightPx}px` : '';
@@ -3746,8 +3752,8 @@ function applyCompactRightSidebarLayout() {
     }
 
     tvProductsPanel.style.padding = '';
-    tvProductsPanel.style.width = '';
-    tvProductsPanel.style.maxWidth = '';
+    tvProductsPanel.style.width = showRightSidebarPanel ? '' : '100%';
+    tvProductsPanel.style.maxWidth = showRightSidebarPanel ? '' : '100%';
 }
 
 function applyRightSidebarLogoVisibility() {
@@ -4043,7 +4049,7 @@ function renderProducts(produtos) {
         return row;
     };
 
-    const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
+    const isTwoListMode = isTwoListLayoutEnabled();
 
     const applyTwoListGridLayout = () => {
         const lineSpacing = getRowLineSpacing();
@@ -4218,6 +4224,9 @@ function splitTwoListItemsBySide(items) {
 
     return { leftItems, rightItems };
 }
+function isTwoListLayoutEnabled() {
+    return String(visualConfig.productListType || '1') === '2';
+}
 
 function renderProductsWithPagination(produtos) {
     clearPaginationTimer();
@@ -4225,7 +4234,7 @@ function renderProductsWithPagination(produtos) {
     const list = Array.isArray(produtos) ? produtos : [];
     latestProductsForPagination = list.slice();
     const rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
-    const isTwoListMode = String(visualConfig.productListType || '1') === '2' && !toBoolean(visualConfig.showRightSidebarPanel, true);
+    const isTwoListMode = isTwoListLayoutEnabled();
 
     if (isTwoListMode) {
         if (list.length === 0) {
@@ -4510,9 +4519,6 @@ async function loadVisualConfig(token) {
         visualConfig.productListRightGroupIds = Array.isArray(visualConfig.productListRightGroupIds)
             ? visualConfig.productListRightGroupIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
             : [];
-        if (visualConfig.showRightSidebarPanel && visualConfig.productListType === '2') {
-            visualConfig.productListType = '1';
-        }
         visualConfig.rowBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rowBorderWidth ?? 1)));
         visualConfig.listBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.listBorderWidth ?? 1)));
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
