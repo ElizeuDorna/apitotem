@@ -1,8 +1,11 @@
-@extends('home')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            
+        </h2>
+    </x-slot>
 
-@section('title', 'Admin - Editar Grupo')
-
-@section('content')
+    <div class="py-8">
 <div class="mb-4 px-4">
     <x-back-button />
 </div>
@@ -71,4 +74,5 @@ document.addEventListener('DOMContentLoaded', function () {
     updateEmpresaCnpj();
 });
 </script>
-@endsection
+    </div>
+</x-app-layout>

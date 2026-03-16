@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Template;
 use App\Models\TemplateItem;
+use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +22,7 @@ class TemplateController extends Controller
         $query = Template::query()->withCount('items')->orderByDesc('id');
 
         if (! $user->isDefaultAdmin()) {
-            $query->where('empresa_id', $user->empresa_id);
+            $query->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
 
         return view('admin.templates.index', [
@@ -54,7 +55,7 @@ class TemplateController extends Controller
 
         $empresaId = $user->isDefaultAdmin()
             ? ($validated['empresa_id'] ?? null)
-            : $user->empresa_id;
+            : EmpresaContext::requireEmpresaId($user);
 
         if (! $empresaId) {
             return redirect()->back()->withInput()->withErrors([
@@ -155,6 +156,6 @@ class TemplateController extends Controller
             return;
         }
 
-        abort_unless((int) $user->empresa_id === (int) $template->empresa_id, 403);
+        abort_unless((int) EmpresaContext::requireEmpresaId($user) === (int) $template->empresa_id, 403);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
+use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -1325,11 +1326,13 @@ class WebScreenConfigController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->empresa_id) {
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
+
+        if (! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
-        return (int) $user->empresa_id;
+        return (int) $empresaId;
     }
 
     private function buildYouTubeEmbedStatuses(array $playlist): array

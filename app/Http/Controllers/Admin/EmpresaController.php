@@ -17,10 +17,27 @@ class EmpresaController extends Controller
     {
         $user = Auth::user();
 
-        $query = Empresa::orderBy('id', 'desc');
+        $query = Empresa::query()
+            ->with('revenda:id,nome,fantasia')
+            ->orderBy('id', 'desc');
 
         if (! $user->isDefaultAdmin()) {
-            $query->where('cnpj_cpf', $user->documento());
+            $empresaVinculada = $user->empresa;
+
+            if (! $empresaVinculada) {
+                if ($user->documento() !== '') {
+                    $query->where('cnpj_cpf', $user->documento());
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            } elseif ($empresaVinculada->isRevenda()) {
+                $query->where(function ($empresaQuery) use ($empresaVinculada) {
+                    $empresaQuery->where('id', $empresaVinculada->id)
+                        ->orWhere('revenda_id', $empresaVinculada->id);
+                });
+            } else {
+                $query->where('id', $empresaVinculada->id);
+            }
         }
 
         $empresas = $query->paginate(15);
@@ -30,7 +47,23 @@ class EmpresaController extends Controller
 
     public function create()
     {
-        return view('admin.empresas.create');
+        $user = Auth::user();
+        $empresaVinculada = $user->empresa;
+
+        if (! $user->isDefaultAdmin()) {
+            abort_unless($empresaVinculada && $empresaVinculada->isRevenda(), 403);
+        }
+
+        $revendas = Empresa::query()
+            ->where('nivel_acesso', Empresa::NIVEL_REVENDA)
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'fantasia']);
+
+        return view('admin.empresas.create', [
+            'isDefaultAdmin' => $user->isDefaultAdmin(),
+            'empresaVinculada' => $empresaVinculada,
+            'revendas' => $revendas,
+        ]);
     }
 
     public function store(Request $request)
@@ -49,11 +82,35 @@ class EmpresaController extends Controller
             'email' => 'required|email|max:255|unique:empresa,email',
             'fone' => 'required|string|max:20',
             'password' => 'required|string|min:6|max:60',
+            'nivel_acesso' => 'nullable|integer|in:1,2',
+            'revenda_id' => 'nullable|integer|exists:empresa,id',
             'endereco' => 'nullable|string|max:255',
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
             'cep' => 'nullable|string|max:10',
         ]);
+
+        $user = Auth::user();
+        $empresaVinculada = $user->empresa;
+
+        if ($user->isDefaultAdmin()) {
+            $validated['nivel_acesso'] = (int) ($validated['nivel_acesso'] ?? Empresa::NIVEL_CLIENTE_FINAL);
+        } else {
+            abort_unless($empresaVinculada && $empresaVinculada->isRevenda(), 403);
+            $validated['nivel_acesso'] = Empresa::NIVEL_CLIENTE_FINAL;
+            $validated['revenda_id'] = $empresaVinculada->id;
+        }
+
+        if ((int) $validated['nivel_acesso'] === Empresa::NIVEL_REVENDA) {
+            $validated['revenda_id'] = null;
+        } elseif (! empty($validated['revenda_id'])) {
+            $revenda = Empresa::query()->find($validated['revenda_id']);
+            if (! $revenda || ! $revenda->isRevenda()) {
+                return back()
+                    ->withErrors(['revenda_id' => 'Selecione uma revenda valida.'])
+                    ->withInput();
+            }
+        }
 
         $validated['fantasia'] = $validated['nome'];
         $validated['urlimagem'] = '';
@@ -81,7 +138,18 @@ class EmpresaController extends Controller
     {
         $this->authorizeEmpresaAccess($empresa);
 
-        return view('admin.empresas.edit', compact('empresa'));
+        $user = Auth::user();
+
+        $revendas = Empresa::query()
+            ->where('nivel_acesso', Empresa::NIVEL_REVENDA)
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'fantasia']);
+
+        return view('admin.empresas.edit', [
+            'empresa' => $empresa,
+            'isDefaultAdmin' => $user->isDefaultAdmin(),
+            'revendas' => $revendas,
+        ]);
     }
 
     public function update(Request $request, Empresa $empresa)
@@ -102,14 +170,44 @@ class EmpresaController extends Controller
             'email' => 'required|email|max:255|unique:empresa,email,' . $empresa->id,
             'fone' => 'required|string|max:20',
             'password' => 'nullable|string|min:6|max:60',
+            'nivel_acesso' => 'nullable|integer|in:1,2',
+            'revenda_id' => 'nullable|integer|exists:empresa,id',
             'endereco' => 'nullable|string|max:255',
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
             'cep' => 'nullable|string|max:10',
         ]);
 
-        if (! Auth::user()->isDefaultAdmin()) {
-            $validated['cnpj_cpf'] = Auth::user()->documento();
+        $user = Auth::user();
+        $empresaVinculada = $user->empresa;
+
+        if ($user->isDefaultAdmin()) {
+            $validated['nivel_acesso'] = (int) ($validated['nivel_acesso'] ?? $empresa->nivel_acesso ?? Empresa::NIVEL_CLIENTE_FINAL);
+        } else {
+            abort_unless($empresaVinculada && $empresaVinculada->isRevenda(), 403);
+            $validated['nivel_acesso'] = Empresa::NIVEL_CLIENTE_FINAL;
+            $validated['revenda_id'] = $empresaVinculada->id;
+            if ((int) $empresa->id === (int) $empresaVinculada->id) {
+                $validated['nivel_acesso'] = Empresa::NIVEL_REVENDA;
+                $validated['revenda_id'] = null;
+            }
+        }
+
+        if ((int) $validated['nivel_acesso'] === Empresa::NIVEL_REVENDA) {
+            $validated['revenda_id'] = null;
+        } elseif (! empty($validated['revenda_id'])) {
+            if ((int) $validated['revenda_id'] === (int) $empresa->id) {
+                return back()
+                    ->withErrors(['revenda_id' => 'A empresa nao pode ser vinculada a si mesma como revenda.'])
+                    ->withInput();
+            }
+
+            $revenda = Empresa::query()->find($validated['revenda_id']);
+            if (! $revenda || ! $revenda->isRevenda()) {
+                return back()
+                    ->withErrors(['revenda_id' => 'Selecione uma revenda valida.'])
+                    ->withInput();
+            }
         }
 
         $validated['fantasia'] = $validated['nome'];
@@ -147,6 +245,21 @@ class EmpresaController extends Controller
             return;
         }
 
-        abort_unless($empresa->cnpj_cpf === $user->documento(), 403);
+        $empresaVinculada = $user->empresa;
+
+        if (! $empresaVinculada) {
+            abort_unless($empresa->cnpj_cpf === $user->documento(), 403);
+            return;
+        }
+
+        if ($empresaVinculada->isRevenda()) {
+            $isEmpresaDaRevenda = (int) $empresa->id === (int) $empresaVinculada->id
+                || (int) $empresa->revenda_id === (int) $empresaVinculada->id;
+
+            abort_unless($isEmpresaDaRevenda, 403);
+            return;
+        }
+
+        abort_unless((int) $empresa->id === (int) $empresaVinculada->id, 403);
     }
 }

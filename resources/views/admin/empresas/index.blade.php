@@ -1,8 +1,11 @@
-@extends('home')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            
+        </h2>
+    </x-slot>
 
-@section('title', 'Admin - Empresas')
-
-@section('content')
+    <div class="py-8">
 <div class="mb-4 px-4">
     <x-back-button />
 </div>
@@ -22,6 +25,8 @@
                 <tr>
                     <th class="px-4 py-2 text-left">CÓDIGO</th>
                     <th class="px-4 py-2 text-left">NOME</th>
+                    <th class="px-4 py-2 text-left">NÍVEL</th>
+                    <th class="px-4 py-2 text-left">REVENDA</th>
                     <th class="px-4 py-2 text-left">RAZÃO SOCIAL</th>
                     <th class="px-4 py-2 text-left">CNPJ/CPF</th>
                     <th class="px-4 py-2 text-left">EMAIL</th>
@@ -34,6 +39,8 @@
                     <tr class="border-b hover:bg-gray-50">
                         <td class="px-4 py-2">{{ $empresa->codigo }}</td>
                         <td class="px-4 py-2">{{ $empresa->nome }}</td>
+                        <td class="px-4 py-2">{{ (int) ($empresa->nivel_acesso ?? 1) === 2 ? 'Revenda (N2)' : 'Cliente Final (N1)' }}</td>
+                        <td class="px-4 py-2">{{ $empresa->revenda?->nome ?: ($empresa->revenda?->fantasia ?: '-') }}</td>
                         <td class="px-4 py-2">{{ $empresa->razaosocial }}</td>
                         <td class="px-4 py-2">{{ $empresa->cnpj_cpf }}</td>
                         <td class="px-4 py-2">{{ $empresa->email }}</td>
@@ -49,7 +56,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-4 text-center text-gray-500">Nenhuma empresa cadastrada</td>
+                        <td colspan="9" class="px-4 py-4 text-center text-gray-500">Nenhuma empresa cadastrada</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -60,4 +67,5 @@
         {{ $empresas->links() }}
     </div>
 </div>
-@endsection
+    </div>
+</x-app-layout>

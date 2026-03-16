@@ -32,17 +32,21 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
+        ->middleware('revenda.empresa.selecionada')
         ->middleware('menu.access:cadastro_publico')
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('revenda.empresa.selecionada')
         ->middleware('menu.access:cadastro_publico');
 
     Route::get('register/{user}/edit', [RegisteredUserController::class, 'edit'])
+        ->middleware('revenda.empresa.selecionada')
         ->middleware('menu.access:cadastro_publico')
         ->name('register.users.edit');
 
     Route::put('register/{user}', [RegisteredUserController::class, 'update'])
+        ->middleware('revenda.empresa.selecionada')
         ->middleware('menu.access:cadastro_publico')
         ->name('register.users.update');
 

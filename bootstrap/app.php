@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'menu.access' => \App\Http\Middleware\EnsureMenuAccess::class,
+            'revenda.empresa.selecionada' => \App\Http\Middleware\EnsureRevendaEmpresaSelecionada::class,
             'identify.company' => \App\Http\Middleware\Api\IdentifyCompany::class,
             'device.auth' => \App\Http\Middleware\Api\DeviceAuth::class,
         ]);

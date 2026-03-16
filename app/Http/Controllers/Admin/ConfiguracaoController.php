@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
+use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -69,10 +70,12 @@ class ConfiguracaoController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->empresa_id) {
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
+
+        if (! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
-        return (int) $user->empresa_id;
+        return (int) $empresaId;
     }
 }

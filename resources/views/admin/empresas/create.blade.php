@@ -1,8 +1,11 @@
-@extends('home')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            
+        </h2>
+    </x-slot>
 
-@section('title', 'Admin - Criar Empresa')
-
-@section('content')
+    <div class="py-8">
 <div class="mb-4 px-4">
     <x-back-button />
 </div>
@@ -64,6 +67,31 @@
             <input type="password" name="password" class="w-full border rounded px-2 py-1 @error('password') border-red-500 @enderror" required />
             @error('password')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
         </div>
+
+        @if($isDefaultAdmin ?? false)
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-semibold">NIVEL DE ACESSO</label>
+                    <select name="nivel_acesso" id="nivel_acesso" class="w-full border rounded px-2 py-1 @error('nivel_acesso') border-red-500 @enderror" required>
+                        <option value="1" @selected(old('nivel_acesso', 1) == 1)>Cliente Final (Nivel 1)</option>
+                        <option value="2" @selected(old('nivel_acesso') == 2)>Revenda (Nivel 2)</option>
+                    </select>
+                    @error('nivel_acesso')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+                </div>
+                <div id="revenda-wrapper">
+                    <label class="block font-semibold">VINCULAR A REVENDA (OPCIONAL)</label>
+                    <select name="revenda_id" id="revenda_id" class="w-full border rounded px-2 py-1 @error('revenda_id') border-red-500 @enderror">
+                        <option value="">Sem vinculo de revenda</option>
+                        @foreach(($revendas ?? collect()) as $revenda)
+                            <option value="{{ $revenda->id }}" @selected((string) old('revenda_id') === (string) $revenda->id)>
+                                {{ $revenda->nome ?: ($revenda->fantasia ?: ('Revenda #' . $revenda->id)) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('revenda_id')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+                </div>
+            </div>
+        @endif
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -148,6 +176,24 @@ document.addEventListener('DOMContentLoaded', function () {
             event.target.value = formatCpfCnpj(event.target.value);
         });
     });
+
+    const nivelAcesso = document.getElementById('nivel_acesso');
+    const revendaWrapper = document.getElementById('revenda-wrapper');
+    const revendaSelect = document.getElementById('revenda_id');
+
+    if (nivelAcesso && revendaWrapper && revendaSelect) {
+        const toggleRevendaField = () => {
+            const isRevenda = nivelAcesso.value === '2';
+            revendaWrapper.classList.toggle('hidden', isRevenda);
+            if (isRevenda) {
+                revendaSelect.value = '';
+            }
+        };
+
+        toggleRevendaField();
+        nivelAcesso.addEventListener('change', toggleRevendaField);
+    }
 });
 </script>
-@endsection
+    </div>
+</x-app-layout>

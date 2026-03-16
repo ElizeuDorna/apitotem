@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Grupo;
 use App\Models\Departamento;
+use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,15 +14,16 @@ class GrupoController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if (! $user->isDefaultAdmin() && ! $user->empresa_id) {
+        if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
         $query = Grupo::with(['departamento', 'empresa:id,cnpj_cpf'])->withCount('produtos');
 
         if (! $user->isDefaultAdmin()) {
-            $query->where('empresa_id', $user->empresa_id);
+            $query->where('empresa_id', $empresaId);
         }
 
         $grupos = $query->paginate(15);
@@ -31,13 +33,14 @@ class GrupoController extends Controller
     public function create()
     {
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if (! $user->isDefaultAdmin() && ! $user->empresa_id) {
+        if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
         $departamentos = Departamento::query()
-            ->when(! $user->isDefaultAdmin(), fn ($query) => $query->where('empresa_id', $user->empresa_id))
+            ->when(! $user->isDefaultAdmin(), fn ($query) => $query->where('empresa_id', $empresaId))
             ->with('empresa:id,cnpj_cpf')
             ->get();
 
@@ -47,8 +50,9 @@ class GrupoController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if (! $user->isDefaultAdmin() && ! $user->empresa_id) {
+        if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
@@ -60,8 +64,8 @@ class GrupoController extends Controller
         $departamento = Departamento::findOrFail($validated['departamento_id']);
 
         if (! $user->isDefaultAdmin()) {
-            abort_unless($departamento->empresa_id === $user->empresa_id, 403);
-            $validated['empresa_id'] = $user->empresa_id;
+            abort_unless($departamento->empresa_id === $empresaId, 403);
+            $validated['empresa_id'] = $empresaId;
         } else {
             $validated['empresa_id'] = $departamento->empresa_id;
         }
@@ -76,9 +80,10 @@ class GrupoController extends Controller
         $this->authorizeGrupoAccess($grupo);
 
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
         $departamentos = Departamento::query()
-            ->when(! $user->isDefaultAdmin(), fn ($query) => $query->where('empresa_id', $user->empresa_id))
+            ->when(! $user->isDefaultAdmin(), fn ($query) => $query->where('empresa_id', $empresaId))
             ->with('empresa:id,cnpj_cpf')
             ->get();
 
@@ -88,6 +93,7 @@ class GrupoController extends Controller
     public function update(Request $request, Grupo $grupo)
     {
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
         $this->authorizeGrupoAccess($grupo);
 
@@ -99,8 +105,8 @@ class GrupoController extends Controller
         $departamento = Departamento::findOrFail($validated['departamento_id']);
 
         if (! $user->isDefaultAdmin()) {
-            abort_unless($departamento->empresa_id === $user->empresa_id, 403);
-            $validated['empresa_id'] = $user->empresa_id;
+            abort_unless($departamento->empresa_id === $empresaId, 403);
+            $validated['empresa_id'] = $empresaId;
         } else {
             $validated['empresa_id'] = $departamento->empresa_id;
         }
@@ -128,11 +134,12 @@ class GrupoController extends Controller
     private function authorizeGrupoAccess(Grupo $grupo): void
     {
         $user = Auth::user();
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
         if ($user->isDefaultAdmin()) {
             return;
         }
 
-        abort_unless($user->empresa_id && $grupo->empresa_id === $user->empresa_id, 403);
+        abort_unless($empresaId && $grupo->empresa_id === $empresaId, 403);
     }
 }

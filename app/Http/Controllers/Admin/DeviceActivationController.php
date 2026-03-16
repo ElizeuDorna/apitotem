@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\DeviceActivation;
 use App\Models\Empresa;
+use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +38,7 @@ class DeviceActivationController extends Controller
             ->orderByDesc('id');
 
         if (! $user->isDefaultAdmin()) {
-            $devicesQuery->where('empresa_id', $user->empresa_id);
+            $devicesQuery->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
 
         $devices = $devicesQuery->paginate(15, ['*'], 'devices_page');
@@ -142,7 +143,7 @@ class DeviceActivationController extends Controller
 
         $empresaId = $user->isDefaultAdmin()
             ? (int) $validated['empresa_id']
-            : (int) $user->empresa_id;
+            : EmpresaContext::requireEmpresaId($user);
 
         $device->update([
             'nome' => $validated['nome'],
@@ -173,9 +174,7 @@ class DeviceActivationController extends Controller
             return Empresa::findOrFail($empresaId);
         }
 
-        abort_unless($user->empresa_id, 403, 'Usuário sem empresa vinculada.');
-
-        $empresa = Empresa::find($user->empresa_id);
+        $empresa = Empresa::find(EmpresaContext::requireEmpresaId($user));
         abort_unless($empresa, 404, 'Empresa vinculada não encontrada.');
 
         return $empresa;
@@ -189,7 +188,7 @@ class DeviceActivationController extends Controller
             return;
         }
 
-        abort_unless((int) $user->empresa_id === (int) $device->empresa_id, 403);
+        abort_unless((int) EmpresaContext::requireEmpresaId($user) === (int) $device->empresa_id, 403);
     }
 
     private function generateUniqueDeviceToken(): string

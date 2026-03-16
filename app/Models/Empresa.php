@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,10 @@ use Illuminate\Support\Str;
 class Empresa extends Model
 {
     use HasFactory;
+
+    public const NIVEL_CLIENTE_FINAL = 1;
+
+    public const NIVEL_REVENDA = 2;
     
     protected $table = 'empresa'; 
 
@@ -23,6 +28,8 @@ class Empresa extends Model
         'fone',
         'password',
         'api_token',
+        'nivel_acesso',
+        'revenda_id',
         'endereco',
         'bairro',
         'numero',
@@ -34,6 +41,11 @@ class Empresa extends Model
     protected $hidden = [
         'password',
         'api_token',
+    ];
+
+    protected $casts = [
+        'nivel_acesso' => 'integer',
+        'revenda_id' => 'integer',
     ];
 
     protected static function booted(): void
@@ -98,6 +110,26 @@ class Empresa extends Model
     public function devices(): HasMany
     {
         return $this->hasMany(Device::class);
+    }
+
+    public function revenda(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'revenda_id');
+    }
+
+    public function clientesRevenda(): HasMany
+    {
+        return $this->hasMany(self::class, 'revenda_id');
+    }
+
+    public function isRevenda(): bool
+    {
+        return (int) $this->nivel_acesso === self::NIVEL_REVENDA;
+    }
+
+    public function isClienteFinal(): bool
+    {
+        return (int) $this->nivel_acesso === self::NIVEL_CLIENTE_FINAL;
     }
 
     public function templates(): HasMany

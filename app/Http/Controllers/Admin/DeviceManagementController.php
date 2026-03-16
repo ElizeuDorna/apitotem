@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\DeviceConfiguration;
 use App\Models\Template;
+use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,7 @@ class DeviceManagementController extends Controller
         $query = Device::query()->with(['empresa', 'configuration.template'])->orderByDesc('id');
 
         if (! $user->isDefaultAdmin()) {
-            $query->where('empresa_id', $user->empresa_id);
+            $query->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
 
         $devices = $query->paginate(20);
@@ -112,6 +113,6 @@ class DeviceManagementController extends Controller
             return;
         }
 
-        abort_unless((int) $user->empresa_id === (int) $device->empresa_id, 403);
+        abort_unless((int) EmpresaContext::requireEmpresaId($user) === (int) $device->empresa_id, 403);
     }
 }

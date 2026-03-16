@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
+use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -64,9 +65,7 @@ class ApiTokenController extends Controller
             return $empresa;
         }
 
-        abort_unless($user->empresa_id, 403, 'Usuário sem empresa vinculada.');
-
-        $empresa = Empresa::find($user->empresa_id);
+        $empresa = Empresa::find(EmpresaContext::requireEmpresaId($user));
 
         abort_unless($empresa, 404, 'Empresa vinculada não encontrada.');
 

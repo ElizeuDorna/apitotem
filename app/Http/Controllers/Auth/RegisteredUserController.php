@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\User;
+use App\Support\EmpresaContext;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,13 +27,18 @@ class RegisteredUserController extends Controller
         $authUser = Auth::user();
 
         $empresas = $requiresEmpresaVinculo
-            ? Empresa::query()->orderBy('fantasia')->get()
+            ? $this->visibleEmpresasQuery($authUser)->orderBy('fantasia')->get()
             : collect();
 
         $usuariosQuery = User::query()->orderByDesc('id');
 
         if (! $authUser->isDefaultAdmin()) {
-            $usuariosQuery->where('cpf', $authUser->documento());
+            if ($authUser->empresa_id) {
+                $empresaIds = $this->visibleEmpresasQuery($authUser)->pluck('id');
+                $usuariosQuery->whereIn('empresa_id', $empresaIds);
+            } else {
+                $usuariosQuery->where('cpf', $authUser->documento());
+            }
         }
 
         $usuarios = $usuariosQuery->paginate(10);
@@ -67,6 +73,19 @@ class RegisteredUserController extends Controller
 
         $request->validate($rules);
 
+        if ($requiresEmpresaVinculo && ! Auth::user()->isDefaultAdmin()) {
+            $empresaPermitida = $this->visibleEmpresasQuery(Auth::user())
+                ->whereKey((int) $request->empresa_id)
+                ->exists();
+
+            if (! $empresaPermitida) {
+                return redirect()
+                    ->back()
+                    ->withErrors(['empresa_id' => 'Empresa nao permitida para o seu perfil.'])
+                    ->withInput();
+            }
+        }
+
         $attributes = [
             'name' => $request->name,
             'email' => $request->email,
@@ -99,7 +118,7 @@ class RegisteredUserController extends Controller
         $requiresEmpresaVinculo = Schema::hasColumn('users', 'empresa_id');
 
         $empresas = $requiresEmpresaVinculo
-            ? Empresa::query()->orderBy('fantasia')->get()
+            ? $this->visibleEmpresasQuery(Auth::user())->orderBy('fantasia')->get()
             : collect();
 
         return view('auth.register-edit', compact('user', 'empresas', 'requiresEmpresaVinculo'));
@@ -128,6 +147,19 @@ class RegisteredUserController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        if ($requiresEmpresaVinculo && ! Auth::user()->isDefaultAdmin()) {
+            $empresaPermitida = $this->visibleEmpresasQuery(Auth::user())
+                ->whereKey((int) $validated['empresa_id'])
+                ->exists();
+
+            if (! $empresaPermitida) {
+                return redirect()
+                    ->back()
+                    ->withErrors(['empresa_id' => 'Empresa nao permitida para o seu perfil.'])
+                    ->withInput();
+            }
+        }
 
         $attributes = [
             'name' => $validated['name'],
@@ -158,6 +190,44 @@ class RegisteredUserController extends Controller
             return;
         }
 
+        if ($authUser->empresa_id) {
+            if ($authUser->empresa && $authUser->empresa->isRevenda()) {
+                $empresaIds = $this->visibleEmpresasQuery($authUser)->pluck('id');
+                abort_unless($empresaIds->contains((int) $user->empresa_id), 403);
+                return;
+            }
+
+            abort_unless((int) $user->empresa_id === (int) $authUser->empresa_id, 403);
+            return;
+        }
+
         abort_unless($user->cpf === $authUser->documento(), 403);
+    }
+
+    private function visibleEmpresasQuery(User $authUser)
+    {
+        $query = Empresa::query();
+
+        if ($authUser->isDefaultAdmin()) {
+            return $query;
+        }
+
+        if (! $authUser->empresa_id) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $empresaVinculada = $authUser->empresa;
+
+        if ($empresaVinculada && $empresaVinculada->isRevenda()) {
+            $empresaAtivaId = EmpresaContext::resolveEmpresaIdForUser($authUser);
+
+            if (! $empresaAtivaId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereKey($empresaAtivaId);
+        }
+
+        return $query->where('id', $authUser->empresa_id);
     }
 }

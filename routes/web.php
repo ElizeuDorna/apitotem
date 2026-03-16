@@ -31,6 +31,15 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('/admin/revenda/empresas', [\App\Http\Controllers\Admin\RevendaEmpresaContextController::class, 'index'])
+        ->name('admin.revenda.empresas.index')
+        ->middleware('menu.access:empresas');
+    Route::post('/admin/revenda/empresas/{empresa}/acessar', [\App\Http\Controllers\Admin\RevendaEmpresaContextController::class, 'acessar'])
+        ->name('admin.revenda.empresas.acessar')
+        ->middleware('menu.access:empresas');
+
+    Route::middleware('revenda.empresa.selecionada')->group(function () {
+
     // Admin CRUDs - protegidas por autenticação
     Route::get('/admin/configuracao', [\App\Http\Controllers\Admin\ConfiguracaoController::class, 'edit'])
         ->middleware('menu.access:configuracao');
@@ -116,6 +125,7 @@ Route::middleware('auth')->group(function () {
             ->name('admin.user-permissions.edit');
         Route::put('permissoes-usuarios/{user}', [\App\Http\Controllers\Admin\UserPermissionController::class, 'update'])
             ->name('admin.user-permissions.update');
+    });
     });
 });
 

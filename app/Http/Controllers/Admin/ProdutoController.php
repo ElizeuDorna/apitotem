@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Produto;
 use App\Models\Departamento;
 use App\Models\Grupo;
+use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -19,15 +20,16 @@ class ProdutoController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation() && ! $user->empresa_id) {
+        if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
         $query = Produto::with(['departamento', 'grupo']);
 
         if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation()) {
-            $query->where('empresa_id', $user->empresa_id);
+            $query->where('empresa_id', $empresaId);
         }
 
         $produtos = $query->paginate(15);
@@ -42,8 +44,9 @@ class ProdutoController extends Controller
     public function create()
     {
         $user = Auth::user();
+        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation() && ! $user->empresa_id) {
+        if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
@@ -58,12 +61,13 @@ class ProdutoController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+        $empresaIdUsuario = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
         $departamentoId = (int) $request->input('departamento_id');
         $departamentoForUnique = $departamentoId > 0 ? Departamento::find($departamentoId) : null;
         $empresaIdForUnique = $user->isDefaultAdmin()
             ? $departamentoForUnique?->empresa_id
-            : $user->empresa_id;
+            : $empresaIdUsuario;
 
         $validated = $request->validate([
             'CODIGO' => [
@@ -101,10 +105,10 @@ class ProdutoController extends Controller
             abort(403);
         }
 
-        $empresaId = $user->isDefaultAdmin() ? $departamento->empresa_id : $user->empresa_id;
+        $empresaId = $user->isDefaultAdmin() ? $departamento->empresa_id : $empresaIdUsuario;
 
         if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation()) {
-            if (! $departamento || $departamento->empresa_id !== $user->empresa_id || $grupo->empresa_id !== $user->empresa_id) {
+            if (! $departamento || $departamento->empresa_id !== $empresaIdUsuario || $grupo->empresa_id !== $empresaIdUsuario) {
                 abort(403);
             }
         }
@@ -141,6 +145,7 @@ class ProdutoController extends Controller
     public function update(Request $request, Produto $produto)
     {
         $user = Auth::user();
+        $empresaIdUsuario = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
 
         $this->authorizeProdutoAccess($produto);
 
@@ -148,7 +153,7 @@ class ProdutoController extends Controller
         $departamentoForUnique = $departamentoId > 0 ? Departamento::find($departamentoId) : null;
         $empresaIdForUnique = $user->isDefaultAdmin()
             ? ($departamentoForUnique?->empresa_id ?? $produto->empresa_id)
-            : $user->empresa_id;
+            : $empresaIdUsuario;
 
         $validated = $request->validate([
             'CODIGO' => [
@@ -188,10 +193,10 @@ class ProdutoController extends Controller
             abort(403);
         }
 
-        $empresaId = $user->isDefaultAdmin() ? $departamento->empresa_id : $user->empresa_id;
+        $empresaId = $user->isDefaultAdmin() ? $departamento->empresa_id : $empresaIdUsuario;
 
         if (! $user->isDefaultAdmin() && $this->usesEmpresaSegregation()) {
-            if (! $departamento || $departamento->empresa_id !== $user->empresa_id || $grupo->empresa_id !== $user->empresa_id) {
+            if (! $departamento || $departamento->empresa_id !== $empresaIdUsuario || $grupo->empresa_id !== $empresaIdUsuario) {
                 abort(403);
             }
         }
@@ -224,6 +229,7 @@ class ProdutoController extends Controller
     private function authorizeProdutoAccess(Produto $produto): void
     {
         $user = Auth::user();
+        $empresaIdUsuario = EmpresaContext::resolveEmpresaIdForUser($user);
 
         if ($user->isDefaultAdmin()) {
             return;
@@ -238,7 +244,7 @@ class ProdutoController extends Controller
         $empresaId = $produto->empresa_id ?? $produto->departamento?->empresa_id ?? $produto->grupo?->empresa_id;
 
         if ($empresaId !== null) {
-            abort_unless((int) $user->empresa_id === (int) $empresaId, 403);
+            abort_unless((int) $empresaIdUsuario === (int) $empresaId, 403);
             return;
         }
 
@@ -257,7 +263,7 @@ class ProdutoController extends Controller
         return Departamento::query()
             ->when(
                 ! $user->isDefaultAdmin() && $this->usesEmpresaSegregation(),
-                fn ($query) => $query->where('empresa_id', $user->empresa_id)
+                fn ($query) => $query->where('empresa_id', EmpresaContext::resolveEmpresaIdForUser($user))
             );
     }
 
@@ -266,7 +272,7 @@ class ProdutoController extends Controller
         return Grupo::query()
             ->when(
                 ! $user->isDefaultAdmin() && $this->usesEmpresaSegregation(),
-                fn ($query) => $query->where('empresa_id', $user->empresa_id)
+                fn ($query) => $query->where('empresa_id', EmpresaContext::resolveEmpresaIdForUser($user))
             );
     }
 }

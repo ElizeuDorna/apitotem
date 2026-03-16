@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
 use App\Models\Departamento;
 use App\Models\Grupo;
+use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -83,11 +84,11 @@ class OrganizarListaController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user || ! $user->empresa_id) {
+        if (! $user) {
             abort(403, 'Usuário sem empresa vinculada.');
         }
 
-        return (int) $user->empresa_id;
+        return EmpresaContext::requireEmpresaId($user);
     }
 
     private function decodeJsonList(string $value): array
