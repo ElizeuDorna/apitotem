@@ -39,8 +39,8 @@
 
         <div>
             <label class="block font-semibold">CNPJ/CPF</label>
-            <input type="text" value="{{ auth()->user()?->documento() }}" class="w-full border rounded px-2 py-1 bg-gray-100" readonly />
-            <input type="hidden" name="cnpj_cpf" value="{{ auth()->user()?->documento() }}" />
+            <input type="text" value="{{ old('cnpj_cpf', $cnpjCpfEmpresa) }}" class="w-full border rounded px-2 py-1 bg-gray-100" readonly />
+            <input type="hidden" name="cnpj_cpf" value="{{ old('cnpj_cpf', $cnpjCpfEmpresa) }}" />
             @error('cnpj_cpf')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
         </div>
 

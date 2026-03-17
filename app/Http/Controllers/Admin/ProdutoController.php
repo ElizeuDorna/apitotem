@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\Produto;
 use App\Models\Departamento;
 use App\Models\Grupo;
@@ -52,7 +53,10 @@ class ProdutoController extends Controller
 
         $departamentos = $this->departamentosQueryForUser($user)->get();
         $grupos = $this->gruposQueryForUser($user)->get();
-        return view('admin.produtos.create', compact('departamentos', 'grupos'));
+        $empresaAtiva = EmpresaContext::activeEmpresa($user);
+        $cnpjCpfEmpresa = (string) ($empresaAtiva?->cnpj_cpf ?? $user->documento());
+
+        return view('admin.produtos.create', compact('departamentos', 'grupos', 'cnpjCpfEmpresa'));
     }
 
     /**
@@ -113,7 +117,13 @@ class ProdutoController extends Controller
             }
         }
 
-        $validated['cnpj_cpf'] = preg_replace('/\D/', '', (string) ($validated['cnpj_cpf'] ?? $user->documento()));
+        $empresaDocumento = (string) ($validated['cnpj_cpf'] ?? $user->documento());
+
+        if ($empresaId !== null) {
+            $empresaDocumento = (string) (Empresa::query()->find($empresaId)?->cnpj_cpf ?? $empresaDocumento);
+        }
+
+        $validated['cnpj_cpf'] = preg_replace('/\D/', '', $empresaDocumento);
         $validated['OFERTA'] = isset($validated['OFERTA']) && $validated['OFERTA'] !== ''
             ? (float) $validated['OFERTA']
             : 0;

@@ -129,12 +129,18 @@
                         </x-slot>
                     </x-dropdown>
 
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition ease-in-out duration-150">
-                            Deslogar
-                        </button>
-                    </form>
+                    @if ($isRevendaNav)
+                        <a href="{{ route('admin.revenda.empresas.index') }}" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition ease-in-out duration-150">
+                            TrocarEmp
+                        </a>
+                    @else
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition ease-in-out duration-150">
+                                Deslogar
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
 
