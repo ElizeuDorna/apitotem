@@ -15,9 +15,15 @@
 
         <main class="rounded-xl border border-slate-800 bg-slate-900 p-4 md:p-6">
             <form id="tvConfigForm" class="space-y-4">
-                <div>
-                    <label for="deviceToken" class="mb-1 block text-sm text-slate-300">Token da TV</label>
-                    <input id="deviceToken" type="text" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none" placeholder="Cole o token da TV">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label for="deviceToken" class="mb-1 block text-sm text-slate-300">Token da TV</label>
+                        <input id="deviceToken" type="text" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none" placeholder="Cole o token da TV">
+                    </div>
+                    <div>
+                        <label for="clientCode" class="mb-1 block text-sm text-slate-300">CODIGO CLIENTE</label>
+                        <input id="clientCode" type="text" readonly class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold tracking-wide text-emerald-300 focus:border-emerald-400 focus:outline-none" placeholder="Clique em gerar codigo">
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -32,10 +38,16 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 pt-2">
+                <div>
+                    <label for="deviceUuid" class="mb-1 block text-sm text-slate-300">IDENTIFICACAO DO DISPOSITIVO</label>
+                    <input id="deviceUuid" type="text" readonly class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-slate-500 focus:outline-none" placeholder="Identificacao unica desta TV">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-2">
                     <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">Salvar</button>
                     <button id="clearTvConfig" type="button" class="rounded-md border border-red-700 px-4 py-2 text-sm text-red-300 hover:bg-red-900/30">Limpar configurações</button>
                     <a href="{{ route('tv.totemweb') }}" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Voltar para TV</a>
+                    <button id="generateClientCode" type="button" class="ml-auto rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">Gerar Codigo Cliente</button>
                 </div>
 
                 <p id="configStatus" class="text-xs text-slate-400">Ajuste as configurações e clique em Salvar.</p>

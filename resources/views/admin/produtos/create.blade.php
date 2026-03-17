@@ -12,6 +12,12 @@
 <div class="max-w-2xl mx-auto bg-white p-8 shadow">
     <h2 class="text-2xl font-bold mb-6">Criar Novo Produto</h2>
 
+    @if(auth()->user()->isDefaultAdmin() && (int) ($empresaSelecionadaAdmin ?? 0) > 0)
+        <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            Cadastro vinculado a empresa selecionada na listagem.
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">
             <ul>

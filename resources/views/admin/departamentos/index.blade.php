@@ -9,7 +9,7 @@
 <div class="mb-4 px-4">
     <x-back-button />
 </div>
-<div class="max-w-4xl mx-auto bg-white p-8 shadow">
+<div class="max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Departamentos</h2>
         <a href="{{ route('admin.departamentos.create') }}" class="px-4 py-2 bg-green-600 text-white rounded">+ Novo Departamento</a>
@@ -22,36 +22,36 @@
         <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">{{ $errors->first('delete') }}</div>
     @endif
 
-    <div class="overflow-x-auto">
-        <table class="w-full border">
-            <thead class="bg-gray-100">
+    <div class="overflow-x-auto rounded-xl border border-slate-300">
+        <table class="w-full border-collapse">
+            <thead class="bg-blue-100 border-b border-blue-200">
                 <tr>
-                    <th class="px-4 py-2 text-left">NOME</th>
-                    <th class="px-4 py-2 text-left">CNPJ/CPF</th>
-                    <th class="px-4 py-2 text-center">GRUPOS</th>
-                    <th class="px-4 py-2 text-center">PRODUTOS</th>
-                    <th class="px-4 py-2 text-center">AÇÕES</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-wide text-slate-800 uppercase">NOME</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-wide text-slate-800 uppercase">CNPJ/CPF</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold tracking-wide text-slate-800 uppercase">GRUPOS</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold tracking-wide text-slate-800 uppercase">PRODUTOS</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold tracking-wide text-slate-800 uppercase">ACOES</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-slate-300">
                 @forelse($departamentos as $dept)
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2">{{ $dept->nome }}</td>
-                        <td class="px-4 py-2">{{ $dept->empresa?->cnpj_cpf ? preg_replace('/\D/', '', $dept->empresa->cnpj_cpf) : 'Não vinculado' }}</td>
-                        <td class="px-4 py-2 text-center">{{ $dept->grupos_count ?? 0 }}</td>
-                        <td class="px-4 py-2 text-center">{{ $dept->produtos_count ?? 0 }}</td>
-                        <td class="px-4 py-2 text-center space-x-2">
-                            <a href="{{ route('admin.departamentos.edit', $dept->id) }}" class="text-blue-600 hover:text-blue-800 text-sm">Editar</a>
-                            <form action="{{ route('admin.departamentos.destroy', $dept->id) }}" method="POST" class="inline" onsubmit="return confirm('Tem certeza?');">
+                    <tr class="odd:bg-white even:bg-slate-100 hover:bg-sky-100 transition-colors duration-150">
+                        <td class="px-4 py-3 text-sm font-medium text-slate-900">{{ $dept->nome }}</td>
+                        <td class="px-4 py-3 text-sm text-slate-700">{{ $dept->empresa?->cnpj_cpf ? preg_replace('/\D/', '', $dept->empresa->cnpj_cpf) : 'Não vinculado' }}</td>
+                        <td class="px-4 py-3 text-sm text-center text-slate-700">{{ $dept->grupos_count ?? 0 }}</td>
+                        <td class="px-4 py-3 text-sm text-center text-slate-700">{{ $dept->produtos_count ?? 0 }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="{{ route('admin.departamentos.edit', $dept->id) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
+                            <form action="{{ route('admin.departamentos.destroy', $dept->id) }}" method="POST" class="inline ml-2" onsubmit="return confirm('Tem certeza?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm">Deletar</button>
+                                <button type="submit" class="inline-flex items-center rounded-full border border-red-600 bg-red-500 px-2.5 py-1 text-xs font-semibold text-white">Deletar</button>
                             </form>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-4 text-center text-gray-500">Nenhum departamento cadastrado</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">Nenhum departamento cadastrado</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -24,6 +24,7 @@
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPF/CNPJ</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel da Empresa</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                                 </tr>
                             </thead>
@@ -33,13 +34,20 @@
                                         <td class="px-4 py-2 text-sm text-gray-700">{{ $user->name }}</td>
                                         <td class="px-4 py-2 text-sm text-gray-700">{{ $user->email }}</td>
                                         <td class="px-4 py-2 text-sm text-gray-700">{{ $user->cpf }}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-700">
+                                            @if ($user->empresa)
+                                                {{ $user->empresa->isRevenda() ? 'Revenda (N2)' : 'Cliente Final (N1)' }}
+                                            @else
+                                                Sem empresa
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-2 text-sm">
                                             <a href="{{ route('admin.user-permissions.edit', $user) }}" class="text-indigo-600 hover:text-indigo-800 font-medium">Configurar menus</a>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="px-4 py-3 text-sm text-gray-500 text-center">Nenhum usuário encontrado.</td>
+                                        <td colspan="5" class="px-4 py-3 text-sm text-gray-500 text-center">Nenhum usuário encontrado.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

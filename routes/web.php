@@ -1,7 +1,12 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\Device;
+use App\Models\Empresa;
+use App\Models\Produto;
+use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 Route::get('/', function () {
     return view('welcome');
@@ -23,7 +28,96 @@ Route::redirect('/tv/produtos', '/tv/totemweb');
 Route::redirect('/tv/configuracao', '/tv/totemweb/configuracao');
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    $user = auth()->user();
+
+    $isAdminGeral = $user && $user->isDefaultAdmin();
+    $revendaPrecisaSelecionar = $user ? EmpresaContext::requiresSelection($user) : false;
+    $empresaAtiva = $user ? EmpresaContext::activeEmpresa($user) : null;
+    $temEmpresaAtiva = ! empty($empresaAtiva);
+    $empresaRevendaId = $revendaPrecisaSelecionar && $user && $user->empresa ? (int) $user->empresa->id : null;
+
+    $empresaQuery = Empresa::query();
+    $escopoTitulo = 'Resumo geral da operacao';
+
+    if ($isAdminGeral) {
+        $empresaQuery->where('nivel_acesso', Empresa::NIVEL_CLIENTE_FINAL);
+        $escopoTitulo = 'Visao geral de revendas e clientes finais';
+    } elseif ($revendaPrecisaSelecionar && $empresaRevendaId) {
+        $empresaQuery
+            ->where('revenda_id', $empresaRevendaId)
+            ->where('nivel_acesso', Empresa::NIVEL_CLIENTE_FINAL);
+        $escopoTitulo = 'Visao dos clientes da sua revenda';
+    } elseif ($user && $user->empresa_id) {
+        $empresaQuery->where('id', (int) $user->empresa_id);
+        $escopoTitulo = 'Visao da sua empresa';
+    } else {
+        $empresaQuery->whereRaw('1 = 0');
+    }
+
+    $empresaIds = (clone $empresaQuery)->pluck('id');
+
+    $revendasTotal = Empresa::query()
+        ->where('nivel_acesso', Empresa::NIVEL_REVENDA)
+        ->count();
+
+    $revendasAtivas = $revendasTotal;
+    if (Schema::hasColumn('empresa', 'ativo')) {
+        $revendasAtivas = Empresa::query()
+            ->where('nivel_acesso', Empresa::NIVEL_REVENDA)
+            ->where('ativo', 1)
+            ->count();
+    }
+
+    $clientesVinculadosRevenda = Empresa::query()
+        ->where('nivel_acesso', Empresa::NIVEL_CLIENTE_FINAL)
+        ->whereNotNull('revenda_id')
+        ->count();
+
+    $clientesFinaisTotal = Empresa::query()
+        ->where('nivel_acesso', Empresa::NIVEL_CLIENTE_FINAL)
+        ->count();
+
+    $clientesTotal = $empresaIds->count();
+
+    $clientesAtivos = $clientesTotal;
+    if (Schema::hasColumn('empresa', 'ativo')) {
+        $clientesAtivos = Empresa::query()
+            ->whereIn('id', $empresaIds)
+            ->where('ativo', 1)
+            ->count();
+    }
+
+    $tvsBaseQuery = Device::query()->whereIn('empresa_id', $empresaIds);
+
+    $tvsTotal = (clone $tvsBaseQuery)->count();
+    $tvsAtivas = (clone $tvsBaseQuery)->where('ativo', true)->count();
+    $tvsOnline = (clone $tvsBaseQuery)
+        ->where('ativo', true)
+        ->whereNotNull('last_seen_at')
+        ->where('last_seen_at', '>=', now()->subMinutes(5))
+        ->count();
+
+    $produtosTotal = Produto::query()
+        ->whereIn('empresa_id', $empresaIds)
+        ->count();
+
+    return view('dashboard', [
+        'isAdminGeral' => $isAdminGeral,
+        'revendaPrecisaSelecionar' => $revendaPrecisaSelecionar,
+        'empresaAtiva' => $empresaAtiva,
+        'temEmpresaAtiva' => $temEmpresaAtiva,
+        'escopoTitulo' => $escopoTitulo,
+        'revendasTotal' => $revendasTotal,
+        'revendasAtivas' => $revendasAtivas,
+        'clientesVinculadosRevenda' => $clientesVinculadosRevenda,
+        'clientesFinaisTotal' => $clientesFinaisTotal,
+        'clientesTotal' => $clientesTotal,
+        'clientesAtivos' => $clientesAtivos,
+        'tvsTotal' => $tvsTotal,
+        'tvsAtivas' => $tvsAtivas,
+        'tvsOnline' => $tvsOnline,
+        'produtosTotal' => $produtosTotal,
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -111,6 +205,15 @@ Route::middleware('auth')->group(function () {
         Route::resource('empresas', \App\Http\Controllers\Admin\EmpresaController::class, ['as' => 'admin'])
             ->middleware('menu.access:empresas')
             ->except(['show']);
+        Route::post('empresas/{empresa}/selecionar', [\App\Http\Controllers\Admin\EmpresaController::class, 'selecionarEmpresaAtiva'])
+            ->name('admin.empresas.selecionar')
+            ->middleware('menu.access:empresas');
+        Route::get('empresas/{empresa}/selecionar', [\App\Http\Controllers\Admin\EmpresaController::class, 'selecionarEmpresaAtiva'])
+            ->name('admin.empresas.selecionar.get')
+            ->middleware('menu.access:empresas');
+        Route::post('empresas/limpar-selecao', [\App\Http\Controllers\Admin\EmpresaController::class, 'limparEmpresaAtiva'])
+            ->name('admin.empresas.limpar-selecao')
+            ->middleware('menu.access:empresas');
         Route::resource('departamentos', \App\Http\Controllers\Admin\DepartamentoController::class, ['as' => 'admin'])
             ->middleware('menu.access:departamentos');
         Route::resource('grupos', \App\Http\Controllers\Admin\GrupoController::class, ['as' => 'admin'])

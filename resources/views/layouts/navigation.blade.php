@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<nav x-data="{ open: false }" class="bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
     @php
         $navUser = Auth::user();
         $isRevendaNav = $navUser ? \App\Support\EmpresaContext::requiresSelection($navUser) : false;
@@ -11,84 +11,76 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                    <a href="{{ route('dashboard') }}" class="inline-flex items-center rounded-lg px-2 py-1 hover:bg-slate-100 transition">
+                        <x-application-logo class="block h-9 w-auto fill-current text-slate-800" />
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                @php
+                    $desktopNavBase = 'inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition';
+                    $desktopNavActive = 'bg-sky-50 text-sky-700 ring-1 ring-sky-200';
+                @endphp
+                <div class="hidden sm:ms-8 sm:flex sm:items-center sm:gap-1">
+                    <a href="{{ route('dashboard') }}" class="{{ $desktopNavBase }} {{ request()->routeIs('dashboard') ? $desktopNavActive : '' }}">
                         {{ __('Dashboard') }}
-                    </x-nav-link>
+                    </a>
 
                     @if (Auth::user()->hasMenuAccess('cadastro_publico'))
-                        <x-nav-link :href="route('register')" :active="request()->routeIs('register') || request()->routeIs('register.users.*')">
+                        <a href="{{ route('register') }}" class="{{ $desktopNavBase }} {{ (request()->routeIs('register') || request()->routeIs('register.users.*')) ? $desktopNavActive : '' }}">
                             {{ __('Cadastro Público') }}
-                        </x-nav-link>
+                        </a>
                     @endif
 
                     <!-- Admin Menu -->
                     @if (Auth::user()->hasMenuAccess('produtos'))
-                        <a href="/admin/produtos" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="/admin/produtos" class="{{ $desktopNavBase }} {{ request()->is('admin/produtos*') ? $desktopNavActive : '' }}">
                             {{ __('Produtos') }}
                         </a>
                     @endif
                     @if (Auth::user()->hasMenuAccess('empresas'))
-                        <a href="/admin/empresas" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="/admin/empresas" class="{{ $desktopNavBase }} {{ request()->is('admin/empresas*') ? $desktopNavActive : '' }}">
                             {{ __('Empresas') }}
                         </a>
                     @endif
                     @if (Auth::user()->hasMenuAccess('departamentos'))
-                        <a href="/admin/departamentos" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="/admin/departamentos" class="{{ $desktopNavBase }} {{ request()->is('admin/departamentos*') ? $desktopNavActive : '' }}">
                             {{ __('Departamentos') }}
                         </a>
                     @endif
                     @if (Auth::user()->hasMenuAccess('grupos'))
-                        <a href="/admin/grupos" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="/admin/grupos" class="{{ $desktopNavBase }} {{ request()->is('admin/grupos*') ? $desktopNavActive : '' }}">
                             {{ __('Grupos') }}
                         </a>
                     @endif
                     @if (Auth::user()->hasMenuAccess('configuracao'))
-                        <a href="/admin/configuracao" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="/admin/configuracao" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao') ? $desktopNavActive : '' }}">
                             {{ __('Configuração') }}
                         </a>
-                        <a href="{{ route('admin.web-screen-config.edit') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
-                            {{ __('Config Tela Web') }}
+                        <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
+                            {{ __('Configuracao da Tela') }}
                         </a>
-                        <a href="{{ route('admin.organizar-lista.edit') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="{{ route('admin.organizar-lista.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/organizar-lista') ? $desktopNavActive : '' }}">
                             {{ __('Organizar Lista') }}
                         </a>
                     @endif
-                    @if (Auth::user()->hasMenuAccess('configuracao') || Auth::user()->hasMenuAccess('editor_template') || Auth::user()->isDefaultAdmin())
-                        @php
-                            $galeriaHref = Auth::user()->hasMenuAccess('configuracao')
-                                ? route('admin.web-screen-config.edit')
-                                : (Auth::user()->hasMenuAccess('editor_template')
-                                    ? route('admin.templates.index')
-                                    : route('admin.global-image-galleries.index'));
-                        @endphp
-                        <a href="{{ $galeriaHref }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
-                            {{ __('Galeria') }}
-                        </a>
-                    @endif
                     @if (Auth::user()->hasMenuAccess('token_api'))
-                        <a href="{{ route('admin.api-token.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="{{ route('admin.api-token.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/api-token*') ? $desktopNavActive : '' }}">
                             {{ __('Token API') }}
                         </a>
                     @endif
                     @if (Auth::user()->hasMenuAccess('gestao_tvs'))
-                        <a href="{{ route('admin.devices.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="{{ route('admin.devices.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/devices*') ? $desktopNavActive : '' }}">
                             {{ __('Gestão de TVs') }}
                         </a>
                     @endif
                     @if (Auth::user()->hasMenuAccess('ativar_tv'))
-                        <a href="{{ route('admin.activate-tv.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="{{ route('admin.activate-tv.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/ativar-tv*') ? $desktopNavActive : '' }}">
                             {{ __('Ativar TV') }}
                         </a>
                     @endif
                     @if (Auth::user()->isDefaultAdmin())
-                        <a href="{{ route('admin.user-permissions.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out">
+                        <a href="{{ route('admin.user-permissions.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/permissoes-usuarios*') ? $desktopNavActive : '' }}">
                             {{ __('Permissões de Acesso') }}
                         </a>
                     @endif
@@ -100,7 +92,7 @@
                 <div class="flex items-center gap-2">
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
-                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                            <button class="inline-flex items-center gap-2 px-3 py-2 border border-slate-200 text-sm leading-4 font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition ease-in-out duration-150">
                                 <div>{{ Auth::user()->name }}</div>
 
                                 <div class="ms-1">
@@ -130,13 +122,13 @@
                     </x-dropdown>
 
                     @if ($isRevendaNav)
-                        <a href="{{ route('admin.revenda.empresas.index') }}" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition ease-in-out duration-150">
+                        <a href="{{ route('admin.empresas.index') }}" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition ease-in-out duration-150">
                             TrocarEmp
                         </a>
                     @else
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition ease-in-out duration-150">
+                            <button type="submit" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition ease-in-out duration-150">
                                 Deslogar
                             </button>
                         </form>
@@ -146,7 +138,7 @@
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 focus:outline-none focus:bg-slate-100 focus:text-slate-700 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -157,9 +149,9 @@
     </div>
 
     @if ($isRevendaNav && $empresaAtivaNav)
-        <div class="border-t border-indigo-100 bg-indigo-50">
+        <div class="border-t border-emerald-100 bg-emerald-50/70">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-                <p class="text-sm text-indigo-900">
+                <p class="text-sm text-emerald-900">
                     Empresa ativa: <strong>{{ $empresaAtivaNav->nome }}</strong>.
                     Todas as alterações feitas em qualquer menu serão aplicadas somente nesta empresa até você trocar a seleção.
                 </p>
@@ -168,7 +160,7 @@
     @endif
 
     <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden border-t border-slate-200 bg-white/95 backdrop-blur">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
@@ -206,22 +198,10 @@
                     {{ __('Configuração') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.web-screen-config.edit')">
-                    {{ __('Config Tela Web') }}
+                    {{ __('Configuracao da Tela') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.organizar-lista.edit')">
                     {{ __('Organizar Lista') }}
-                </x-responsive-nav-link>
-            @endif
-            @if (Auth::user()->hasMenuAccess('configuracao') || Auth::user()->hasMenuAccess('editor_template') || Auth::user()->isDefaultAdmin())
-                @php
-                    $galeriaHrefMobile = Auth::user()->hasMenuAccess('configuracao')
-                        ? route('admin.web-screen-config.edit')
-                        : (Auth::user()->hasMenuAccess('editor_template')
-                            ? route('admin.templates.index')
-                            : route('admin.global-image-galleries.index'));
-                @endphp
-                <x-responsive-nav-link :href="$galeriaHrefMobile">
-                    {{ __('Galeria') }}
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user()->hasMenuAccess('token_api'))

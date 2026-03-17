@@ -8,6 +8,7 @@ use App\Models\User;
 class EmpresaContext
 {
     public const SESSION_KEY = 'revenda.empresa_ativa_id';
+    public const ADMIN_SESSION_KEY = 'admin.empresa_ativa_id';
 
     public static function requiresSelection(User $user): bool
     {
@@ -19,7 +20,17 @@ class EmpresaContext
     public static function resolveEmpresaIdForUser(User $user): ?int
     {
         if ($user->isDefaultAdmin()) {
-            return null;
+            $empresaAtivaId = (int) session(self::ADMIN_SESSION_KEY);
+
+            if ($empresaAtivaId <= 0) {
+                return null;
+            }
+
+            $exists = Empresa::query()
+                ->where('id', $empresaAtivaId)
+                ->exists();
+
+            return $exists ? $empresaAtivaId : null;
         }
 
         $empresaVinculada = $user->empresa;
@@ -51,6 +62,9 @@ class EmpresaContext
         $empresaId = self::resolveEmpresaIdForUser($user);
 
         if (! $empresaId) {
+            if ($user->isDefaultAdmin()) {
+                abort(403, 'Selecione uma empresa ativa em Empresas para continuar.');
+            }
             abort(403, 'Selecione uma empresa para continuar.');
         }
 
@@ -70,6 +84,11 @@ class EmpresaContext
 
     public static function setActiveEmpresa(User $user, Empresa $empresa): bool
     {
+        if ($user->isDefaultAdmin()) {
+            session([self::ADMIN_SESSION_KEY => (int) $empresa->id]);
+            return true;
+        }
+
         $empresaVinculada = $user->empresa;
 
         if (! $empresaVinculada || ! $empresaVinculada->isRevenda()) {
@@ -90,5 +109,6 @@ class EmpresaContext
     public static function clearActiveEmpresa(): void
     {
         session()->forget(self::SESSION_KEY);
+        session()->forget(self::ADMIN_SESSION_KEY);
     }
 }

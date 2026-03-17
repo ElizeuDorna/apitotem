@@ -17,10 +17,17 @@ class DeviceManagementController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        $empresaIdAtiva = EmpresaContext::resolveEmpresaIdForUser($user);
 
         $query = Device::query()->with(['empresa', 'configuration.template'])->orderByDesc('id');
 
-        if (! $user->isDefaultAdmin()) {
+        if ($user->isDefaultAdmin()) {
+            if ($empresaIdAtiva) {
+                $query->where('empresa_id', $empresaIdAtiva);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        } else {
             $query->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
 
@@ -28,6 +35,7 @@ class DeviceManagementController extends Controller
 
         return view('admin.devices.index', [
             'devices' => $devices,
+            'adminSemEmpresaAtiva' => $user->isDefaultAdmin() && ! $empresaIdAtiva,
         ]);
     }
 
@@ -110,6 +118,8 @@ class DeviceManagementController extends Controller
         $user = Auth::user();
 
         if ($user->isDefaultAdmin()) {
+            $empresaIdAtiva = EmpresaContext::resolveEmpresaIdForUser($user);
+            abort_unless($empresaIdAtiva && (int) $empresaIdAtiva === (int) $device->empresa_id, 403);
             return;
         }
 

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Rules\CpfCnpjValido;
+use App\Support\EmpresaContext;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
@@ -13,17 +15,18 @@ use Illuminate\Support\Facades\Hash;
 
 class EmpresaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        $buscaEmpresa = trim((string) $request->query('q', ''));
+        $empresaVinculada = $user->empresa;
+        $podePesquisar = $user->isDefaultAdmin() || ($empresaVinculada && $empresaVinculada->isRevenda());
 
         $query = Empresa::query()
             ->with('revenda:id,nome,fantasia')
             ->orderBy('id', 'desc');
 
         if (! $user->isDefaultAdmin()) {
-            $empresaVinculada = $user->empresa;
-
             if (! $empresaVinculada) {
                 if ($user->documento() !== '') {
                     $query->where('cnpj_cpf', $user->documento());
@@ -31,18 +34,69 @@ class EmpresaController extends Controller
                     $query->whereRaw('1 = 0');
                 }
             } elseif ($empresaVinculada->isRevenda()) {
-                $query->where(function ($empresaQuery) use ($empresaVinculada) {
-                    $empresaQuery->where('id', $empresaVinculada->id)
-                        ->orWhere('revenda_id', $empresaVinculada->id);
-                });
+                $query->where('revenda_id', $empresaVinculada->id);
             } else {
                 $query->where('id', $empresaVinculada->id);
             }
         }
 
-        $empresas = $query->paginate(15);
+        if ($podePesquisar && $buscaEmpresa !== '') {
+            $digitsBusca = preg_replace('/\D/', '', $buscaEmpresa);
 
-        return view('admin.empresas.index', compact('empresas'));
+            $query->where(function ($empresaQuery) use ($buscaEmpresa, $digitsBusca) {
+                $empresaQuery->where('nome', 'like', "%{$buscaEmpresa}%")
+                    ->orWhere('razaosocial', 'like', "%{$buscaEmpresa}%");
+
+                if ($digitsBusca !== '') {
+                    $empresaQuery->orWhereRaw(
+                        "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(cnpj_cpf, '.', ''), '/', ''), '-', ''), '(', ''), ')', '') like ?",
+                        ["%{$digitsBusca}%"]
+                    );
+                } else {
+                    $empresaQuery->orWhere('cnpj_cpf', 'like', "%{$buscaEmpresa}%");
+                }
+            });
+        }
+
+        $empresas = $query->paginate(15)->appends($request->query());
+
+        $empresaAtivaId = EmpresaContext::resolveEmpresaIdForUser($user);
+        $empresaAtivaNome = null;
+
+        if ($empresaAtivaId) {
+            $empresaAtivaNome = Empresa::query()->where('id', $empresaAtivaId)->value('nome');
+        }
+
+        return view('admin.empresas.index', compact('empresas', 'buscaEmpresa', 'empresaAtivaId', 'empresaAtivaNome', 'podePesquisar'));
+    }
+
+    public function selecionarEmpresaAtiva(Request $request, Empresa $empresa): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+        abort_unless($user->isDefaultAdmin() || EmpresaContext::requiresSelection($user), 403);
+        abort_unless(EmpresaContext::setActiveEmpresa($user, $empresa), 403);
+
+        return redirect()
+            ->route('admin.empresas.index', $request->query())
+            ->with('success', 'Empresa ativa selecionada com sucesso.');
+    }
+
+    public function limparEmpresaAtiva(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+        abort_unless($user->isDefaultAdmin() || EmpresaContext::requiresSelection($user), 403);
+
+        if ($user->isDefaultAdmin()) {
+            session()->forget(EmpresaContext::ADMIN_SESSION_KEY);
+        } else {
+            session()->forget(EmpresaContext::SESSION_KEY);
+        }
+
+        return redirect()
+            ->route('admin.empresas.index', $request->query())
+            ->with('success', 'Empresa ativa removida.');
     }
 
     public function create()

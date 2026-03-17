@@ -33,7 +33,7 @@ class AuthenticatedSessionController extends Controller
 
         if ($user && EmpresaContext::requiresSelection($user)) {
             EmpresaContext::clearActiveEmpresa();
-            return redirect()->route('admin.revenda.empresas.index');
+            return redirect()->route('admin.empresas.index');
         }
 
         return redirect()->intended(route('dashboard', absolute: false));

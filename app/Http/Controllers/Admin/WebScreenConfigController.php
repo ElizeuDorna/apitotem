@@ -1326,13 +1326,7 @@ class WebScreenConfigController extends Controller
     {
         $user = Auth::user();
 
-        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
-
-        if (! $empresaId) {
-            abort(403, 'Usuário sem empresa vinculada.');
-        }
-
-        return (int) $empresaId;
+        return (int) EmpresaContext::requireEmpresaId($user);
     }
 
     private function buildYouTubeEmbedStatuses(array $playlist): array

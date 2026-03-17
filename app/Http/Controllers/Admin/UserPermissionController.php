@@ -20,6 +20,7 @@ class UserPermissionController extends Controller
         $menuPermissionsReady = Schema::hasColumn('users', 'menu_permissions');
 
         $users = User::query()
+            ->with('empresa:id,nome,nivel_acesso')
             ->orderByDesc('id')
             ->paginate(15);
 

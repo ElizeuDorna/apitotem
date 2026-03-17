@@ -27,25 +27,33 @@ class DeviceActivationController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        $empresaIdAtiva = EmpresaContext::resolveEmpresaIdForUser($user);
 
-        $empresas = $user->isDefaultAdmin()
-            ? Empresa::query()->orderBy('NOME')->get(['id', 'NOME', 'CNPJ_CPF'])
-            : collect();
+        $empresaAtiva = $empresaIdAtiva
+            ? Empresa::query()->find($empresaIdAtiva, ['id', 'NOME', 'nome', 'CNPJ_CPF', 'cnpj_cpf'])
+            : null;
 
         $devicesQuery = Device::query()
             ->with('empresa')
             ->where('ativo', true)
             ->orderByDesc('id');
 
-        if (! $user->isDefaultAdmin()) {
+        if ($user->isDefaultAdmin()) {
+            if ($empresaIdAtiva) {
+                $devicesQuery->where('empresa_id', $empresaIdAtiva);
+            } else {
+                $devicesQuery->whereRaw('1 = 0');
+            }
+        } else {
             $devicesQuery->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
 
         $devices = $devicesQuery->paginate(15, ['*'], 'devices_page');
 
         return view('admin.activate-tv', [
-            'empresas' => $empresas,
             'isDefaultAdmin' => $user->isDefaultAdmin(),
+            'adminSemEmpresaAtiva' => $user->isDefaultAdmin() && ! $empresaIdAtiva,
+            'empresaAtiva' => $empresaAtiva,
             'empresaVinculada' => $user->empresa,
             'activatedToken' => session('activated_token'),
             'devices' => $devices,
@@ -77,7 +85,7 @@ class DeviceActivationController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'alpha_num', 'size:10'],
             'empresa_id' => [
-                $user->isDefaultAdmin() ? 'required' : 'nullable',
+                'nullable',
                 'integer',
                 'exists:empresa,id',
             ],
@@ -121,7 +129,8 @@ class DeviceActivationController extends Controller
         return redirect()
             ->route('admin.activate-tv.index')
             ->with('success', 'TV ativada com sucesso.')
-            ->with('activated_token', $device->token);
+            ->with('activated_token', $device->token)
+            ->with('activated_device_uuid', $device->device_uuid);
     }
 
     public function updateDevice(Request $request, Device $device): RedirectResponse
@@ -135,15 +144,13 @@ class DeviceActivationController extends Controller
             'local' => ['nullable', 'string', 'max:120'],
             'ativo' => ['nullable', 'boolean'],
             'empresa_id' => [
-                $user->isDefaultAdmin() ? 'required' : 'nullable',
+                'nullable',
                 'integer',
                 'exists:empresa,id',
             ],
         ]);
 
-        $empresaId = $user->isDefaultAdmin()
-            ? (int) $validated['empresa_id']
-            : EmpresaContext::requireEmpresaId($user);
+        $empresaId = EmpresaContext::requireEmpresaId($user);
 
         $device->update([
             'nome' => $validated['nome'],
@@ -171,7 +178,7 @@ class DeviceActivationController extends Controller
     private function resolveEmpresa(?int $empresaId, $user): Empresa
     {
         if ($user->isDefaultAdmin()) {
-            return Empresa::findOrFail($empresaId);
+            return Empresa::findOrFail(EmpresaContext::requireEmpresaId($user));
         }
 
         $empresa = Empresa::find(EmpresaContext::requireEmpresaId($user));
@@ -185,6 +192,8 @@ class DeviceActivationController extends Controller
         $user = Auth::user();
 
         if ($user->isDefaultAdmin()) {
+            $empresaIdAtiva = EmpresaContext::requireEmpresaId($user);
+            abort_unless((int) $empresaIdAtiva === (int) $device->empresa_id, 403);
             return;
         }
 

@@ -14,7 +14,7 @@ class DepartamentoController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
         if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
@@ -22,7 +22,7 @@ class DepartamentoController extends Controller
 
         $query = Departamento::with('empresa:id,cnpj_cpf')->withCount('grupos', 'produtos');
 
-        if (! $user->isDefaultAdmin()) {
+        if ($empresaId) {
             $query->where('empresa_id', $empresaId);
         }
 
@@ -33,10 +33,14 @@ class DepartamentoController extends Controller
     public function create()
     {
         $user = Auth::user();
-        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
         if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
+        }
+
+        if ($user->isDefaultAdmin() && ! $empresaId) {
+            abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar departamento.');
         }
 
         $empresaCnpjCpf = null;
@@ -51,10 +55,14 @@ class DepartamentoController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        $empresaId = $user->isDefaultAdmin() ? null : EmpresaContext::resolveEmpresaIdForUser($user);
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
         if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
+        }
+
+        if ($user->isDefaultAdmin() && ! $empresaId) {
+            abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar departamento.');
         }
 
         $validated = $request->validate([
@@ -63,11 +71,7 @@ class DepartamentoController extends Controller
                 'string',
                 'max:255',
                 Rule::unique('departamentos', 'nome')->where(function ($query) use ($empresaId) {
-                    if ($empresaId === null) {
-                        $query->whereNull('empresa_id');
-                    } else {
-                        $query->where('empresa_id', $empresaId);
-                    }
+                    $query->where('empresa_id', $empresaId);
                 }),
             ],
         ]);
@@ -135,6 +139,9 @@ class DepartamentoController extends Controller
         $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
         if ($user->isDefaultAdmin()) {
+            if ($empresaId) {
+                abort_unless((int) $departamento->empresa_id === (int) $empresaId, 403);
+            }
             return;
         }
 

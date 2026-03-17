@@ -13,6 +13,12 @@
                         <div class="rounded-md bg-green-50 p-3 text-sm text-green-800 mb-4">{{ session('success') }}</div>
                     @endif
 
+                    @if (($adminSemEmpresaAtiva ?? false))
+                        <div class="rounded-md bg-amber-50 p-3 text-sm text-amber-800 mb-4">
+                            Selecione uma empresa ativa em Empresas para usar Gestao de TVs.
+                        </div>
+                    @endif
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">

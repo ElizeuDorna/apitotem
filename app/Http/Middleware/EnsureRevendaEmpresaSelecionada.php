@@ -30,6 +30,9 @@ class EnsureRevendaEmpresaSelecionada
             'admin.empresas.edit',
             'admin.empresas.update',
             'admin.empresas.destroy',
+            'admin.empresas.selecionar',
+            'admin.empresas.selecionar.get',
+            'admin.empresas.limpar-selecao',
         ];
 
         $routeName = (string) optional($request->route())->getName();
@@ -43,7 +46,7 @@ class EnsureRevendaEmpresaSelecionada
         }
 
         return redirect()
-            ->route('admin.revenda.empresas.index')
+            ->route('admin.empresas.index')
             ->with('warning', 'Selecione uma empresa para continuar.');
     }
 }

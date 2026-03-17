@@ -2,8 +2,11 @@ const form = document.getElementById('tvConfigForm');
 const tokenInput = document.getElementById('deviceToken');
 const endpointInput = document.getElementById('apiEndpoint');
 const refreshInput = document.getElementById('refreshSeconds');
+const clientCodeInput = document.getElementById('clientCode');
+const deviceUuidInput = document.getElementById('deviceUuid');
 const statusText = document.getElementById('configStatus');
 const clearButton = document.getElementById('clearTvConfig');
+const generateClientCodeButton = document.getElementById('generateClientCode');
 const tokenHistoryList = document.getElementById('tokenHistoryList');
 
 const TOKEN_HISTORY_KEY = 'tv_device_token_history_v1';
@@ -12,6 +15,31 @@ const TOKEN_PRIMARY_KEY = 'tv_device_token';
 const TOKEN_LAST_KEY = 'tv_last_device_token';
 const DEFAULT_PRODUCTS_ENDPOINT = '/api/tv/produtos';
 const DEFAULT_REFRESH_SECONDS = '30';
+const CLIENT_CODE_KEY = 'tv_client_code';
+const DEVICE_UUID_KEY = 'tv_device_uuid';
+
+function createUuidV4() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+        const random = Math.floor(Math.random() * 16);
+        const value = char === 'x' ? random : (random & 0x3) | 0x8;
+        return value.toString(16);
+    });
+}
+
+function getDeviceUuid() {
+    const stored = String(localStorage.getItem(DEVICE_UUID_KEY) || '').trim();
+    if (stored) {
+        return stored;
+    }
+
+    const created = createUuidV4();
+    localStorage.setItem(DEVICE_UUID_KEY, created);
+    return created;
+}
 
 function setStatus(message, isError = false) {
     if (!statusText) {
@@ -137,6 +165,12 @@ function loadSettings() {
     tokenInput.value = resolveStoredToken();
     endpointInput.value = localStorage.getItem('tv_api_endpoint') || DEFAULT_PRODUCTS_ENDPOINT;
     refreshInput.value = localStorage.getItem('tv_refresh_seconds') || DEFAULT_REFRESH_SECONDS;
+    if (deviceUuidInput) {
+        deviceUuidInput.value = getDeviceUuid();
+    }
+    if (clientCodeInput) {
+        clientCodeInput.value = String(localStorage.getItem(CLIENT_CODE_KEY) || '').trim();
+    }
     if (tokenInput.value) {
         persistTokenAcrossKeys(tokenInput.value);
     }
@@ -180,10 +214,70 @@ function clearSettings() {
         TOKEN_HISTORY_KEY,
         'tv_api_endpoint',
         'tv_refresh_seconds',
+        CLIENT_CODE_KEY,
     ].forEach((key) => localStorage.removeItem(key));
 
     loadSettings();
     setStatus('Configurações limpas. Informe um novo token para usar a tela.');
+}
+
+async function generateClientCode() {
+    const button = generateClientCodeButton;
+    const deviceUuid = getDeviceUuid();
+
+    if (deviceUuidInput) {
+        deviceUuidInput.value = deviceUuid;
+    }
+
+    if (!deviceUuid) {
+        setStatus('Nao foi possivel identificar este dispositivo.', true);
+        return;
+    }
+
+    try {
+        if (button) {
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-not-allowed');
+        }
+
+        setStatus('Gerando codigo de cliente...');
+
+        const response = await fetch('/api/tv/activation-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({
+                device_uuid: deviceUuid,
+            }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.message || 'Falha ao gerar codigo de cliente.');
+        }
+
+        const code = String(payload?.code || '').trim();
+        if (!code) {
+            throw new Error('Resposta da API sem codigo de cliente.');
+        }
+
+        localStorage.setItem(CLIENT_CODE_KEY, code);
+        if (clientCodeInput) {
+            clientCodeInput.value = code;
+        }
+
+        setStatus('Codigo de cliente gerado com sucesso.');
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao gerar codigo de cliente.';
+        setStatus(message, true);
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
+    }
 }
 
 if (form) {
@@ -193,6 +287,10 @@ if (form) {
 
 if (clearButton) {
     clearButton.addEventListener('click', clearSettings);
+}
+
+if (generateClientCodeButton) {
+    generateClientCodeButton.addEventListener('click', generateClientCode);
 }
 
 window.addEventListener('offline', () => {

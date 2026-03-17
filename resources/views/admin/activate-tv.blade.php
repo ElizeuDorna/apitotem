@@ -15,10 +15,20 @@
                         </div>
                     @endif
 
+                    @if ($isDefaultAdmin && ($adminSemEmpresaAtiva ?? false))
+                        <div class="rounded-md bg-amber-50 p-4 text-sm text-amber-800">
+                            Selecione uma empresa ativa em Empresas para usar Ativar TV.
+                        </div>
+                    @endif
+
                     @if ($activatedToken)
                         <div class="rounded-md bg-blue-50 p-4">
                             <p class="text-xs text-blue-700">Token gerado para a TV</p>
                             <textarea rows="3" readonly class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ $activatedToken }}</textarea>
+                            @if (session('activated_device_uuid'))
+                                <p class="mt-3 text-xs text-blue-700">Identificacao do dispositivo</p>
+                                <input type="text" readonly value="{{ session('activated_device_uuid') }}" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 font-mono text-xs text-gray-700 shadow-sm">
+                            @endif
                         </div>
                     @endif
 
@@ -32,17 +42,9 @@
                         </div>
 
                         @if ($isDefaultAdmin)
-                            <div>
-                                <label for="empresa_id" class="block text-sm font-medium text-gray-700">Empresa</label>
-                                <select id="empresa_id" name="empresa_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                                    <option value="">Selecione</option>
-                                    @foreach ($empresas as $empresa)
-                                        <option value="{{ $empresa->id }}" @selected((string) old('empresa_id') === (string) $empresa->id)>
-                                            {{ $empresa->NOME }} - {{ $empresa->CNPJ_CPF }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <x-input-error :messages="$errors->get('empresa_id')" class="mt-2" />
+                            <div class="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                                Empresa ativa: <strong>{{ $empresaAtiva?->NOME ?? $empresaAtiva?->nome }}</strong>
+                                ({{ $empresaAtiva?->CNPJ_CPF ?? $empresaAtiva?->cnpj_cpf }})
                             </div>
                         @else
                             <div class="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
@@ -63,11 +65,13 @@
                             <x-input-error :messages="$errors->get('local')" class="mt-2" />
                         </div>
 
-                        <div class="flex justify-end">
-                            <x-primary-button>
-                                Ativar
-                            </x-primary-button>
-                        </div>
+                        @if (!($isDefaultAdmin && ($adminSemEmpresaAtiva ?? false)))
+                            <div class="flex justify-end">
+                                <x-primary-button>
+                                    Ativar
+                                </x-primary-button>
+                            </div>
+                        @endif
                     </form>
                 </div>
             </div>
@@ -82,6 +86,7 @@
                                 <tr>
                                     <th class="px-3 py-2 text-left">Nome</th>
                                     <th class="px-3 py-2 text-left">Local</th>
+                                    <th class="px-3 py-2 text-left">Identificacao do Dispositivo</th>
                                     <th class="px-3 py-2 text-left">Token</th>
                                     <th class="px-3 py-2 text-left">Empresa</th>
                                     <th class="px-3 py-2 text-left">Status</th>
@@ -102,21 +107,23 @@
                                             <input form="update-device-{{ $device->id }}" name="local" type="text" value="{{ old('local', $device->local) }}" class="w-full rounded-md border-gray-300 shadow-sm">
                                         </td>
                                         <td class="px-3 py-2">
+                                            <input type="text" value="{{ $device->device_uuid }}" class="w-full rounded-md border-gray-200 bg-gray-50 font-mono text-xs text-gray-700" readonly>
+                                        </td>
+                                        <td class="px-3 py-2">
                                             <input type="text" value="{{ $device->token }}" class="w-full rounded-md border-gray-200 bg-gray-50 font-mono text-xs text-gray-700" readonly>
                                         </td>
                                         <td class="px-3 py-2">
-                                            @if ($isDefaultAdmin)
-                                                <select form="update-device-{{ $device->id }}" name="empresa_id" class="w-full rounded-md border-gray-300 shadow-sm" required>
-                                                    @foreach ($empresas as $empresa)
-                                                        @php
-                                                            $empresaNome = $empresa->NOME ?? $empresa->nome ?? '';
-                                                            $empresaCnpj = $empresa->CNPJ_CPF ?? $empresa->cnpj_cpf ?? '';
-                                                        @endphp
-                                                        <option value="{{ $empresa->id }}" @selected((string) $device->empresa_id === (string) $empresa->id)>
-                                                            {{ $empresaNome }}{{ $empresaCnpj ? ' - ' . $empresaCnpj : '' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                            @if (! $isDefaultAdmin)
+                                                @php
+                                                    $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
+                                                    $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
+                                                @endphp
+                                                <span>
+                                                    {{ $empresaNome ?? 'Empresa nao vinculada' }}
+                                                    @if ($empresaCnpj)
+                                                        - {{ $empresaCnpj }}
+                                                    @endif
+                                                </span>
                                             @else
                                                 @php
                                                     $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
@@ -158,7 +165,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="px-3 py-8 text-center text-gray-500">Nenhuma TV ativa encontrada.</td>
+                                        <td colspan="8" class="px-3 py-8 text-center text-gray-500">Nenhuma TV ativa encontrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

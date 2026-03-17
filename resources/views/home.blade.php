@@ -37,7 +37,7 @@
                 </div>
 
                 @if($authUser && \App\Support\EmpresaContext::requiresSelection($authUser))
-                    <a href="{{ route('admin.revenda.empresas.index') }}" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded">Trocar empresa</a>
+                    <a href="{{ route('admin.empresas.index') }}" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded">Trocar empresa</a>
                     @if($empresaAtiva)
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded text-sm">Ativa: {{ $empresaAtiva->nome }}</span>
                     @endif
@@ -65,7 +65,7 @@
                     <a href="{{ route('admin.grupos.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Grupos</a>
                     <a href="{{ url('/admin/configuracao') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Configuração</a>
                     @if($authUser && \App\Support\EmpresaContext::requiresSelection($authUser))
-                        <a href="{{ route('admin.revenda.empresas.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Trocar empresa ativa</a>
+                        <a href="{{ route('admin.empresas.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Trocar empresa ativa</a>
                         @if($empresaAtiva)
                             <div class="px-3 py-2 text-xs text-green-700">Ativa: {{ $empresaAtiva->nome }}</div>
                         @endif
