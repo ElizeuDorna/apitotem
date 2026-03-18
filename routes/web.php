@@ -219,6 +219,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('grupos', \App\Http\Controllers\Admin\GrupoController::class, ['as' => 'admin'])
             ->middleware('menu.access:grupos');
 
+        Route::get('financeiro', [\App\Http\Controllers\Admin\FinanceiroController::class, 'index'])
+            ->name('admin.financeiro.index');
+        Route::get('financeiro/{empresa}', [\App\Http\Controllers\Admin\FinanceiroController::class, 'show'])
+            ->name('admin.financeiro.show');
+        Route::put('financeiro/{empresa}', [\App\Http\Controllers\Admin\FinanceiroController::class, 'update'])
+            ->name('admin.financeiro.update');
+
         Route::resource('global-image-galleries', \App\Http\Controllers\Admin\GlobalImageGalleryController::class, ['as' => 'admin'])
             ->except(['show']);
 

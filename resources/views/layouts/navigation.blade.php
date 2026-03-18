@@ -53,6 +53,9 @@
                             {{ __('Grupos') }}
                         </a>
                     @endif
+                    <a href="{{ route('admin.financeiro.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/financeiro*') ? $desktopNavActive : '' }}">
+                        {{ __('Financeiro') }}
+                    </a>
                     @if (Auth::user()->hasMenuAccess('configuracao'))
                         <a href="/admin/configuracao" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao') ? $desktopNavActive : '' }}">
                             {{ __('Configuração') }}
@@ -193,6 +196,9 @@
                     {{ __('Grupos') }}
                 </x-responsive-nav-link>
             @endif
+            <x-responsive-nav-link :href="route('admin.financeiro.index')">
+                {{ __('Financeiro') }}
+            </x-responsive-nav-link>
             @if (Auth::user()->hasMenuAccess('configuracao'))
                 <x-responsive-nav-link href="/admin/configuracao">
                     {{ __('Configuração') }}
