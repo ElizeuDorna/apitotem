@@ -124,7 +124,16 @@ class ProdutoController extends Controller
             'cnpj_cpf' => 'nullable|string|max:18',
             'PRECO' => 'required|numeric|min:0',
             'OFERTA' => 'nullable|numeric|min:0',
-            'IMG' => 'nullable|url|max:500',
+            'IMG' => [
+                'nullable',
+                'string',
+                'max:500',
+                function ($attribute, $value, $fail) {
+                    if (! $this->isValidProdutoImagePathOrUrl($value)) {
+                        $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/.');
+                    }
+                },
+            ],
             'departamento_id' => 'required|exists:departamentos,id',
             'grupo_id' => 'required|exists:grupos,id',
         ], [
@@ -230,7 +239,16 @@ class ProdutoController extends Controller
             'cnpj_cpf' => 'required|string|max:18',
             'PRECO' => 'required|numeric|min:0',
             'OFERTA' => 'nullable|numeric|min:0',
-            'IMG' => 'nullable|url|max:500',
+            'IMG' => [
+                'nullable',
+                'string',
+                'max:500',
+                function ($attribute, $value, $fail) {
+                    if (! $this->isValidProdutoImagePathOrUrl($value)) {
+                        $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/.');
+                    }
+                },
+            ],
             'departamento_id' => 'required|exists:departamentos,id',
             'grupo_id' => 'required|exists:grupos,id',
         ], [
@@ -339,5 +357,20 @@ class ProdutoController extends Controller
                 ! $user->isDefaultAdmin() && $this->usesEmpresaSegregation(),
                 fn ($query) => $query->where('empresa_id', EmpresaContext::resolveEmpresaIdForUser($user))
             );
+    }
+
+    private function isValidProdutoImagePathOrUrl($value): bool
+    {
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return true;
+        }
+
+        if (str_starts_with($normalized, '/storage/')) {
+            return true;
+        }
+
+        return filter_var($normalized, FILTER_VALIDATE_URL) !== false;
     }
 }

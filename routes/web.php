@@ -229,6 +229,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('global-image-galleries', \App\Http\Controllers\Admin\GlobalImageGalleryController::class, ['as' => 'admin'])
             ->except(['show']);
 
+        Route::get('galeria-imagem', [\App\Http\Controllers\Admin\GaleriaNovaController::class, 'index'])
+            ->name('admin.galeria-imagem.index');
+        Route::post('galeria-imagem', [\App\Http\Controllers\Admin\GaleriaNovaController::class, 'store'])
+            ->name('admin.galeria-imagem.store');
+        Route::delete('galeria-imagem/{galeriaNova}', [\App\Http\Controllers\Admin\GaleriaNovaController::class, 'destroy'])
+            ->name('admin.galeria-imagem.destroy');
+
         Route::get('permissoes-usuarios', [\App\Http\Controllers\Admin\UserPermissionController::class, 'index'])
             ->name('admin.user-permissions.index');
         Route::get('permissoes-usuarios/{user}/edit', [\App\Http\Controllers\Admin\UserPermissionController::class, 'edit'])

@@ -67,6 +67,11 @@
                             {{ __('Organizar Lista') }}
                         </a>
                     @endif
+                    @if (Auth::user()->hasMenuAccess('galeria_nova'))
+                        <a href="{{ route('admin.galeria-imagem.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/galeria-imagem*') ? $desktopNavActive : '' }}">
+                            {{ __('Galeria de Imagem') }}
+                        </a>
+                    @endif
                     @if (Auth::user()->hasMenuAccess('token_api'))
                         <a href="{{ route('admin.api-token.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/api-token*') ? $desktopNavActive : '' }}">
                             {{ __('Token API') }}
@@ -208,6 +213,11 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.organizar-lista.edit')">
                     {{ __('Organizar Lista') }}
+                </x-responsive-nav-link>
+            @endif
+            @if (Auth::user()->hasMenuAccess('galeria_nova'))
+                <x-responsive-nav-link :href="route('admin.galeria-imagem.index')">
+                    {{ __('Galeria de Imagem') }}
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user()->hasMenuAccess('token_api'))

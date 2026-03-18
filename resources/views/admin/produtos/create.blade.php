@@ -66,7 +66,20 @@
 
         <div>
             <label class="block font-semibold">IMAGEM (URL)</label>
-            <input type="url" name="IMG" value="{{ old('IMG') }}" class="w-full border rounded px-2 py-1" />
+            <div class="mt-1 flex items-stretch gap-2 md:max-w-xl">
+                <input type="text" name="IMG" value="{{ old('IMG') }}" class="w-full border rounded px-2 py-1" placeholder="https://... ou /storage/..." />
+                <a
+                    href="{{ route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_produto' => 1]) }}"
+                    target="_blank"
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                    title="Abrir formulario da Galeria de Imagem"
+                    aria-label="Abrir formulario da Galeria de Imagem"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
+                        <path fill-rule="evenodd" d="M9 3a6 6 0 1 0 3.873 10.582l3.272 3.273a1 1 0 0 0 1.414-1.414l-3.273-3.272A6 6 0 0 0 9 3Zm-4 6a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+            </div>
             @error('IMG')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
         </div>
 
@@ -104,6 +117,57 @@
 
 <script>
 const gruposDisponiveis = @json($grupos->map(fn($grupo) => ['id' => $grupo->id, 'nome' => $grupo->nome, 'departamento_id' => $grupo->departamento_id])->values());
+const produtoImagemInput = document.querySelector('input[name="IMG"]');
+const produtoImagemSelecionadaStorageKey = 'produto_imagem_url_selecionada';
+
+function aplicarImagemSelecionadaNoProduto(url) {
+    const normalizedUrl = String(url || '').trim();
+
+    if (!produtoImagemInput || normalizedUrl === '') {
+        return;
+    }
+
+    produtoImagemInput.value = normalizedUrl;
+    produtoImagemInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) {
+        return;
+    }
+
+    const payload = event.data || {};
+    if (payload.type !== 'galeriaNovaSelectImage') {
+        return;
+    }
+
+    aplicarImagemSelecionadaNoProduto(payload.url);
+});
+
+const imagemSelecionadaPendente = localStorage.getItem(produtoImagemSelecionadaStorageKey);
+if (imagemSelecionadaPendente) {
+    aplicarImagemSelecionadaNoProduto(imagemSelecionadaPendente);
+    localStorage.removeItem(produtoImagemSelecionadaStorageKey);
+}
+
+function sincronizarImagemSelecionadaDaGaleria() {
+    const imagemSelecionada = localStorage.getItem(produtoImagemSelecionadaStorageKey);
+    if (!imagemSelecionada) {
+        return;
+    }
+
+    aplicarImagemSelecionadaNoProduto(imagemSelecionada);
+    localStorage.removeItem(produtoImagemSelecionadaStorageKey);
+}
+
+window.addEventListener('focus', sincronizarImagemSelecionadaDaGaleria);
+window.addEventListener('storage', (event) => {
+    if (event.key !== produtoImagemSelecionadaStorageKey) {
+        return;
+    }
+
+    sincronizarImagemSelecionadaDaGaleria();
+});
 
 function updateGrupos() {
     const deptId = document.querySelector('select[name="departamento_id"]').value;
