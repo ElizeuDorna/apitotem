@@ -78,7 +78,7 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 space-y-4">
-                    <h3 class="text-lg font-semibold">TVs ativas</h3>
+                    <h3 class="text-lg font-semibold">TVs cadastradas</h3>
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -98,6 +98,12 @@
                                 @forelse ($devices as $device)
                                     @php
                                         $isOnline = $device->last_seen_at && $device->last_seen_at->gt(now()->subMinutes(2));
+                                        $statusLabel = ! $device->ativo
+                                            ? 'Desativada'
+                                            : ($isOnline ? 'Online' : 'Offline');
+                                        $statusClass = ! $device->ativo
+                                            ? 'text-red-700'
+                                            : ($isOnline ? 'text-green-700' : 'text-gray-600');
                                     @endphp
                                     <tr>
                                         <td class="px-3 py-2">
@@ -141,7 +147,7 @@
                                             <label class="inline-flex items-center gap-2">
                                                 <input form="update-device-{{ $device->id }}" type="hidden" name="ativo" value="0">
                                                 <input form="update-device-{{ $device->id }}" type="checkbox" name="ativo" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm" @checked($device->ativo)>
-                                                <span class="text-xs {{ $isOnline ? 'text-green-700' : 'text-gray-600' }}">{{ $isOnline ? 'Online' : 'Offline' }}</span>
+                                                <span class="text-xs {{ $statusClass }}">{{ $statusLabel }}</span>
                                             </label>
                                         </td>
                                         <td class="px-3 py-2">{{ $device->last_seen_at?->format('d/m/Y H:i:s') ?? '-' }}</td>
@@ -165,7 +171,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-3 py-8 text-center text-gray-500">Nenhuma TV ativa encontrada.</td>
+                                        <td colspan="8" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

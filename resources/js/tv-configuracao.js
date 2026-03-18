@@ -17,6 +17,8 @@ const DEFAULT_PRODUCTS_ENDPOINT = '/api/tv/produtos';
 const DEFAULT_REFRESH_SECONDS = '30';
 const CLIENT_CODE_KEY = 'tv_client_code';
 const DEVICE_UUID_KEY = 'tv_device_uuid';
+const TV_CONFIG_ENDPOINT = '/api/tv/totemweb/config';
+const TV_PAGE_URL = '/tv/totemweb';
 
 function createUuidV4() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') {
@@ -177,7 +179,46 @@ function loadSettings() {
     renderTokenHistory();
 }
 
-function saveSettings(event) {
+async function validateTokenAgainstApi(token) {
+    const response = await fetch(TV_CONFIG_ENDPOINT, {
+        method: 'GET',
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+        return { valid: true };
+    }
+
+    if (response.status === 401) {
+        const reason = String(payload?.reason || '').toLowerCase();
+
+        if (reason === 'device_inactive') {
+            return { valid: false, message: 'Token encontrado, mas a TV esta desativada no admin.' };
+        }
+
+        if (reason === 'device_not_found') {
+            return { valid: false, message: 'Token nao encontrado. Gere um novo codigo e ative novamente.' };
+        }
+
+        if (reason === 'token_missing') {
+            return { valid: false, message: 'Token nao informado.' };
+        }
+
+        return { valid: false, message: 'Token invalido para esta TV.' };
+    }
+
+    return {
+        valid: true,
+        warning: 'Nao foi possivel validar o token agora. Redirecionando para a TV para nova tentativa.',
+    };
+}
+
+async function saveSettings(event) {
     event.preventDefault();
 
     const token = tokenInput.value.trim();
@@ -202,8 +243,28 @@ function saveSettings(event) {
     localStorage.setItem('tv_api_endpoint', endpoint);
     localStorage.setItem('tv_refresh_seconds', String(refresh));
 
-    setStatus('Configurações salvas com sucesso.');
+    setStatus('Validando token e salvando configuracoes...');
     renderTokenHistory();
+
+    try {
+        const validation = await validateTokenAgainstApi(token);
+
+        if (!validation.valid) {
+            setStatus(validation.message || 'Token invalido para esta TV.', true);
+            return;
+        }
+
+        if (validation.warning) {
+            setStatus(validation.warning);
+        } else {
+            setStatus('Configuracoes salvas. Redirecionando para a TV...');
+        }
+
+        window.location.assign(TV_PAGE_URL);
+    } catch (_error) {
+        setStatus('Falha momentanea na validacao. Redirecionando para a TV...');
+        window.location.assign(TV_PAGE_URL);
+    }
 }
 
 function clearSettings() {

@@ -35,7 +35,6 @@ class DeviceActivationController extends Controller
 
         $devicesQuery = Device::query()
             ->with('empresa')
-            ->where('ativo', true)
             ->orderByDesc('id');
 
         if ($user->isDefaultAdmin()) {

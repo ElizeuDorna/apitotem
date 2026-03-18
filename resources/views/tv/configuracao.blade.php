@@ -60,5 +60,105 @@
             </form>
         </main>
     </div>
+
+    <script>
+        (function () {
+            const form = document.getElementById('tvConfigForm');
+            const tokenInput = document.getElementById('deviceToken');
+            const endpointInput = document.getElementById('apiEndpoint');
+            const refreshInput = document.getElementById('refreshSeconds');
+            const statusText = document.getElementById('configStatus');
+
+            if (!form || !tokenInput || !endpointInput || !refreshInput) {
+                return;
+            }
+
+            const TOKEN_KEYS = [
+                'tv_device_token',
+                'tv_last_device_token',
+                'tv_device_token_backup',
+            ];
+
+            const TV_CONFIG_ENDPOINT = '/api/tv/totemweb/config';
+            const TV_PAGE_URL = '/tv/totemweb';
+
+            const setStatus = (message, isError) => {
+                if (!statusText) {
+                    return;
+                }
+
+                statusText.textContent = message;
+                statusText.className = `text-xs ${isError ? 'text-red-400' : 'text-slate-400'}`;
+            };
+
+            const persistToken = (token) => {
+                TOKEN_KEYS.forEach((key) => localStorage.setItem(key, token));
+            };
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                const token = String(tokenInput.value || '').trim();
+                const endpoint = String(endpointInput.value || '').trim() || '/api/tv/produtos';
+                const refresh = Number(refreshInput.value || 30);
+
+                if (!token) {
+                    setStatus('Informe o token da TV.', true);
+                    return;
+                }
+
+                if (Number.isNaN(refresh) || refresh < 5 || refresh > 3600) {
+                    setStatus('Atualizacao deve ficar entre 5 e 3600 segundos.', true);
+                    return;
+                }
+
+                persistToken(token);
+                localStorage.setItem('tv_api_endpoint', endpoint);
+                localStorage.setItem('tv_refresh_seconds', String(refresh));
+
+                setStatus('Validando token...');
+
+                try {
+                    const response = await fetch(TV_CONFIG_ENDPOINT, {
+                        method: 'GET',
+                        headers: {
+                            Accept: 'application/json',
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (response.status === 401) {
+                        const reason = String(payload && payload.reason ? payload.reason : '').toLowerCase();
+                        if (reason === 'device_inactive') {
+                            setStatus('Token encontrado, mas a TV esta desativada no admin.', true);
+                            return;
+                        }
+
+                        if (reason === 'device_not_found') {
+                            setStatus('Token nao encontrado. Gere novo codigo e ative novamente.', true);
+                            return;
+                        }
+
+                        if (reason === 'token_missing') {
+                            setStatus('Token nao informado.', true);
+                            return;
+                        }
+
+                        setStatus('Token invalido para esta TV.', true);
+                        return;
+                    }
+
+                    setStatus('Configuracoes salvas. Redirecionando para a TV...');
+                    window.location.assign(TV_PAGE_URL);
+                } catch (_error) {
+                    setStatus('Falha momentanea na validacao. Redirecionando para a TV...');
+                    window.location.assign(TV_PAGE_URL);
+                }
+            }, true);
+        })();
+    </script>
 </body>
 </html>
