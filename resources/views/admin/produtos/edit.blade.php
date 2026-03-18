@@ -7,7 +7,7 @@
 
     <div class="py-8">
 <div class="mb-4 px-4">
-    <x-back-button />
+    <x-back-button :href="request()->query('return', route('admin.produtos.index'))" />
 </div>
 <div class="max-w-2xl mx-auto bg-white p-8 shadow">
     <h2 class="text-2xl font-bold mb-6">Editar Produto</h2>
@@ -101,7 +101,7 @@
 
         <div class="flex space-x-2 pt-4">
             <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded">Atualizar</button>
-            <a href="{{ route('admin.produtos.index') }}" class="px-6 py-2 bg-gray-400 text-white rounded">Cancelar</a>
+            <a href="{{ request()->query('return', route('admin.produtos.index')) }}" class="px-6 py-2 bg-gray-400 text-white rounded">Cancelar</a>
         </div>
 
     </form>

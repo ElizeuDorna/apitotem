@@ -178,6 +178,12 @@ Route::middleware('auth')->group(function () {
         Route::delete('templates/{template}/items/{item}', [\App\Http\Controllers\Admin\TemplateController::class, 'deleteItem'])
             ->name('admin.templates.items.destroy')
             ->middleware('menu.access:editor_template');
+        Route::post('templates/{template}/apply-device', [\App\Http\Controllers\Admin\TemplateController::class, 'applyToDevice'])
+            ->name('admin.templates.apply-device')
+            ->middleware('menu.access:editor_template');
+        Route::post('templates/{template}/set-default-web', [\App\Http\Controllers\Admin\TemplateController::class, 'setDefaultWeb'])
+            ->name('admin.templates.set-default-web')
+            ->middleware('menu.access:editor_template');
 
         Route::get('ativar-tv', [\App\Http\Controllers\Admin\DeviceActivationController::class, 'index'])
             ->name('admin.activate-tv.index')

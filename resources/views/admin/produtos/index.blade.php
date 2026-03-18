@@ -47,7 +47,7 @@
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $produto->departamento?->nome ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $produto->grupo?->nome ?? '-' }}</td>
                         <td class="px-4 py-3 text-center">
-                            <a href="{{ route('admin.produtos.edit', ['produto' => $produto->id]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
+                            <a href="{{ route('admin.produtos.edit', ['produto' => $produto->id, 'return' => url()->full()]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
                             <form action="{{ route('admin.produtos.destroy', ['produto' => $produto->id]) }}" method="POST" class="inline ml-2" onsubmit="return confirm('Tem certeza?');">
                                 @csrf
                                 @method('DELETE')

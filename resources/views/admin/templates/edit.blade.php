@@ -3,6 +3,16 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Editar Template</h2>
     </x-slot>
 
+    @php
+        $layoutLabels = [
+            'grade' => ['pt' => 'Grade', 'en' => 'Grid'],
+            'lista' => ['pt' => 'Lista', 'en' => 'List'],
+            'video_background' => ['pt' => 'Video de fundo', 'en' => 'Video background'],
+            'promocao' => ['pt' => 'Promocao', 'en' => 'Promotion'],
+            'misto' => ['pt' => 'Misto', 'en' => 'Mixed'],
+        ];
+    @endphp
+
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -20,12 +30,50 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Layout</label>
-                            <select name="tipo_layout" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            <select id="tipoLayoutSelect" name="tipo_layout" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                                 @foreach($layouts as $layout)
-                                    <option value="{{ $layout }}" @selected(old('tipo_layout', $template->tipo_layout) === $layout)>{{ $layout }}</option>
+                                    <option
+                                        value="{{ $layout }}"
+                                        data-layout-key="{{ $layout }}"
+                                        data-label-pt="{{ $layoutLabels[$layout]['pt'] ?? $layout }}"
+                                        data-label-en="{{ $layoutLabels[$layout]['en'] ?? $layout }}"
+                                        @selected(old('tipo_layout', $template->tipo_layout) === $layout)
+                                    >{{ $layoutLabels[$layout]['pt'] ?? $layout }}</option>
                                 @endforeach
                             </select>
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Aplicar em dispositivo</label>
+                            <select name="device_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                <option value="">Nao alterar dispositivo</option>
+                                @foreach($devices as $device)
+                                    <option value="{{ $device->id }}" @selected((string) old('device_id', $assignedDeviceId) === (string) $device->id)>
+                                        {{ $device->nome }}{{ $device->local ? ' - ' . $device->local : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('device_id')" class="mt-2" />
+                        </div>
+
+                        <div class="md:col-span-3 flex flex-wrap items-center gap-4">
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="capture_web_config" value="0">
+                                <input type="checkbox" name="capture_web_config" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('capture_web_config') === '1')>
+                                <span class="text-sm text-gray-700">Atualizar snapshot com configuração atual da Totem Web</span>
+                            </label>
+
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="is_default_web" value="0">
+                                <input type="checkbox" name="is_default_web" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('is_default_web', $template->is_default_web) == '1')>
+                                <span class="text-sm text-gray-700">Template padrão da empresa</span>
+                            </label>
+                        </div>
+
+                        <div class="md:col-span-3 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                            Snapshot Totem Web: <strong>{{ empty($template->web_config_payload) ? 'Nao capturado' : 'Capturado' }}</strong>
+                        </div>
+
                         <div class="flex items-end gap-2">
                             <x-primary-button>Salvar</x-primary-button>
                         </div>
@@ -104,4 +152,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            const select = document.getElementById('tipoLayoutSelect');
+            if (!select) {
+                return;
+            }
+
+            const isEnglishBrowser = String(navigator.language || '').toLowerCase().startsWith('en');
+
+            Array.from(select.options).forEach((option) => {
+                const labelPt = String(option.getAttribute('data-label-pt') || option.value);
+                const labelEn = String(option.getAttribute('data-label-en') || option.value);
+                option.textContent = isEnglishBrowser ? labelEn : labelPt;
+            });
+        })();
+    </script>
 </x-app-layout>

@@ -26,6 +26,12 @@
                         {{ __('Dashboard') }}
                     </a>
 
+                    @if (Auth::user()->hasMenuAccess('editor_template'))
+                        <a href="{{ route('admin.templates.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/templates*') ? $desktopNavActive : '' }}">
+                            {{ __('Template') }}
+                        </a>
+                    @endif
+
                     @if (Auth::user()->hasMenuAccess('cadastro_publico'))
                         <a href="{{ route('register') }}" class="{{ $desktopNavBase }} {{ (request()->routeIs('register') || request()->routeIs('register.users.*')) ? $desktopNavActive : '' }}">
                             {{ __('Cadastro Público') }}
@@ -173,6 +179,12 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            @if (Auth::user()->hasMenuAccess('editor_template'))
+                <x-responsive-nav-link :href="route('admin.templates.index')" :active="request()->is('admin/templates*')">
+                    {{ __('Template') }}
+                </x-responsive-nav-link>
+            @endif
 
             @if (Auth::user()->hasMenuAccess('cadastro_publico'))
                 <x-responsive-nav-link :href="route('register')" :active="request()->routeIs('register') || request()->routeIs('register.users.*')">

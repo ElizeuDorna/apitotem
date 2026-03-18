@@ -12,6 +12,7 @@ use App\Models\DeviceActivation;
 use App\Models\GlobalImageGallery;
 use App\Models\Empresa;
 use App\Models\Produto;
+use App\Models\Template;
 use App\Models\TemplateItem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -442,6 +443,12 @@ class TvController extends Controller
             'empresa_id' => $device->empresa_id,
         ], []);
 
+        $deviceConfiguration = $this->resolveDeviceConfiguration((int) $device->id);
+        $templatePayload = $this->resolveWebTemplatePayloadForDevice($device, $deviceConfiguration);
+        if (!empty($templatePayload)) {
+            $config = $this->applyWebTemplatePayloadToConfig($config, $templatePayload);
+        }
+
         $empresa = Empresa::query()->find($device->empresa_id);
         $configuredRightSidebarLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->rightSidebarLogoUrl ?? ''));
         $companyLogoUrl = $this->normalizeCompanyLogoUrl((string) ($empresa->urlimagem ?? ''));
@@ -862,6 +869,46 @@ class TvController extends Controller
                 'orientacao' => 'landscape',
             ]
         )->load('template');
+    }
+
+    private function resolveWebTemplatePayloadForDevice(Device $device, DeviceConfiguration $configuration): array
+    {
+        $template = $configuration->template;
+
+        if ($template && is_array($template->web_config_payload) && !empty($template->web_config_payload)) {
+            return $template->web_config_payload;
+        }
+
+        $defaultTemplate = Template::query()
+            ->where('empresa_id', $device->empresa_id)
+            ->where('is_default_web', true)
+            ->latest('id')
+            ->first();
+
+        if ($defaultTemplate && is_array($defaultTemplate->web_config_payload) && !empty($defaultTemplate->web_config_payload)) {
+            return $defaultTemplate->web_config_payload;
+        }
+
+        return [];
+    }
+
+    private function applyWebTemplatePayloadToConfig(Configuracao $config, array $payload): Configuracao
+    {
+        $fillable = array_flip((new Configuracao())->getFillable());
+
+        foreach ($payload as $key => $value) {
+            if (!is_string($key) || !isset($fillable[$key])) {
+                continue;
+            }
+
+            if (in_array($key, ['empresa_id'], true)) {
+                continue;
+            }
+
+            $config->setAttribute($key, $value);
+        }
+
+        return $config;
     }
 
     private function sortProductsForTv(Collection $products, string $mode, string $alphabeticalDirection, array $departmentOrder, array $groupOrder): Collection

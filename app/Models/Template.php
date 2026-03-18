@@ -15,6 +15,13 @@ class Template extends Model
         'empresa_id',
         'nome',
         'tipo_layout',
+        'web_config_payload',
+        'is_default_web',
+    ];
+
+    protected $casts = [
+        'web_config_payload' => 'array',
+        'is_default_web' => 'boolean',
     ];
 
     public const LAYOUTS = [

@@ -41,7 +41,7 @@
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $grupo->empresa?->cnpj_cpf ? preg_replace('/\D/', '', $grupo->empresa->cnpj_cpf) : 'Não vinculado' }}</td>
                         <td class="px-4 py-3 text-sm text-center text-slate-700">{{ $grupo->produtos_count ?? 0 }}</td>
                         <td class="px-4 py-3 text-center">
-                            <a href="{{ route('admin.grupos.edit', $grupo->id) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
+                            <a href="{{ route('admin.grupos.edit', ['grupo' => $grupo->id, 'return' => url()->full()]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
                             <form action="{{ route('admin.grupos.destroy', $grupo->id) }}" method="POST" class="inline ml-2" onsubmit="return confirm('Tem certeza?');">
                                 @csrf
                                 @method('DELETE')
