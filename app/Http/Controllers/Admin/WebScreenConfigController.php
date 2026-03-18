@@ -61,6 +61,7 @@ class WebScreenConfigController extends Controller
         $shouldProcessGeneralConfig = in_array($saveSection, ['', 'generalConfigSection'], true);
         $shouldProcessVideoValidation = in_array($saveSection, ['', 'videoConfigSection'], true);
         $slideSelectionSubmitted = (bool) $request->boolean('suggestedSlideSelectionSubmitted', false);
+        $forceClearRightSidebarSlides = (bool) $request->boolean('forceClearRightSidebarSlides', false);
         $currentConfig = Configuracao::firstOrCreate(['empresa_id' => $empresaId], []);
 
         if ($saveSection !== '') {
@@ -129,6 +130,7 @@ class WebScreenConfigController extends Controller
         $validated = $request->validate([
             'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,fullScreenSlideConfig,imageSizeConfigSection,paginationConfigSection'],
             'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig,fullScreenSlideConfig'],
+            'forceClearRightSidebarSlides' => ['nullable', 'boolean'],
             'apiRefreshInterval' => ['nullable', 'integer', 'min:5', 'max:3600'],
             'openRightSidebarImageScheduleUrl' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
@@ -747,9 +749,11 @@ class WebScreenConfigController extends Controller
                 }
             }
 
-            $companyDirectUrl = $this->normalizeSingleImageUrl((string) ($validated['companyGalleryDirectUrl'] ?? ''));
-            if ($companyDirectUrl !== '' && !in_array($companyDirectUrl, $manualSlideUrls, true)) {
-                $manualSlideUrls[] = $companyDirectUrl;
+            if (! ($saveSection === 'companyGalleryConfigSection' && $forceClearRightSidebarSlides)) {
+                $companyDirectUrl = $this->normalizeSingleImageUrl((string) ($validated['companyGalleryDirectUrl'] ?? ''));
+                if ($companyDirectUrl !== '' && !in_array($companyDirectUrl, $manualSlideUrls, true)) {
+                    $manualSlideUrls[] = $companyDirectUrl;
+                }
             }
 
             $availableSources = $availableGalleryImages;
@@ -770,7 +774,13 @@ class WebScreenConfigController extends Controller
 
             $finalSlideUrls = $manualSlideUrls;
 
-            if ($slideSelectionSubmitted) {
+            if ($saveSection === 'companyGalleryConfigSection' && $forceClearRightSidebarSlides) {
+                $finalSlideUrls = [];
+                $validated['rightSidebarImageSchedules'] = [];
+                $validated['suggestedSlideImageSources'] = [];
+            }
+
+            if ($slideSelectionSubmitted && !($saveSection === 'companyGalleryConfigSection' && $forceClearRightSidebarSlides)) {
                 $selectedSlideUrls = collect($validated['suggestedSlideImageSources'])
                     ->map(fn (string $sourceKey) => $availableSources[$sourceKey] ?? null)
                     ->filter(fn ($url) => is_string($url) && $url !== '')
@@ -785,13 +795,20 @@ class WebScreenConfigController extends Controller
                 $finalSlideUrls = array_values(array_unique(array_merge($manualSlideUrlsWithoutManaged, $selectedSlideUrls)));
             }
 
-            if (empty($finalSlideUrls) && !empty($availableGalleryImages) && !$slideSelectionSubmitted) {
+            if (
+                empty($finalSlideUrls)
+                && !empty($availableGalleryImages)
+                && !$slideSelectionSubmitted
+                && $saveSection !== 'companyGalleryConfigSection'
+            ) {
                 $finalSlideUrls = array_values($availableGalleryImages);
             }
 
             // Keep list and editor in sync: any URL present in schedule payload must
             // also remain in the slide URLs list shown in the UI.
-            $finalSlideUrls = array_values(array_unique(array_merge($finalSlideUrls, $scheduleSubmittedUrls)));
+            $finalSlideUrls = $saveSection === 'companyGalleryConfigSection' && $forceClearRightSidebarSlides
+                ? []
+                : array_values(array_unique(array_merge($finalSlideUrls, $scheduleSubmittedUrls)));
 
             $validated['rightSidebarImageUrls'] = implode("\n", $finalSlideUrls);
 
@@ -944,7 +961,7 @@ class WebScreenConfigController extends Controller
             $validated['rightSidebarImageUrls'] = null;
         }
 
-        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['companyGalleryDirectUrl'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload']);
+        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['companyGalleryDirectUrl'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload'], $validated['forceClearRightSidebarSlides']);
 
         $embedStatuses = [];
         $embedWarnings = [];

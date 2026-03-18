@@ -62,6 +62,7 @@
                         <input type="hidden" id="suggestedSlideSelectionSubmitted" name="suggestedSlideSelectionSubmitted" value="0">
                         <input type="hidden" id="openCompanyGalleryTarget" name="openCompanyGalleryTarget" value="">
                         <input type="hidden" id="openRightSidebarImageScheduleUrl" name="openRightSidebarImageScheduleUrl" value="">
+                        <input type="hidden" id="forceClearRightSidebarSlides" name="forceClearRightSidebarSlides" value="0">
 
                         <div class="grid grid-cols-1 gap-4 items-start">
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
@@ -1300,6 +1301,7 @@
         const suggestedSlideSelectionSubmittedInput = document.getElementById('suggestedSlideSelectionSubmitted');
         const openCompanyGalleryTargetInput = document.getElementById('openCompanyGalleryTarget');
         const openRightSidebarImageScheduleUrlInput = document.getElementById('openRightSidebarImageScheduleUrl');
+        const forceClearRightSidebarSlidesInput = document.getElementById('forceClearRightSidebarSlides');
         const galeriaNovaSlidePickerUrl = @json(route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_slide' => 1]));
         const rightSidebarSlideImageSelecionadaStorageKey = 'right_sidebar_slide_image_url_selected';
         const companyGallerySubmenuList = document.getElementById('companyGallerySubmenuList');
@@ -2944,21 +2946,38 @@
                 removeButton.className = 'rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-700';
                 removeButton.textContent = 'Excluir imagem';
                 removeButton.addEventListener('click', () => {
-                    const currentUrl = normalizeSlideUrlForCompare(row.getAttribute('data-schedule-row-url'));
-                    const filteredUrls = parseRightSidebarImageUrls()
-                        .map((item) => normalizeSlideUrlForCompare(item))
-                        .filter((item) => item !== '' && item !== currentUrl);
+                    const shouldDelete = window.confirm('Deseja excluir esta imagem da lista de slide?');
+                    if (!shouldDelete) {
+                        return;
+                    }
+
+                    const currentUrl = normalizeSlideUrlForCompare(url);
+                    const normalizedUrls = Array.from(new Set(
+                        parseRightSidebarImageUrls()
+                            .map((item) => normalizeSlideUrlForCompare(item))
+                            .filter((item) => item !== '')
+                    ));
+                    const filteredUrls = normalizedUrls.filter((_, itemIndex) => itemIndex !== index);
                     rightSidebarImageUrls.value = Array.from(new Set(filteredUrls)).join('\n');
+                    if (forceClearRightSidebarSlidesInput) {
+                        forceClearRightSidebarSlidesInput.value = filteredUrls.length === 0 ? '1' : '0';
+                    }
                     hasUserInteractedWithSlideSelection = true;
                     if (suggestedSlideSelectionSubmittedInput) {
                         suggestedSlideSelectionSubmittedInput.value = '1';
                     }
                     uncheckManagedSlideSourcesByUrl(currentUrl);
-                    delete rightSidebarImageScheduleState[currentUrl];
-                    if (openRightSidebarImageScheduleUrl === currentUrl) {
+                    syncSelectedSlideUrlsToTextarea();
+                    Object.keys(rightSidebarImageScheduleState).forEach((key) => {
+                        if (urlsMatchForSlideManagement(key, currentUrl)) {
+                            delete rightSidebarImageScheduleState[key];
+                        }
+                    });
+                    if (urlsMatchForSlideManagement(openRightSidebarImageScheduleUrl, currentUrl)) {
                         openRightSidebarImageScheduleUrl = null;
                     }
                     renderRightSidebarImageScheduleEditor();
+                    requestCompanyGalleryConfigSave();
                 });
                 actionWrap.appendChild(removeButton);
                 details.appendChild(actionWrap);
@@ -3054,6 +3073,53 @@
             return '';
         }
 
+        function normalizeComparableSlidePath(url) {
+            const value = String(url || '').trim();
+            if (value === '') {
+                return '';
+            }
+
+            const renderable = resolveRenderableSlideUrl(value);
+            const normalizedRenderable = normalizeSlideUrlForCompare(renderable).replace(/\/+$/, '');
+            if (normalizedRenderable !== '') {
+                return normalizedRenderable;
+            }
+
+            return normalizeSlideUrlForCompare(value).replace(/\/+$/, '');
+        }
+
+        function safeDecodeUriComponent(value) {
+            try {
+                return decodeURIComponent(String(value || ''));
+            } catch (_error) {
+                return String(value || '');
+            }
+        }
+
+        function urlsMatchForSlideManagement(firstUrl, secondUrl) {
+            const first = normalizeComparableSlidePath(firstUrl);
+            const second = normalizeComparableSlidePath(secondUrl);
+
+            if (!first || !second) {
+                return false;
+            }
+
+            if (first === second) {
+                return true;
+            }
+
+            const firstDecoded = safeDecodeUriComponent(first).replace(/\/+$/, '');
+            const secondDecoded = safeDecodeUriComponent(second).replace(/\/+$/, '');
+            return firstDecoded === secondDecoded;
+        }
+
+        function requestCompanyGalleryConfigSave() {
+            const sectionSaveButton = document.querySelector('[data-save-section="companyGalleryConfigSection"]');
+            if (sectionSaveButton instanceof HTMLButtonElement) {
+                sectionSaveButton.click();
+            }
+        }
+
         function syncSelectedSlideUrlsToTextarea() {
             if (!rightSidebarImageUrls) {
                 return;
@@ -3087,15 +3153,15 @@
         }
 
         function uncheckManagedSlideSourcesByUrl(targetUrl) {
-            const normalizedTarget = normalizeSlideUrlForCompare(targetUrl);
+            const normalizedTarget = normalizeComparableSlidePath(targetUrl);
             if (!normalizedTarget) {
                 return;
             }
 
             const managedCheckboxes = Array.from(document.querySelectorAll('input[name="suggestedSlideImageSources[]"][data-source-url]'));
             managedCheckboxes.forEach((input) => {
-                const sourceUrl = normalizeSlideUrlForCompare(input.getAttribute('data-source-url'));
-                if (sourceUrl === normalizedTarget) {
+                const sourceUrl = normalizeComparableSlidePath(input.getAttribute('data-source-url'));
+                if (sourceUrl === normalizedTarget || urlsMatchForSlideManagement(sourceUrl, normalizedTarget)) {
                     input.checked = false;
                 }
             });
@@ -3240,7 +3306,6 @@
                 button.className = 'company-gallery-submenu-btn w-full rounded border border-gray-300 px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50';
                 button.setAttribute('data-company-gallery-target', targetId);
                 button.textContent = label;
-
                 button.addEventListener('click', () => {
                     const clickedTargetId = String(button.getAttribute('data-company-gallery-target') || '').trim();
                     if (!clickedTargetId) {
@@ -3252,7 +3317,7 @@
                         return;
                     }
 
-                        openCompanyGalleryTargetBlock(clickedTargetId);
+                    openCompanyGalleryTargetBlock(clickedTargetId);
                 });
 
                 companyGallerySubmenuList.appendChild(button);
@@ -3271,6 +3336,10 @@
                     if (!urls.includes(selectedUrl)) {
                         urls.push(selectedUrl);
                         rightSidebarImageUrls.value = Array.from(new Set(urls)).join('\n');
+                    }
+
+                    if (forceClearRightSidebarSlidesInput) {
+                        forceClearRightSidebarSlidesInput.value = '0';
                     }
 
                     hasUserInteractedWithSlideSelection = true;
@@ -3399,7 +3468,8 @@
                 const isSuggestedSlideSelectionSubmitted = control === suggestedSlideSelectionSubmittedInput;
                 const isOpenCompanyGalleryTarget = control === openCompanyGalleryTargetInput;
                 const isOpenRightSidebarImageScheduleUrl = control === openRightSidebarImageScheduleUrlInput;
-                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl;
+                const isForceClearRightSidebarSlides = control === forceClearRightSidebarSlidesInput;
+                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
 
                 controlsState.push({ control, disabled: control.disabled });
                 if (!shouldKeep) {
@@ -3432,6 +3502,11 @@
                     suggestedSlideSelectionSubmittedInput.value = '1';
                 }
                 syncSelectedSlideUrlsToTextarea();
+
+                if (forceClearRightSidebarSlidesInput && sectionId === 'companyGalleryConfigSection') {
+                    const currentUrls = String(rightSidebarImageUrls?.value || '').trim();
+                    forceClearRightSidebarSlidesInput.value = currentUrls === '' ? '1' : '0';
+                }
             }
 
             // Restore control states if browser blocks submission due to validation.
