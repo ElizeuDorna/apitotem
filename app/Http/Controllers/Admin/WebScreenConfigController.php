@@ -8,17 +8,22 @@ use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
 use App\Support\EmpresaContext;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
 
 class WebScreenConfigController extends Controller
 {
+    private const TEMPLATE_DEV_MODE_CACHE_PREFIX = 'tv:web:disable-templates:empresa:';
+    private const RESPONSIVE_MODE_CACHE_PREFIX = 'tv:web:enable-responsive:empresa:';
+
     public function edit(): View
     {
         $empresaId = $this->resolveEmpresaId();
@@ -45,6 +50,8 @@ class WebScreenConfigController extends Controller
 
         return view('admin.web-screen-config', [
             'config' => $config,
+            'templateDevModeEnabled' => $this->isTemplateDevModeEnabled($empresaId),
+            'responsiveModeEnabled' => $this->isResponsiveModeEnabled($empresaId),
             'companyGalleryImages' => $this->listCompanyGalleryImages(),
             'availableGroups' => Grupo::query()
                 ->where('empresa_id', $empresaId)
@@ -56,6 +63,33 @@ class WebScreenConfigController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $empresaId = $this->resolveEmpresaId();
+        $toggleTemplateDevMode = trim((string) $request->input('toggleTemplateDevMode', ''));
+        if (in_array($toggleTemplateDevMode, ['enable', 'disable'], true)) {
+            $enabled = $toggleTemplateDevMode === 'enable';
+            $this->setTemplateDevModeEnabled($empresaId, $enabled);
+
+            return redirect()
+                ->back()
+                ->with('success', $enabled
+                    ? 'Modo desenvolvimento ativado: templates da TV desativados para esta empresa.'
+                    : 'Modo desenvolvimento desativado: templates da TV reativados para esta empresa.')
+                ->with('openConfigSection', 'generalConfigSection');
+        }
+
+        $toggleResponsiveMode = trim((string) $request->input('toggleResponsiveMode', ''));
+        if (in_array($toggleResponsiveMode, ['enable', 'disable'], true)) {
+            $enabled = $toggleResponsiveMode === 'enable';
+            $this->setResponsiveModeEnabled($empresaId, $enabled);
+
+            return redirect()
+                ->back()
+                ->with('success', $enabled
+                    ? 'Responsividade ativada para TV/Totem desta empresa.'
+                    : 'Responsividade desativada para TV/Totem desta empresa.')
+                ->with('openConfigSection', 'companyGalleryConfigSection')
+                ->with('openCompanyGalleryTarget', 'rightSidebarImageConfig');
+        }
+
         $saveSection = trim((string) $request->input('saveSection', ''));
         $shouldProcessRightSidebarMedia = in_array($saveSection, ['', 'companyGalleryConfigSection', 'fullScreenSlideConfig'], true);
         $shouldProcessGeneralConfig = in_array($saveSection, ['', 'generalConfigSection'], true);
@@ -211,9 +245,13 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageSchedules.*.windowsPriceText' => ['nullable', 'string', 'max:60'],
             'rightSidebarImageSchedules.*.windowsNameFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
             'rightSidebarImageSchedules.*.windowsPriceFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
-            'rightSidebarImageSchedules.*.windowsTextFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
+            'rightSidebarImageSchedules.*.windowsTextFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
+            'rightSidebarImageSchedules.*.windowsNameFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
+            'rightSidebarImageSchedules.*.windowsPriceFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
             'rightSidebarImageSchedules.*.windowsNamePosition' => ['nullable', 'in:top,bottom'],
             'rightSidebarImageSchedules.*.windowsPricePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarImageSchedules.*.windowsNameVerticalNudge' => ['nullable', 'integer', 'min:-120', 'max:120'],
+            'rightSidebarImageSchedules.*.windowsPriceVerticalNudge' => ['nullable', 'integer', 'min:-120', 'max:120'],
             'rightSidebarImageSchedules.*.windowsNameColor' => ['nullable', 'string', 'max:9'],
             'rightSidebarImageSchedules.*.windowsNameBadgeEnabled' => ['nullable', 'boolean'],
             'rightSidebarImageSchedules.*.windowsNameBadgeColor' => ['nullable', 'string', 'max:9'],
@@ -225,9 +263,13 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageSchedules.*.androidPriceText' => ['nullable', 'string', 'max:60'],
             'rightSidebarImageSchedules.*.androidNameFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
             'rightSidebarImageSchedules.*.androidPriceFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
-            'rightSidebarImageSchedules.*.androidTextFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
+            'rightSidebarImageSchedules.*.androidTextFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
+            'rightSidebarImageSchedules.*.androidNameFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
+            'rightSidebarImageSchedules.*.androidPriceFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
             'rightSidebarImageSchedules.*.androidNamePosition' => ['nullable', 'in:top,bottom'],
             'rightSidebarImageSchedules.*.androidPricePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarImageSchedules.*.androidNameVerticalNudge' => ['nullable', 'integer', 'min:-120', 'max:120'],
+            'rightSidebarImageSchedules.*.androidPriceVerticalNudge' => ['nullable', 'integer', 'min:-120', 'max:120'],
             'rightSidebarImageSchedules.*.androidNameColor' => ['nullable', 'string', 'max:9'],
             'rightSidebarImageSchedules.*.androidNameBadgeEnabled' => ['nullable', 'boolean'],
             'rightSidebarImageSchedules.*.androidNameBadgeColor' => ['nullable', 'string', 'max:9'],
@@ -264,6 +306,14 @@ class WebScreenConfigController extends Controller
             'rightSidebarProductCarouselEnabled' => ['nullable', 'boolean'],
             'rightSidebarProductDisplayMode' => ['nullable', 'in:all,offers_only'],
             'rightSidebarProductTransitionMode' => ['nullable', 'in:products_only,before_images,mixed_with_images,mixed_with_media'],
+            'rightSidebarPlaybackSequence' => ['nullable', Rule::in([
+                'products,image,video',
+                'products,video,image',
+                'image,products,video',
+                'image,video,products',
+                'video,products,image',
+                'video,image,products',
+            ])],
             'rightSidebarProductInterval' => ['nullable', 'integer', 'min:1', 'max:300'],
             'rightSidebarProductShowImage' => ['nullable', 'boolean'],
             'rightSidebarProductShowName' => ['nullable', 'boolean'],
@@ -437,8 +487,12 @@ class WebScreenConfigController extends Controller
                 $windowsNameFontSize = max(8, min(120, (int) ($item['windowsNameFontSize'] ?? 18)));
                 $windowsPriceFontSize = max(8, min(120, (int) ($item['windowsPriceFontSize'] ?? 22)));
                 $windowsTextFontFamily = (string) ($item['windowsTextFontFamily'] ?? 'arial');
+                $windowsNameFontFamily = (string) ($item['windowsNameFontFamily'] ?? $windowsTextFontFamily);
+                $windowsPriceFontFamily = (string) ($item['windowsPriceFontFamily'] ?? $windowsTextFontFamily);
                 $windowsNamePosition = (string) ($item['windowsNamePosition'] ?? 'top');
                 $windowsPricePosition = (string) ($item['windowsPricePosition'] ?? 'bottom');
+                $windowsNameVerticalNudge = max(-120, min(120, (int) ($item['windowsNameVerticalNudge'] ?? 0)));
+                $windowsPriceVerticalNudge = max(-120, min(120, (int) ($item['windowsPriceVerticalNudge'] ?? 0)));
                 $windowsNameColor = $this->normalizeHexColor((string) ($item['windowsNameColor'] ?? '#ffffff'), '#ffffff');
                 $windowsNameBadgeEnabled = isset($item['windowsNameBadgeEnabled']) ? (bool) $item['windowsNameBadgeEnabled'] : true;
                 $windowsNameBadgeColor = $this->normalizeHexColor((string) ($item['windowsNameBadgeColor'] ?? '#0f172a'), '#0f172a');
@@ -452,8 +506,12 @@ class WebScreenConfigController extends Controller
                 $androidNameFontSize = max(8, min(120, (int) ($item['androidNameFontSize'] ?? 18)));
                 $androidPriceFontSize = max(8, min(120, (int) ($item['androidPriceFontSize'] ?? 22)));
                 $androidTextFontFamily = (string) ($item['androidTextFontFamily'] ?? 'arial');
+                $androidNameFontFamily = (string) ($item['androidNameFontFamily'] ?? $androidTextFontFamily);
+                $androidPriceFontFamily = (string) ($item['androidPriceFontFamily'] ?? $androidTextFontFamily);
                 $androidNamePosition = (string) ($item['androidNamePosition'] ?? 'top');
                 $androidPricePosition = (string) ($item['androidPricePosition'] ?? 'bottom');
+                $androidNameVerticalNudge = max(-120, min(120, (int) ($item['androidNameVerticalNudge'] ?? 0)));
+                $androidPriceVerticalNudge = max(-120, min(120, (int) ($item['androidPriceVerticalNudge'] ?? 0)));
                 $androidNameColor = $this->normalizeHexColor((string) ($item['androidNameColor'] ?? '#ffffff'), '#ffffff');
                 $androidNameBadgeEnabled = isset($item['androidNameBadgeEnabled']) ? (bool) $item['androidNameBadgeEnabled'] : true;
                 $androidNameBadgeColor = $this->normalizeHexColor((string) ($item['androidNameBadgeColor'] ?? '#0f172a'), '#0f172a');
@@ -486,9 +544,13 @@ class WebScreenConfigController extends Controller
                     'windowsPriceText' => $windowsPriceText,
                     'windowsNameFontSize' => $windowsNameFontSize,
                     'windowsPriceFontSize' => $windowsPriceFontSize,
-                    'windowsTextFontFamily' => in_array($windowsTextFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system'], true) ? $windowsTextFontFamily : 'arial',
+                    'windowsTextFontFamily' => in_array($windowsTextFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system', 'impact_shadow', 'neon_glow', 'serif_elegant', 'gold_lux', 'retro_arcade', 'crystal_frost'], true) ? $windowsTextFontFamily : 'arial',
+                    'windowsNameFontFamily' => in_array($windowsNameFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system', 'impact_shadow', 'neon_glow', 'serif_elegant', 'gold_lux', 'retro_arcade', 'crystal_frost'], true) ? $windowsNameFontFamily : 'arial',
+                    'windowsPriceFontFamily' => in_array($windowsPriceFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system', 'impact_shadow', 'neon_glow', 'serif_elegant', 'gold_lux', 'retro_arcade', 'crystal_frost'], true) ? $windowsPriceFontFamily : 'arial',
                     'windowsNamePosition' => in_array($windowsNamePosition, ['top', 'bottom'], true) ? $windowsNamePosition : 'top',
                     'windowsPricePosition' => in_array($windowsPricePosition, ['top', 'bottom'], true) ? $windowsPricePosition : 'bottom',
+                    'windowsNameVerticalNudge' => $windowsNameVerticalNudge,
+                    'windowsPriceVerticalNudge' => $windowsPriceVerticalNudge,
                     'windowsNameColor' => $windowsNameColor,
                     'windowsNameBadgeEnabled' => $windowsNameBadgeEnabled,
                     'windowsNameBadgeColor' => $windowsNameBadgeColor,
@@ -500,9 +562,13 @@ class WebScreenConfigController extends Controller
                     'androidPriceText' => $androidPriceText,
                     'androidNameFontSize' => $androidNameFontSize,
                     'androidPriceFontSize' => $androidPriceFontSize,
-                    'androidTextFontFamily' => in_array($androidTextFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system'], true) ? $androidTextFontFamily : 'arial',
+                    'androidTextFontFamily' => in_array($androidTextFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system', 'impact_shadow', 'neon_glow', 'serif_elegant', 'gold_lux', 'retro_arcade', 'crystal_frost'], true) ? $androidTextFontFamily : 'arial',
+                    'androidNameFontFamily' => in_array($androidNameFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system', 'impact_shadow', 'neon_glow', 'serif_elegant', 'gold_lux', 'retro_arcade', 'crystal_frost'], true) ? $androidNameFontFamily : 'arial',
+                    'androidPriceFontFamily' => in_array($androidPriceFontFamily, ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system', 'impact_shadow', 'neon_glow', 'serif_elegant', 'gold_lux', 'retro_arcade', 'crystal_frost'], true) ? $androidPriceFontFamily : 'arial',
                     'androidNamePosition' => in_array($androidNamePosition, ['top', 'bottom'], true) ? $androidNamePosition : 'top',
                     'androidPricePosition' => in_array($androidPricePosition, ['top', 'bottom'], true) ? $androidPricePosition : 'bottom',
+                    'androidNameVerticalNudge' => $androidNameVerticalNudge,
+                    'androidPriceVerticalNudge' => $androidPriceVerticalNudge,
                     'androidNameColor' => $androidNameColor,
                     'androidNameBadgeEnabled' => $androidNameBadgeEnabled,
                     'androidNameBadgeColor' => $androidNameBadgeColor,
@@ -523,6 +589,7 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarProductCarouselEnabled'] = (bool) ($validated['rightSidebarProductCarouselEnabled'] ?? false);
         $validated['rightSidebarProductDisplayMode'] = (string) ($validated['rightSidebarProductDisplayMode'] ?? 'all');
         $validated['rightSidebarProductTransitionMode'] = (string) ($validated['rightSidebarProductTransitionMode'] ?? 'products_only');
+        $validated['rightSidebarPlaybackSequence'] = (string) ($validated['rightSidebarPlaybackSequence'] ?? 'products,image,video');
         $validated['rightSidebarProductInterval'] = (int) ($validated['rightSidebarProductInterval'] ?? 8);
         $validated['rightSidebarProductShowImage'] = (bool) ($validated['rightSidebarProductShowImage'] ?? true);
         $validated['rightSidebarProductShowName'] = (bool) ($validated['rightSidebarProductShowName'] ?? true);
@@ -555,7 +622,7 @@ class WebScreenConfigController extends Controller
             ->values()
             ->all();
         $validated['rowBorderWidth'] = (int) ($validated['rowBorderWidth'] ?? 1);
-        $validated['rightSidebarImageHeight'] = (int) ($validated['rightSidebarImageHeight'] ?? 96);
+        $validated['rightSidebarImageHeight'] = (int) ($validated['rightSidebarImageHeight'] ?? 0);
         $validated['rightSidebarImageWidth'] = (int) ($validated['rightSidebarImageWidth'] ?? 0);
         $validated['rightSidebarAndroidHeight'] = (int) ($validated['rightSidebarAndroidHeight'] ?? 0);
         $validated['rightSidebarAndroidWidth'] = (int) ($validated['rightSidebarAndroidWidth'] ?? 0);
@@ -901,6 +968,10 @@ class WebScreenConfigController extends Controller
             unset($validated['rightSidebarProductTransitionMode']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarPlaybackSequence')) {
+            unset($validated['rightSidebarPlaybackSequence']);
+        }
+
         if (! Schema::hasColumn('configuracoes', 'rightSidebarProductInterval')) {
             unset($validated['rightSidebarProductInterval']);
         }
@@ -1102,6 +1173,7 @@ class WebScreenConfigController extends Controller
             'rightSidebarProductCarouselEnabled',
             'rightSidebarProductDisplayMode',
             'rightSidebarProductTransitionMode',
+            'rightSidebarPlaybackSequence',
             'rightSidebarProductInterval',
             'rightSidebarProductShowImage',
             'rightSidebarProductShowName',
@@ -1196,6 +1268,36 @@ class WebScreenConfigController extends Controller
         if (! empty($merge)) {
             $request->merge($merge);
         }
+    }
+
+    private function templateDevModeCacheKey(int $empresaId): string
+    {
+        return self::TEMPLATE_DEV_MODE_CACHE_PREFIX.$empresaId;
+    }
+
+    private function isTemplateDevModeEnabled(int $empresaId): bool
+    {
+        return (bool) Cache::get($this->templateDevModeCacheKey($empresaId), false);
+    }
+
+    private function setTemplateDevModeEnabled(int $empresaId, bool $enabled): void
+    {
+        Cache::forever($this->templateDevModeCacheKey($empresaId), $enabled);
+    }
+
+    private function responsiveModeCacheKey(int $empresaId): string
+    {
+        return self::RESPONSIVE_MODE_CACHE_PREFIX.$empresaId;
+    }
+
+    private function isResponsiveModeEnabled(int $empresaId): bool
+    {
+        return (bool) Cache::get($this->responsiveModeCacheKey($empresaId), false);
+    }
+
+    private function setResponsiveModeEnabled(int $empresaId, bool $enabled): void
+    {
+        Cache::forever($this->responsiveModeCacheKey($empresaId), $enabled);
     }
 
     private function storeCompanyGalleryImage(Request $request, string $code): string

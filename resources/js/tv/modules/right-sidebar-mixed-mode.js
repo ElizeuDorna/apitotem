@@ -21,6 +21,7 @@ export function createRightSidebarMixedModeModule(deps) {
         const nextSignature = JSON.stringify({
             intervalSeconds,
             transition: String(deps.visualConfig.rightSidebarProductTransitionMode || (includeVideos ? 'mixed_with_media' : 'mixed_with_images')).toLowerCase(),
+            playbackSequence: String(deps.visualConfig.rightSidebarPlaybackSequence || 'products,image,video').toLowerCase(),
             displayMode: String(deps.visualConfig.rightSidebarProductDisplayMode || 'all').toLowerCase(),
             products: nextProductItems.map((item) => ({
                 id: Number(item?.id || 0),
@@ -71,15 +72,50 @@ export function createRightSidebarMixedModeModule(deps) {
             return;
         }
 
-        const turnSequence = [];
-        if (state.sidebarProductItems.length > 0) {
-            turnSequence.push('product');
-        }
-        if (state.sidebarMixedImageUrls.length > 0) {
-            turnSequence.push('image');
-        }
-        if (state.sidebarMixedVideoItems.length > 0) {
-            turnSequence.push('video');
+        const parseConfiguredTurnSequence = () => {
+            const rawSequence = String(deps.visualConfig.rightSidebarPlaybackSequence || 'products,image,video')
+                .trim()
+                .toLowerCase();
+            const aliases = {
+                product: 'product',
+                products: 'product',
+                image: 'image',
+                images: 'image',
+                slide: 'image',
+                slides: 'image',
+                video: 'video',
+                videos: 'video',
+            };
+
+            const parsed = rawSequence
+                .split(',')
+                .map((part) => aliases[String(part || '').trim()] || '')
+                .filter((part) => part !== '');
+
+            const uniqueTurns = [];
+            parsed.forEach((turn) => {
+                if (!uniqueTurns.includes(turn)) {
+                    uniqueTurns.push(turn);
+                }
+            });
+
+            if (!includeVideos) {
+                return uniqueTurns.filter((turn) => turn !== 'video');
+            }
+
+            return uniqueTurns;
+        };
+
+        const configuredTurnSequence = parseConfiguredTurnSequence();
+        const availableTurns = {
+            product: state.sidebarProductItems.length > 0,
+            image: state.sidebarMixedImageUrls.length > 0,
+            video: state.sidebarMixedVideoItems.length > 0,
+        };
+
+        let turnSequence = configuredTurnSequence.filter((turn) => availableTurns[turn] === true);
+        if (turnSequence.length === 0) {
+            turnSequence = ['product', 'image', 'video'].filter((turn) => availableTurns[turn] === true);
         }
 
         if (turnSequence.length === 0) {
@@ -90,98 +126,6 @@ export function createRightSidebarMixedModeModule(deps) {
         const renderMixedTurn = () => {
             const turn = turnSequence[state.sidebarMixedTurnIndex % turnSequence.length] || 'product';
 
-            // mixed_with_media: run full batches in sequence (all products -> all images -> all videos).
-            if (includeVideos) {
-                if (turn === 'product' && state.sidebarProductItems.length > 0) {
-                    state.sidebarMixedVideoTurnActive = false;
-                    state.sidebarMixedVideoTurnExpiresAt = 0;
-                    state.sidebarMixedCurrentVideoItem = null;
-                    deps.stopVideoPlaybackForImageMode();
-                    if (deps.tvImageSlide) {
-                        deps.tvImageSlide.classList.add('hidden');
-                    }
-                    deps.hideSlideTextOverlays();
-
-                    deps.renderSidebarProductItem(state.sidebarProductItems[state.sidebarProductIndex]);
-                    state.sidebarProductIndex += 1;
-                    if (state.sidebarProductIndex >= state.sidebarProductItems.length) {
-                        state.sidebarProductIndex = 0;
-                        state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
-                    }
-
-                    scheduleNextMixedTurn(intervalSeconds);
-                    return;
-                }
-
-                if (turn === 'image' && state.sidebarMixedImageUrls.length > 0) {
-                    state.sidebarMixedVideoTurnActive = false;
-                    state.sidebarMixedVideoTurnExpiresAt = 0;
-                    state.sidebarMixedCurrentVideoItem = null;
-                    deps.stopVideoPlaybackForImageMode();
-                    deps.hideSidebarProductCard();
-                    state.imageSlideUrls = Array.isArray(state.sidebarMixedImageUrls) ? state.sidebarMixedImageUrls.slice() : [];
-                    if (deps.tvImageSlide) {
-                        deps.tvImageSlide.classList.remove('hidden');
-                        deps.showImageSlideAt(state.sidebarMixedImageIndex);
-                    }
-
-                    state.sidebarMixedImageIndex += 1;
-                    if (state.sidebarMixedImageIndex >= state.sidebarMixedImageUrls.length) {
-                        state.sidebarMixedImageIndex = 0;
-                        state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
-                    }
-
-                    scheduleNextMixedTurn(intervalSeconds);
-                    return;
-                }
-
-                if (turn === 'video' && state.sidebarMixedVideoItems.length > 0) {
-                    deps.hideSidebarProductCard();
-                    deps.hideSlideTextOverlays();
-                    if (deps.tvImageSlide) {
-                        deps.tvImageSlide.classList.add('hidden');
-                    }
-
-                    const nextVideo = state.sidebarMixedVideoItems[state.sidebarMixedVideoIndex % state.sidebarMixedVideoItems.length] || null;
-                    if (nextVideo?.url) {
-                        deps.applyVideoSource(nextVideo);
-                    }
-
-                    const currentUrl = String(nextVideo?.url || '').trim();
-                    const isYouTube = Boolean(deps.getYouTubeVideoId(currentUrl));
-                    const isDirectVideoFile = /\.(mp4|webm|ogg|m3u8)([?#].*)?$/i.test(currentUrl);
-                    const hasEmbedUrl = Boolean(deps.resolveEmbedUrl(currentUrl, deps.toBoolean(nextVideo?.muted, false)));
-                    const needsFallbackTimer = hasEmbedUrl && !isYouTube && !isDirectVideoFile;
-
-                    state.sidebarMixedVideoTurnActive = true;
-                    state.sidebarMixedVideoTurnExpiresAt = 0;
-                    state.sidebarMixedCurrentVideoItem = nextVideo || null;
-
-                    if (needsFallbackTimer) {
-                        // Non-YouTube embeds usually do not emit reliable ended events.
-                        const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
-                        const fallbackSeconds = Math.max(configuredVideoSeconds, 30);
-                        deps.clearSidebarProductTimer();
-                        state.sidebarProductTimer = setTimeout(() => {
-                            if (typeof state.sidebarMixedOnVideoFinished === 'function') {
-                                state.sidebarMixedOnVideoFinished();
-                            }
-                        }, fallbackSeconds * 1000);
-                    } else {
-                        deps.clearSidebarProductTimer();
-                    }
-
-                    return;
-                }
-
-                // If current phase has no items, skip to next phase.
-                state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
-                scheduleNextMixedTurn(intervalSeconds);
-                return;
-            }
-
-            state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
-
             if (turn === 'product' && state.sidebarProductItems.length > 0) {
                 state.sidebarMixedVideoTurnActive = false;
                 state.sidebarMixedVideoTurnExpiresAt = 0;
@@ -191,8 +135,14 @@ export function createRightSidebarMixedModeModule(deps) {
                     deps.tvImageSlide.classList.add('hidden');
                 }
                 deps.hideSlideTextOverlays();
+
                 deps.renderSidebarProductItem(state.sidebarProductItems[state.sidebarProductIndex]);
-                state.sidebarProductIndex = (state.sidebarProductIndex + 1) % state.sidebarProductItems.length;
+                state.sidebarProductIndex += 1;
+                if (state.sidebarProductIndex >= state.sidebarProductItems.length) {
+                    state.sidebarProductIndex = 0;
+                    state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
+                }
+
                 scheduleNextMixedTurn(intervalSeconds);
                 return;
             }
@@ -208,7 +158,13 @@ export function createRightSidebarMixedModeModule(deps) {
                     deps.tvImageSlide.classList.remove('hidden');
                     deps.showImageSlideAt(state.sidebarMixedImageIndex);
                 }
-                state.sidebarMixedImageIndex = (state.sidebarMixedImageIndex + 1) % state.sidebarMixedImageUrls.length;
+
+                state.sidebarMixedImageIndex += 1;
+                if (state.sidebarMixedImageIndex >= state.sidebarMixedImageUrls.length) {
+                    state.sidebarMixedImageIndex = 0;
+                    state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
+                }
+
                 scheduleNextMixedTurn(intervalSeconds);
                 return;
             }
@@ -221,21 +177,39 @@ export function createRightSidebarMixedModeModule(deps) {
                 }
 
                 const nextVideo = state.sidebarMixedVideoItems[state.sidebarMixedVideoIndex % state.sidebarMixedVideoItems.length] || null;
-                state.sidebarMixedVideoIndex = (state.sidebarMixedVideoIndex + 1) % state.sidebarMixedVideoItems.length;
                 if (nextVideo?.url) {
                     deps.applyVideoSource(nextVideo);
                 }
 
-                // Keep video visible for a minimum duration in mixed mode.
-                const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
-                const videoTurnSeconds = Math.max(intervalSeconds, configuredVideoSeconds, 4);
+                const currentUrl = String(nextVideo?.url || '').trim();
+                const isYouTube = Boolean(deps.getYouTubeVideoId(currentUrl));
+                const isDirectVideoFile = /\.(mp4|webm|ogg|m3u8)([?#].*)?$/i.test(currentUrl);
+                const hasEmbedUrl = Boolean(deps.resolveEmbedUrl(currentUrl, deps.toBoolean(nextVideo?.muted, false)));
+                const needsFallbackTimer = hasEmbedUrl && !isYouTube && !isDirectVideoFile;
+
                 state.sidebarMixedVideoTurnActive = true;
-                state.sidebarMixedVideoTurnExpiresAt = Date.now() + (videoTurnSeconds * 1000);
+                state.sidebarMixedVideoTurnExpiresAt = 0;
                 state.sidebarMixedCurrentVideoItem = nextVideo || null;
-                scheduleNextMixedTurn(videoTurnSeconds);
+
+                if (needsFallbackTimer) {
+                    // Non-YouTube embeds usually do not emit reliable ended events.
+                    const configuredVideoSeconds = Math.max(0, Number(nextVideo?.durationSeconds || 0));
+                    const fallbackSeconds = Math.max(configuredVideoSeconds, 30);
+                    deps.clearSidebarProductTimer();
+                    state.sidebarProductTimer = setTimeout(() => {
+                        if (typeof state.sidebarMixedOnVideoFinished === 'function') {
+                            state.sidebarMixedOnVideoFinished();
+                        }
+                    }, fallbackSeconds * 1000);
+                } else {
+                    deps.clearSidebarProductTimer();
+                }
+
                 return;
             }
 
+            // If current phase has no items, skip to next phase.
+            state.sidebarMixedTurnIndex = (state.sidebarMixedTurnIndex + 1) % turnSequence.length;
             state.sidebarMixedVideoTurnActive = false;
             state.sidebarMixedVideoTurnExpiresAt = 0;
             state.sidebarMixedCurrentVideoItem = null;

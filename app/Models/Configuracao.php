@@ -76,6 +76,7 @@ class Configuracao extends Model
         'rightSidebarProductCarouselEnabled',
         'rightSidebarProductDisplayMode',
         'rightSidebarProductTransitionMode',
+        'rightSidebarPlaybackSequence',
         'rightSidebarProductInterval',
         'rightSidebarProductShowImage',
         'rightSidebarProductShowName',

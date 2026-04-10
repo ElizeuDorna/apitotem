@@ -182,6 +182,7 @@ const visualConfig = {
     videoPlaylist: [],
     showVideoPanel: true,
     showRightSidebarPanel: true,
+    enableResponsiveLayout: false,
     showRightSidebarLogo: false,
     showLeftVerticalLogo: false,
     rightSidebarLogoPosition: 'sidebar_top',
@@ -241,6 +242,7 @@ const visualConfig = {
     rightSidebarProductCarouselEnabled: false,
     rightSidebarProductDisplayMode: 'all',
     rightSidebarProductTransitionMode: 'products_only',
+    rightSidebarPlaybackSequence: 'products,image,video',
     rightSidebarProductInterval: 8,
     rightSidebarProductShowImage: true,
     rightSidebarProductShowName: true,
@@ -661,6 +663,10 @@ function getCurrentFullscreenElement() {
 }
 
 function isCompactViewport() {
+    if (!toBoolean(visualConfig.enableResponsiveLayout, false)) {
+        return false;
+    }
+
     try {
         const byWidth = window.matchMedia('(max-width: 1023px)').matches;
         const byTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -1290,9 +1296,12 @@ function parseConfiguredImageSlideUrls() {
             windowsPriceText: String(entry?.windowsPriceText || '').trim(),
             windowsNameFontSize: Math.max(8, Math.min(120, Number(entry?.windowsNameFontSize || 18) || 18)),
             windowsPriceFontSize: Math.max(8, Math.min(120, Number(entry?.windowsPriceFontSize || 22) || 22)),
-            windowsTextFontFamily: String(entry?.windowsTextFontFamily || 'arial').toLowerCase(),
+            windowsNameFontFamily: String(entry?.windowsNameFontFamily || entry?.windowsTextFontFamily || 'arial').toLowerCase(),
+            windowsPriceFontFamily: String(entry?.windowsPriceFontFamily || entry?.windowsTextFontFamily || 'arial').toLowerCase(),
             windowsNamePosition: String(entry?.windowsNamePosition || 'top').toLowerCase(),
             windowsPricePosition: String(entry?.windowsPricePosition || 'bottom').toLowerCase(),
+            windowsNameVerticalNudge: Math.max(-120, Math.min(120, Number(entry?.windowsNameVerticalNudge || 0) || 0)),
+            windowsPriceVerticalNudge: Math.max(-120, Math.min(120, Number(entry?.windowsPriceVerticalNudge || 0) || 0)),
             windowsNameColor: String(entry?.windowsNameColor || '#FFFFFF').trim(),
             windowsNameBadgeEnabled: parsePlatformEnabled(entry?.windowsNameBadgeEnabled, true),
             windowsNameBadgeColor: String(entry?.windowsNameBadgeColor || '#0F172A').trim(),
@@ -1309,9 +1318,12 @@ function parseConfiguredImageSlideUrls() {
             androidPriceText: String(entry?.androidPriceText || entry?.windowsPriceText || '').trim(),
             androidNameFontSize: Math.max(8, Math.min(120, Number(entry?.androidNameFontSize ?? entry?.windowsNameFontSize ?? 18) || 18)),
             androidPriceFontSize: Math.max(8, Math.min(120, Number(entry?.androidPriceFontSize ?? entry?.windowsPriceFontSize ?? 22) || 22)),
-            androidTextFontFamily: String(entry?.androidTextFontFamily || entry?.windowsTextFontFamily || 'arial').toLowerCase(),
+            androidNameFontFamily: String(entry?.androidNameFontFamily || entry?.androidTextFontFamily || entry?.windowsNameFontFamily || entry?.windowsTextFontFamily || 'arial').toLowerCase(),
+            androidPriceFontFamily: String(entry?.androidPriceFontFamily || entry?.androidTextFontFamily || entry?.windowsPriceFontFamily || entry?.windowsTextFontFamily || 'arial').toLowerCase(),
             androidNamePosition: String(entry?.androidNamePosition || entry?.windowsNamePosition || 'top').toLowerCase(),
             androidPricePosition: String(entry?.androidPricePosition || entry?.windowsPricePosition || 'bottom').toLowerCase(),
+            androidNameVerticalNudge: Math.max(-120, Math.min(120, Number(entry?.androidNameVerticalNudge ?? entry?.windowsNameVerticalNudge ?? 0) || 0)),
+            androidPriceVerticalNudge: Math.max(-120, Math.min(120, Number(entry?.androidPriceVerticalNudge ?? entry?.windowsPriceVerticalNudge ?? 0) || 0)),
             androidNameColor: String(entry?.androidNameColor || entry?.windowsNameColor || '#FFFFFF').trim(),
             androidNameBadgeEnabled: parsePlatformEnabled(entry?.androidNameBadgeEnabled, parsePlatformEnabled(entry?.windowsNameBadgeEnabled, true)),
             androidNameBadgeColor: String(entry?.androidNameBadgeColor || entry?.windowsNameBadgeColor || '#0F172A').trim(),
@@ -1394,9 +1406,16 @@ function parseConfiguredImageSlideUrls() {
             priceText: String(isAndroidRuntime ? (schedule.androidPriceText || '') : (schedule.windowsPriceText || '')).trim(),
             nameFontSize: Math.max(8, Math.min(120, Number(isAndroidRuntime ? schedule.androidNameFontSize : schedule.windowsNameFontSize) || 18)),
             priceFontSize: Math.max(8, Math.min(120, Number(isAndroidRuntime ? schedule.androidPriceFontSize : schedule.windowsPriceFontSize) || 22)),
-            textFontFamily: String(isAndroidRuntime ? (schedule.androidTextFontFamily || 'arial') : (schedule.windowsTextFontFamily || 'arial')).toLowerCase(),
+            nameFontFamily: String(isAndroidRuntime
+                ? (schedule.androidNameFontFamily || schedule.androidTextFontFamily || 'arial')
+                : (schedule.windowsNameFontFamily || schedule.windowsTextFontFamily || 'arial')).toLowerCase(),
+            priceFontFamily: String(isAndroidRuntime
+                ? (schedule.androidPriceFontFamily || schedule.androidTextFontFamily || 'arial')
+                : (schedule.windowsPriceFontFamily || schedule.windowsTextFontFamily || 'arial')).toLowerCase(),
             namePosition: String(isAndroidRuntime ? (schedule.androidNamePosition || 'top') : (schedule.windowsNamePosition || 'top')).toLowerCase(),
             pricePosition: String(isAndroidRuntime ? (schedule.androidPricePosition || 'bottom') : (schedule.windowsPricePosition || 'bottom')).toLowerCase(),
+            nameVerticalNudge: Math.max(-120, Math.min(120, Number(isAndroidRuntime ? schedule.androidNameVerticalNudge : schedule.windowsNameVerticalNudge) || 0)),
+            priceVerticalNudge: Math.max(-120, Math.min(120, Number(isAndroidRuntime ? schedule.androidPriceVerticalNudge : schedule.windowsPriceVerticalNudge) || 0)),
             nameColor: String(isAndroidRuntime ? (schedule.androidNameColor || '#FFFFFF') : (schedule.windowsNameColor || '#FFFFFF')).trim(),
             nameBadgeEnabled: isAndroidRuntime ? Boolean(schedule.androidNameBadgeEnabled) : Boolean(schedule.windowsNameBadgeEnabled),
             nameBadgeColor: String(isAndroidRuntime ? (schedule.androidNameBadgeColor || '#0F172A') : (schedule.windowsNameBadgeColor || '#0F172A')).trim(),
@@ -1699,17 +1718,18 @@ function getImageSlideSettings(currentSlideUrl = '') {
     return null;
 }
 
-function applyOverlayBlockPosition(element, position, defaultPosition) {
+function applyOverlayBlockPosition(element, position, defaultPosition, nudgePx = 0) {
     if (!element) {
         return;
     }
 
     const resolved = position === 'bottom' || position === 'top' ? position : defaultPosition;
+    const nudge = Math.max(-120, Math.min(120, Number(nudgePx || 0) || 0));
     if (resolved === 'bottom') {
         element.style.top = '';
-        element.style.bottom = '8px';
+        element.style.bottom = `calc(8px + ${nudge}px)`;
     } else {
-        element.style.top = '8px';
+        element.style.top = `calc(8px + ${nudge}px)`;
         element.style.bottom = '';
     }
 }
@@ -1748,7 +1768,8 @@ function applyConfiguredSlideTextOverlay(currentSlideUrl = '') {
         }
     };
 
-    const fontFamily = resolveTitleFontFamily(String(perImageSettings.textFontFamily || 'arial'));
+    const nameFontKey = String(perImageSettings.nameFontFamily || 'arial');
+    const priceFontKey = String(perImageSettings.priceFontFamily || perImageSettings.nameFontFamily || 'arial');
     const showName = Boolean(perImageSettings.showName);
     const showPrice = Boolean(perImageSettings.showPrice);
     const nameText = String(perImageSettings.nameText || '').trim() || fallbackNameFromUrl(currentSlideUrl);
@@ -1756,14 +1777,27 @@ function applyConfiguredSlideTextOverlay(currentSlideUrl = '') {
 
     if (slideNameOverlay) {
         if (showName && nameText !== '') {
+            const nameColor = String(perImageSettings.nameColor || '#FFFFFF');
+            const nameFontStyle = resolveOverlayFontStyle(nameFontKey, nameColor, '700');
             slideNameOverlay.textContent = nameText;
-            slideNameOverlay.style.fontFamily = fontFamily;
+            slideNameOverlay.style.fontFamily = nameFontStyle.fontFamily;
+            slideNameOverlay.style.fontWeight = nameFontStyle.fontWeight;
+            slideNameOverlay.style.textShadow = nameFontStyle.textShadow;
+            slideNameOverlay.style.letterSpacing = nameFontStyle.letterSpacing;
+            slideNameOverlay.style.textTransform = nameFontStyle.textTransform;
+            slideNameOverlay.style.webkitTextStroke = nameFontStyle.webkitTextStroke;
+            slideNameOverlay.style.filter = nameFontStyle.filter;
             slideNameOverlay.style.fontSize = `${Math.max(8, Math.min(120, Number(perImageSettings.nameFontSize || 18) || 18))}px`;
-            slideNameOverlay.style.color = String(perImageSettings.nameColor || '#FFFFFF');
+            slideNameOverlay.style.color = nameColor;
             slideNameOverlay.style.background = perImageSettings.nameBadgeEnabled === false
                 ? 'transparent'
                 : String(perImageSettings.nameBadgeColor || '#0F172A');
-            applyOverlayBlockPosition(slideNameOverlay, String(perImageSettings.namePosition || 'top').toLowerCase(), 'top');
+            applyOverlayBlockPosition(
+                slideNameOverlay,
+                String(perImageSettings.namePosition || 'top').toLowerCase(),
+                'top',
+                Number(perImageSettings.nameVerticalNudge || 0)
+            );
             slideNameOverlay.classList.remove('hidden');
         } else {
             slideNameOverlay.classList.add('hidden');
@@ -1772,15 +1806,28 @@ function applyConfiguredSlideTextOverlay(currentSlideUrl = '') {
     }
 
     if (slidePriceOverlay) {
-        if (showPrice && priceText !== '') {
-            slidePriceOverlay.textContent = priceText;
-            slidePriceOverlay.style.fontFamily = fontFamily;
+        if (showPrice) {
+            const priceColor = String(perImageSettings.priceColor || '#FDE68A');
+            const priceFontStyle = resolveOverlayFontStyle(priceFontKey, priceColor, '800');
+            slidePriceOverlay.textContent = priceText !== '' ? priceText : 'Preco';
+            slidePriceOverlay.style.fontFamily = priceFontStyle.fontFamily;
+            slidePriceOverlay.style.fontWeight = priceFontStyle.fontWeight;
+            slidePriceOverlay.style.textShadow = priceFontStyle.textShadow;
+            slidePriceOverlay.style.letterSpacing = priceFontStyle.letterSpacing;
+            slidePriceOverlay.style.textTransform = priceFontStyle.textTransform;
+            slidePriceOverlay.style.webkitTextStroke = priceFontStyle.webkitTextStroke;
+            slidePriceOverlay.style.filter = priceFontStyle.filter;
             slidePriceOverlay.style.fontSize = `${Math.max(8, Math.min(120, Number(perImageSettings.priceFontSize || 22) || 22))}px`;
-            slidePriceOverlay.style.color = String(perImageSettings.priceColor || '#FDE68A');
+            slidePriceOverlay.style.color = priceColor;
             slidePriceOverlay.style.background = perImageSettings.priceBadgeEnabled === false
                 ? 'transparent'
                 : String(perImageSettings.priceBadgeColor || '#0F172A');
-            applyOverlayBlockPosition(slidePriceOverlay, String(perImageSettings.pricePosition || 'bottom').toLowerCase(), 'bottom');
+            applyOverlayBlockPosition(
+                slidePriceOverlay,
+                String(perImageSettings.pricePosition || 'bottom').toLowerCase(),
+                'bottom',
+                Number(perImageSettings.priceVerticalNudge || 0)
+            );
             slidePriceOverlay.classList.remove('hidden');
         } else {
             slidePriceOverlay.classList.add('hidden');
@@ -1837,15 +1884,30 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     }
     tvImageSlide.style.maxWidth = '100%';
     tvImageSlide.style.maxHeight = '100%';
+    tvImageSlide.style.alignSelf = 'center';
 
     const parsedHeight = Number(visualConfig.rightSidebarImageHeight);
-    let imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 96;
+    let imgHeight = Number.isFinite(parsedHeight) ? Math.max(0, Math.min(1000, parsedHeight)) : 0;
     const parsedWidth = Number(visualConfig.rightSidebarImageWidth);
     let imgWidth = Number.isFinite(parsedWidth) ? Math.max(0, Math.min(1000, parsedWidth)) : 0;
 
     const perImageHeight = Math.max(0, Number(perImageSettings?.imageHeight || 0) || 0);
     const perImageWidth = Math.max(0, Number(perImageSettings?.imageWidth || 0) || 0);
     const perImageVerticalOffset = Math.max(-300, Math.min(300, Number(perImageSettings?.verticalOffset || 0) || 0));
+    const pxPerCm = 37.8;
+    const totalWidthInsetPx = 2 * pxPerCm;
+    const extraHeightPx = 10 * pxPerCm;
+    const getAutoSidebarBoxSize = () => {
+        const sidebarRect = tvRightSidebarMediaWrap?.getBoundingClientRect?.();
+        const fallbackWidth = Math.max(220, Math.round(window.innerWidth * 0.24));
+        const availableWidth = Number.isFinite(sidebarRect?.width)
+            ? Math.max(120, Math.round(sidebarRect.width))
+            : fallbackWidth;
+
+        const autoWidth = Math.max(120, Math.round(availableWidth - totalWidthInsetPx));
+        const autoHeight = Math.max(120, Math.round(autoWidth + extraHeightPx));
+        return { autoWidth, autoHeight };
+    };
     const shouldFullscreen = forceFullScreenSlideModeActive
         && toBoolean(visualConfig.fullScreenSlideEnabled, false)
         && parseConfiguredDedicatedFullScreenSlideUrls().length > 0
@@ -1894,21 +1956,38 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
         );
         const compactMaxWidth = Math.max(140, Math.min(320, Math.round(window.innerWidth * 0.92)));
 
-        tvImageSlide.style.width = '100%';
-        tvImageSlide.style.height = '100%';
-        const compactConfiguredWidth = imgWidth > 0 ? Math.max(80, Math.min(compactMaxWidth, imgWidth)) : compactMaxWidth;
-        const compactConfiguredHeight = imgHeight > 0 ? Math.max(80, Math.min(compactMaxHeight, imgHeight)) : compactMaxHeight;
-        tvImageSlide.style.maxWidth = `${compactConfiguredWidth}px`;
-        tvImageSlide.style.maxHeight = `${compactConfiguredHeight}px`;
+        if (imgHeight === 0 && imgWidth === 0) {
+            const autoSize = getAutoSidebarBoxSize();
+            const compactAutoWidth = Math.max(120, autoSize.autoWidth);
+            const compactAutoHeight = Math.max(120, autoSize.autoHeight);
+            const autoFit = fit === 'scale-down' ? 'contain' : fit;
+
+            tvImageSlide.style.width = '100%';
+            tvImageSlide.style.height = '100%';
+            tvImageSlide.style.maxWidth = `${compactAutoWidth}px`;
+            tvImageSlide.style.maxHeight = `${compactAutoHeight}px`;
+            tvImageSlide.style.objectFit = autoFit;
+            return;
+        }
+
+        tvImageSlide.style.width = imgWidth > 0 ? `${Math.max(80, imgWidth)}px` : '100%';
+        tvImageSlide.style.height = imgHeight > 0 ? `${Math.max(80, imgHeight)}px` : '100%';
+        tvImageSlide.style.maxWidth = imgWidth > 0 ? 'none' : `${compactMaxWidth}px`;
+        tvImageSlide.style.maxHeight = imgHeight > 0 ? 'none' : `${compactMaxHeight}px`;
         tvImageSlide.style.objectFit = fit;
         return;
     }
 
-    // Auto mode still needs a fixed render box, otherwise object-fit has no visual effect.
+    // Auto mode follows a centered box based on sidebar width with fixed cm margins and extra height.
     if (imgHeight === 0 && imgWidth === 0) {
+        const autoSize = getAutoSidebarBoxSize();
+        const autoFit = fit === 'scale-down' ? 'contain' : fit;
+
         tvImageSlide.style.width = '100%';
         tvImageSlide.style.height = '100%';
-        tvImageSlide.style.objectFit = fit;
+        tvImageSlide.style.maxWidth = `${autoSize.autoWidth}px`;
+        tvImageSlide.style.maxHeight = `${autoSize.autoHeight}px`;
+        tvImageSlide.style.objectFit = autoFit;
         return;
     }
 
@@ -1923,6 +2002,9 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     } else {
         tvImageSlide.style.width = '';
     }
+
+    tvImageSlide.style.maxWidth = imgWidth > 0 ? 'none' : '100%';
+    tvImageSlide.style.maxHeight = imgHeight > 0 ? 'none' : '100%';
 }
 
 function startImageSlideMode() {
@@ -3499,10 +3581,98 @@ function resolveTitleFontFamily(fontKey) {
         georgia: 'Georgia, serif',
         courier: 'Courier New, monospace',
         system: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+        impact_shadow: 'Impact, Haettenschweiler, Arial Black, sans-serif',
+        neon_glow: 'Trebuchet MS, Tahoma, sans-serif',
+        serif_elegant: 'Georgia, Times New Roman, serif',
+        gold_lux: 'Georgia, Times New Roman, serif',
+        retro_arcade: 'Courier New, monospace',
+        crystal_frost: 'Trebuchet MS, Tahoma, sans-serif',
     };
 
     const key = String(fontKey || 'arial').toLowerCase();
     return families[key] || families.arial;
+}
+
+function resolveOverlayFontStyle(fontKey, textColor = '#FFFFFF', defaultWeight = '700') {
+    const key = String(fontKey || 'arial').toLowerCase();
+    const normalizedColor = String(textColor || '#FFFFFF').trim() || '#FFFFFF';
+    const base = {
+        fontFamily: resolveTitleFontFamily(key),
+        fontWeight: String(defaultWeight),
+        textShadow: '0 2px 6px rgba(0, 0, 0, 0.9)',
+        letterSpacing: '0.01em',
+        textTransform: 'none',
+        webkitTextStroke: '0px transparent',
+        filter: 'none',
+    };
+
+    if (key === 'impact_shadow') {
+        return {
+            ...base,
+            fontWeight: '900',
+            textShadow: '0 1px 0 rgba(0,0,0,0.95), 0 3px 8px rgba(0,0,0,0.85)',
+            letterSpacing: '0.03em',
+            textTransform: 'uppercase',
+            webkitTextStroke: '0.7px rgba(0,0,0,0.65)',
+        };
+    }
+
+    if (key === 'neon_glow') {
+        return {
+            ...base,
+            fontWeight: '800',
+            textShadow: `0 0 6px ${normalizedColor}, 0 0 14px ${normalizedColor}, 0 2px 6px rgba(0,0,0,0.85)`,
+            letterSpacing: '0.02em',
+            filter: 'saturate(1.25) brightness(1.1)',
+        };
+    }
+
+    if (key === 'serif_elegant') {
+        return {
+            ...base,
+            fontWeight: '700',
+            textShadow: '0 1px 0 rgba(255,255,255,0.2), 0 3px 8px rgba(0,0,0,0.78)',
+            letterSpacing: '0.02em',
+            textTransform: 'capitalize',
+        };
+    }
+
+    if (key === 'gold_lux') {
+        return {
+            ...base,
+            fontWeight: '800',
+            textShadow: '0 1px 0 rgba(255,240,170,0.55), 0 0 10px rgba(251,191,36,0.8), 0 3px 10px rgba(0,0,0,0.78)',
+            letterSpacing: '0.03em',
+            textTransform: 'uppercase',
+            webkitTextStroke: '0.7px rgba(120,53,15,0.7)',
+            filter: 'saturate(1.15) contrast(1.08)',
+        };
+    }
+
+    if (key === 'retro_arcade') {
+        return {
+            ...base,
+            fontWeight: '900',
+            textShadow: '0 0 1px rgba(255,255,255,0.6), 0 0 7px rgba(34,211,238,0.75), 0 0 15px rgba(244,114,182,0.65), 0 2px 6px rgba(0,0,0,0.88)',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            webkitTextStroke: '0.5px rgba(15,23,42,0.55)',
+            filter: 'saturate(1.2)',
+        };
+    }
+
+    if (key === 'crystal_frost') {
+        return {
+            ...base,
+            fontWeight: '700',
+            textShadow: '0 1px 0 rgba(255,255,255,0.35), 0 0 8px rgba(186,230,253,0.85), 0 3px 8px rgba(15,23,42,0.75)',
+            letterSpacing: '0.02em',
+            webkitTextStroke: '0.4px rgba(125,211,252,0.45)',
+            filter: 'brightness(1.08)',
+        };
+    }
+
+    return base;
 }
 
 function applyGroupLabelStyles(element) {
@@ -4476,6 +4646,7 @@ async function loadVisualConfig(token) {
         visualConfig.showImage = Boolean(visualConfig.showImage);
         visualConfig.showVideoPanel = toBoolean(visualConfig.showVideoPanel, true);
         visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
+        visualConfig.enableResponsiveLayout = toBoolean(visualConfig.enableResponsiveLayout, false);
         visualConfig.showRightSidebarLogo = toBoolean(visualConfig.showRightSidebarLogo, false);
         visualConfig.showLeftVerticalLogo = toBoolean(visualConfig.showLeftVerticalLogo, false);
         visualConfig.rightSidebarLogoPosition = String(visualConfig.rightSidebarLogoPosition || 'sidebar_top');

@@ -26,6 +26,8 @@ class TvController extends Controller
 {
     private const ACTIVATION_EXPIRES_SECONDS = 300;
     private const ACTIVATION_CODE_LENGTH = 10;
+    private const TEMPLATE_DEV_MODE_CACHE_PREFIX = 'tv:web:disable-templates:empresa:';
+    private const RESPONSIVE_MODE_CACHE_PREFIX = 'tv:web:enable-responsive:empresa:';
 
     #[OA\Post(
         path: '/api/tv/activation-code',
@@ -508,6 +510,7 @@ class TvController extends Controller
                 'videoMuted' => (bool) $config->videoMuted,
                 'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
                 'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
+                'enableResponsiveLayout' => $this->isResponsiveModeEnabled((int) $device->empresa_id),
                 'showRightSidebarLogo' => (bool) ($config->showRightSidebarLogo ?? false),
                 'rightSidebarLogoPosition' => 'sidebar_top',
                 'rightSidebarLogoPositionWindows' => (string) ($config->rightSidebarLogoPositionWindows ?? $config->rightSidebarLogoPosition ?? 'sidebar_top'),
@@ -570,6 +573,7 @@ class TvController extends Controller
                 'rightSidebarProductCarouselEnabled' => (bool) ($config->rightSidebarProductCarouselEnabled ?? false),
                 'rightSidebarProductDisplayMode' => (string) ($config->rightSidebarProductDisplayMode ?? 'all'),
                 'rightSidebarProductTransitionMode' => (string) ($config->rightSidebarProductTransitionMode ?? 'products_only'),
+                'rightSidebarPlaybackSequence' => (string) ($config->rightSidebarPlaybackSequence ?? 'products,image,video'),
                 'rightSidebarProductInterval' => (int) ($config->rightSidebarProductInterval ?? 8),
                 'rightSidebarProductShowImage' => (bool) ($config->rightSidebarProductShowImage ?? true),
                 'rightSidebarProductShowName' => (bool) ($config->rightSidebarProductShowName ?? true),
@@ -873,6 +877,10 @@ class TvController extends Controller
 
     private function resolveWebTemplatePayloadForDevice(Device $device, DeviceConfiguration $configuration): array
     {
+        if ($this->isTemplateDevModeEnabled((int) $device->empresa_id)) {
+            return [];
+        }
+
         $template = $configuration->template;
 
         if ($template && is_array($template->web_config_payload) && !empty($template->web_config_payload)) {
@@ -895,6 +903,20 @@ class TvController extends Controller
     private function applyWebTemplatePayloadToConfig(Configuracao $config, array $payload): Configuracao
     {
         $fillable = array_flip((new Configuracao())->getFillable());
+        $blockedKeys = array_flip([
+            'rightSidebarMediaType',
+            'rightSidebarGlobalGalleryCode',
+            'rightSidebarImageUrls',
+            'rightSidebarImageSchedules',
+            'rightSidebarImageInterval',
+            'rightSidebarImageFit',
+            'rightSidebarImageHeight',
+            'rightSidebarImageWidth',
+            'rightSidebarAndroidHeight',
+            'rightSidebarAndroidWidth',
+            'rightSidebarAndroidVerticalOffset',
+            'rightSidebarPlaybackSequence',
+        ]);
 
         foreach ($payload as $key => $value) {
             if (!is_string($key) || !isset($fillable[$key])) {
@@ -905,10 +927,24 @@ class TvController extends Controller
                 continue;
             }
 
+            if (isset($blockedKeys[$key])) {
+                continue;
+            }
+
             $config->setAttribute($key, $value);
         }
 
         return $config;
+    }
+
+    private function isTemplateDevModeEnabled(int $empresaId): bool
+    {
+        return (bool) Cache::get(self::TEMPLATE_DEV_MODE_CACHE_PREFIX.$empresaId, false);
+    }
+
+    private function isResponsiveModeEnabled(int $empresaId): bool
+    {
+        return (bool) Cache::get(self::RESPONSIVE_MODE_CACHE_PREFIX.$empresaId, false);
     }
 
     private function sortProductsForTv(Collection $products, string $mode, string $alphabeticalDirection, array $departmentOrder, array $groupOrder): Collection

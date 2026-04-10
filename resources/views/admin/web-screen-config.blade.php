@@ -81,6 +81,30 @@
                                 <button type="button" data-save-section="generalConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
                             </div>
 
+                            <div class="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-sm font-semibold text-amber-900">Modo desenvolvimento (Templates TV)</p>
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $templateDevModeEnabled ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800' }}">
+                                        {{ $templateDevModeEnabled ? 'Templates desativados' : 'Templates ativos' }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-amber-800">Quando ativado, a TV ignora templates e usa somente a configuração da empresa. Vale para todos os devices desta empresa.</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        type="submit"
+                                        name="toggleTemplateDevMode"
+                                        value="enable"
+                                        class="rounded-md border border-amber-600 bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+                                    >Desativar templates (DEV)</button>
+                                    <button
+                                        type="submit"
+                                        name="toggleTemplateDevMode"
+                                        value="disable"
+                                        class="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                                    >Reativar templates</button>
+                                </div>
+                            </div>
+
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1" for="apiRefreshInterval">Tempo para atualizar a TV (segundos)</label>
@@ -668,6 +692,20 @@
                                     @error('rightSidebarProductTransitionMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Sequência de execução na lateral (quando misturar)</label>
+                                    <select name="rightSidebarPlaybackSequence" class="w-full border rounded px-3 py-2">
+                                        <option value="products,image,video" @selected(old('rightSidebarPlaybackSequence', $config->rightSidebarPlaybackSequence ?? 'products,image,video') === 'products,image,video')>1) Lista de produtos -> 2) Slide (imagens) -> 3) Vídeos</option>
+                                        <option value="products,video,image" @selected(old('rightSidebarPlaybackSequence', $config->rightSidebarPlaybackSequence ?? 'products,image,video') === 'products,video,image')>1) Lista de produtos -> 2) Vídeos -> 3) Slide (imagens)</option>
+                                        <option value="image,products,video" @selected(old('rightSidebarPlaybackSequence', $config->rightSidebarPlaybackSequence ?? 'products,image,video') === 'image,products,video')>1) Slide (imagens) -> 2) Lista de produtos -> 3) Vídeos</option>
+                                        <option value="image,video,products" @selected(old('rightSidebarPlaybackSequence', $config->rightSidebarPlaybackSequence ?? 'products,image,video') === 'image,video,products')>1) Slide (imagens) -> 2) Vídeos -> 3) Lista de produtos</option>
+                                        <option value="video,products,image" @selected(old('rightSidebarPlaybackSequence', $config->rightSidebarPlaybackSequence ?? 'products,image,video') === 'video,products,image')>1) Vídeos -> 2) Lista de produtos -> 3) Slide (imagens)</option>
+                                        <option value="video,image,products" @selected(old('rightSidebarPlaybackSequence', $config->rightSidebarPlaybackSequence ?? 'products,image,video') === 'video,image,products')>1) Vídeos -> 2) Slide (imagens) -> 3) Lista de produtos</option>
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-600">Regra: cada etapa roda ate o fim e so depois passa para a proxima etapa da sequência.</p>
+                                    @error('rightSidebarPlaybackSequence')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <label class="inline-flex items-center gap-2">
                                         <input type="hidden" name="rightSidebarProductShowName" value="0">
@@ -760,7 +798,7 @@
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Altura (px)</label>
-                                                <input type="number" id="rightSidebarImageHeight" name="rightSidebarImageHeight" min="0" max="1000" value="{{ old('rightSidebarImageHeight', $config->rightSidebarImageHeight ?? 96) }}" class="w-full border rounded px-3 py-2">
+                                                <input type="number" id="rightSidebarImageHeight" name="rightSidebarImageHeight" min="0" max="1000" value="{{ old('rightSidebarImageHeight', $config->rightSidebarImageHeight ?? 0) }}" class="w-full border rounded px-3 py-2">
                                                 @error('rightSidebarImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                             </div>
                                             <div>
@@ -834,6 +872,30 @@
                                     >Novo</button>
                                 </div>
 
+                                <div class="rounded-md border border-sky-200 bg-sky-50 p-3 space-y-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <p class="text-sm font-semibold text-sky-900">Modo responsividade (TV/Totem)</p>
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $responsiveModeEnabled ? 'bg-sky-200 text-sky-900' : 'bg-gray-200 text-gray-700' }}">
+                                            {{ $responsiveModeEnabled ? 'Responsividade ativa' : 'Responsividade desativada' }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-sky-800">Padrão recomendado: desativado. Com responsividade desativada, o slide automático segue a largura fixa do retângulo conforme sua regra.</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button
+                                            type="submit"
+                                            name="toggleResponsiveMode"
+                                            value="enable"
+                                            class="rounded-md border border-sky-600 bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+                                        >Ativar responsividade</button>
+                                        <button
+                                            type="submit"
+                                            name="toggleResponsiveMode"
+                                            value="disable"
+                                            class="rounded-md border border-gray-600 bg-gray-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800"
+                                        >Desativar responsividade</button>
+                                    </div>
+                                </div>
+
                                 <input
                                     type="hidden"
                                     id="rightSidebarImageUrls"
@@ -856,17 +918,10 @@
                                         <input type="number" id="rightSidebarImageInterval" name="rightSidebarImageInterval" min="1" max="300" value="{{ old('rightSidebarImageInterval', $config->rightSidebarImageInterval ?? 8) }}" class="w-full border rounded px-3 py-2">
                                         @error('rightSidebarImageInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Ajuste da imagem</label>
-                                        <select id="rightSidebarImageFit" name="rightSidebarImageFit" class="w-full border rounded px-3 py-2">
-                                            <option value="contain" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'scale-down') === 'contain')>Mostrar inteira (contain)</option>
-                                            <option value="scale-down" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'scale-down') === 'scale-down')>Mostrar inteira sem ampliar (recomendado)</option>
-                                            <option value="cover" @selected(old('rightSidebarImageFit', $config->rightSidebarImageFit ?? 'scale-down') === 'cover')>Preencher área (cover)</option>
-                                        </select>
-                                        @error('rightSidebarImageFit')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                    </div>
                                 </div>
+
+                                <input type="hidden" id="rightSidebarImageFit" name="rightSidebarImageFit" value="scale-down">
+                                @error('rightSidebarImageFit')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                             </div>
 
                         </div>
@@ -1280,6 +1335,7 @@
         const rightSidebarHybridConfig = document.getElementById('rightSidebarHybridConfig');
         const rightSidebarImageConfig = document.getElementById('rightSidebarImageConfig');
         const rightSidebarImageUrls = document.getElementById('rightSidebarImageUrls');
+        const rightSidebarImageFit = document.getElementById('rightSidebarImageFit');
         const fullScreenSlideImageUrls = document.getElementById('fullScreenSlideImageUrls');
         const fullScreenSlideAddFromGalleryBtn = document.getElementById('fullScreenSlideAddFromGalleryBtn');
         const addSlideImageFromGalleryBtn = document.getElementById('addSlideImageFromGalleryBtn');
@@ -1363,9 +1419,12 @@
                     windowsPriceText: String(entry?.windowsPriceText || '').trim(),
                     windowsNameFontSize: Number(entry?.windowsNameFontSize ?? 18) || 18,
                     windowsPriceFontSize: Number(entry?.windowsPriceFontSize ?? 22) || 22,
-                    windowsTextFontFamily: String(entry?.windowsTextFontFamily || 'arial').trim().toLowerCase(),
+                    windowsNameFontFamily: String(entry?.windowsNameFontFamily ?? entry?.windowsTextFontFamily ?? 'arial').trim().toLowerCase(),
+                    windowsPriceFontFamily: String(entry?.windowsPriceFontFamily ?? entry?.windowsTextFontFamily ?? 'arial').trim().toLowerCase(),
                     windowsNamePosition: String(entry?.windowsNamePosition || 'top').trim().toLowerCase(),
                     windowsPricePosition: String(entry?.windowsPricePosition || 'bottom').trim().toLowerCase(),
+                    windowsNameVerticalNudge: Number(entry?.windowsNameVerticalNudge ?? 0) || 0,
+                    windowsPriceVerticalNudge: Number(entry?.windowsPriceVerticalNudge ?? 0) || 0,
                     windowsNameColor: String(entry?.windowsNameColor || '#FFFFFF').trim(),
                     windowsNameBadgeEnabled: parsePlatformEnabled(entry?.windowsNameBadgeEnabled, true),
                     windowsNameBadgeColor: String(entry?.windowsNameBadgeColor || '#0F172A').trim(),
@@ -1382,9 +1441,12 @@
                     androidPriceText: String(entry?.androidPriceText || '').trim(),
                     androidNameFontSize: Number(entry?.androidNameFontSize ?? 18) || 18,
                     androidPriceFontSize: Number(entry?.androidPriceFontSize ?? 22) || 22,
-                    androidTextFontFamily: String(entry?.androidTextFontFamily || 'arial').trim().toLowerCase(),
+                    androidNameFontFamily: String(entry?.androidNameFontFamily ?? entry?.androidTextFontFamily ?? entry?.windowsNameFontFamily ?? entry?.windowsTextFontFamily ?? 'arial').trim().toLowerCase(),
+                    androidPriceFontFamily: String(entry?.androidPriceFontFamily ?? entry?.androidTextFontFamily ?? entry?.windowsPriceFontFamily ?? entry?.windowsTextFontFamily ?? 'arial').trim().toLowerCase(),
                     androidNamePosition: String(entry?.androidNamePosition || 'top').trim().toLowerCase(),
                     androidPricePosition: String(entry?.androidPricePosition || 'bottom').trim().toLowerCase(),
+                    androidNameVerticalNudge: Number(entry?.androidNameVerticalNudge ?? 0) || 0,
+                    androidPriceVerticalNudge: Number(entry?.androidPriceVerticalNudge ?? 0) || 0,
                     androidNameColor: String(entry?.androidNameColor || '#FFFFFF').trim(),
                     androidNameBadgeEnabled: parsePlatformEnabled(entry?.androidNameBadgeEnabled, true),
                     androidNameBadgeColor: String(entry?.androidNameBadgeColor || '#0F172A').trim(),
@@ -1780,16 +1842,10 @@
                 return [];
             }
 
-            const parsed = String(rightSidebarImageUrls.value || '')
+            return String(rightSidebarImageUrls.value || '')
                 .split(/\r?\n/)
                 .map((value) => value.trim())
                 .filter((value) => /^https?:\/\//i.test(value) || /^\/storage\//i.test(value) || /^storage\//i.test(value));
-
-            if (parsed.length > 0) {
-                return parsed;
-            }
-
-            return getInitialScheduleUrls();
         }
 
         function abrirGaleriaNovaParaSelecionarSlide(onSelect) {
@@ -1885,9 +1941,12 @@
                 const windowsPriceTextInput = row.querySelector('input[data-schedule-price-text-windows]');
                 const windowsNameFontSizeInput = row.querySelector('input[data-schedule-name-font-size-windows]');
                 const windowsPriceFontSizeInput = row.querySelector('input[data-schedule-price-font-size-windows]');
-                const windowsTextFontFamilyInput = row.querySelector('select[data-schedule-font-family-windows]');
+                const windowsNameFontFamilyInput = row.querySelector('select[data-schedule-name-font-family-windows]');
+                const windowsPriceFontFamilyInput = row.querySelector('select[data-schedule-price-font-family-windows]');
                 const windowsNamePositionInput = row.querySelector('select[data-schedule-name-position-windows]');
                 const windowsPricePositionInput = row.querySelector('select[data-schedule-price-position-windows]');
+                const windowsNameVerticalNudgeInput = row.querySelector('input[data-schedule-name-vertical-nudge-windows]');
+                const windowsPriceVerticalNudgeInput = row.querySelector('input[data-schedule-price-vertical-nudge-windows]');
                 const windowsNameColorInput = row.querySelector('input[data-schedule-name-color-windows]');
                 const windowsNameBadgeEnabledInput = row.querySelector('input[data-schedule-name-badge-enabled-windows]');
                 const windowsNameBadgeColorInput = row.querySelector('input[data-schedule-name-badge-color-windows]');
@@ -1904,9 +1963,12 @@
                 const androidPriceTextInput = row.querySelector('input[data-schedule-price-text-android]');
                 const androidNameFontSizeInput = row.querySelector('input[data-schedule-name-font-size-android]');
                 const androidPriceFontSizeInput = row.querySelector('input[data-schedule-price-font-size-android]');
-                const androidTextFontFamilyInput = row.querySelector('select[data-schedule-font-family-android]');
+                const androidNameFontFamilyInput = row.querySelector('select[data-schedule-name-font-family-android]');
+                const androidPriceFontFamilyInput = row.querySelector('select[data-schedule-price-font-family-android]');
                 const androidNamePositionInput = row.querySelector('select[data-schedule-name-position-android]');
                 const androidPricePositionInput = row.querySelector('select[data-schedule-price-position-android]');
+                const androidNameVerticalNudgeInput = row.querySelector('input[data-schedule-name-vertical-nudge-android]');
+                const androidPriceVerticalNudgeInput = row.querySelector('input[data-schedule-price-vertical-nudge-android]');
                 const androidNameColorInput = row.querySelector('input[data-schedule-name-color-android]');
                 const androidNameBadgeEnabledInput = row.querySelector('input[data-schedule-name-badge-enabled-android]');
                 const androidNameBadgeColorInput = row.querySelector('input[data-schedule-name-badge-color-android]');
@@ -1929,9 +1991,12 @@
                     windowsPriceText: windowsPriceTextInput instanceof HTMLInputElement ? String(windowsPriceTextInput.value || '').trim() : '',
                     windowsNameFontSize: windowsNameFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(windowsNameFontSizeInput.value || 18) || 18)) : 18,
                     windowsPriceFontSize: windowsPriceFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(windowsPriceFontSizeInput.value || 22) || 22)) : 22,
-                    windowsTextFontFamily: windowsTextFontFamilyInput instanceof HTMLSelectElement ? String(windowsTextFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
+                    windowsNameFontFamily: windowsNameFontFamilyInput instanceof HTMLSelectElement ? String(windowsNameFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
+                    windowsPriceFontFamily: windowsPriceFontFamilyInput instanceof HTMLSelectElement ? String(windowsPriceFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
                     windowsNamePosition: windowsNamePositionInput instanceof HTMLSelectElement ? String(windowsNamePositionInput.value || 'top').toLowerCase() : 'top',
                     windowsPricePosition: windowsPricePositionInput instanceof HTMLSelectElement ? String(windowsPricePositionInput.value || 'bottom').toLowerCase() : 'bottom',
+                    windowsNameVerticalNudge: windowsNameVerticalNudgeInput instanceof HTMLInputElement ? Math.max(-120, Math.min(120, Number(windowsNameVerticalNudgeInput.value || 0) || 0)) : 0,
+                    windowsPriceVerticalNudge: windowsPriceVerticalNudgeInput instanceof HTMLInputElement ? Math.max(-120, Math.min(120, Number(windowsPriceVerticalNudgeInput.value || 0) || 0)) : 0,
                     windowsNameColor: windowsNameColorInput instanceof HTMLInputElement ? String(windowsNameColorInput.value || '#FFFFFF').trim() : '#FFFFFF',
                     windowsNameBadgeEnabled: windowsNameBadgeEnabledInput instanceof HTMLInputElement ? Boolean(windowsNameBadgeEnabledInput.checked) : true,
                     windowsNameBadgeColor: windowsNameBadgeColorInput instanceof HTMLInputElement ? String(windowsNameBadgeColorInput.value || '#0F172A').trim() : '#0F172A',
@@ -1948,9 +2013,12 @@
                     androidPriceText: androidPriceTextInput instanceof HTMLInputElement ? String(androidPriceTextInput.value || '').trim() : '',
                     androidNameFontSize: androidNameFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(androidNameFontSizeInput.value || 18) || 18)) : 18,
                     androidPriceFontSize: androidPriceFontSizeInput instanceof HTMLInputElement ? Math.max(8, Math.min(120, Number(androidPriceFontSizeInput.value || 22) || 22)) : 22,
-                    androidTextFontFamily: androidTextFontFamilyInput instanceof HTMLSelectElement ? String(androidTextFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
+                    androidNameFontFamily: androidNameFontFamilyInput instanceof HTMLSelectElement ? String(androidNameFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
+                    androidPriceFontFamily: androidPriceFontFamilyInput instanceof HTMLSelectElement ? String(androidPriceFontFamilyInput.value || 'arial').toLowerCase() : 'arial',
                     androidNamePosition: androidNamePositionInput instanceof HTMLSelectElement ? String(androidNamePositionInput.value || 'top').toLowerCase() : 'top',
                     androidPricePosition: androidPricePositionInput instanceof HTMLSelectElement ? String(androidPricePositionInput.value || 'bottom').toLowerCase() : 'bottom',
+                    androidNameVerticalNudge: androidNameVerticalNudgeInput instanceof HTMLInputElement ? Math.max(-120, Math.min(120, Number(androidNameVerticalNudgeInput.value || 0) || 0)) : 0,
+                    androidPriceVerticalNudge: androidPriceVerticalNudgeInput instanceof HTMLInputElement ? Math.max(-120, Math.min(120, Number(androidPriceVerticalNudgeInput.value || 0) || 0)) : 0,
                     androidNameColor: androidNameColorInput instanceof HTMLInputElement ? String(androidNameColorInput.value || '#FFFFFF').trim() : '#FFFFFF',
                     androidNameBadgeEnabled: androidNameBadgeEnabledInput instanceof HTMLInputElement ? Boolean(androidNameBadgeEnabledInput.checked) : true,
                     androidNameBadgeColor: androidNameBadgeColorInput instanceof HTMLInputElement ? String(androidNameBadgeColorInput.value || '#0F172A').trim() : '#0F172A',
@@ -2010,9 +2078,12 @@
                     windowsPriceText: '',
                     windowsNameFontSize: 18,
                     windowsPriceFontSize: 22,
-                    windowsTextFontFamily: 'arial',
+                    windowsNameFontFamily: 'arial',
+                    windowsPriceFontFamily: 'arial',
                     windowsNamePosition: 'top',
                     windowsPricePosition: 'bottom',
+                    windowsNameVerticalNudge: 0,
+                    windowsPriceVerticalNudge: 0,
                     windowsNameColor: '#FFFFFF',
                     windowsNameBadgeEnabled: true,
                     windowsNameBadgeColor: '#0F172A',
@@ -2029,9 +2100,12 @@
                     androidPriceText: '',
                     androidNameFontSize: 18,
                     androidPriceFontSize: 22,
-                    androidTextFontFamily: 'arial',
+                    androidNameFontFamily: 'arial',
+                    androidPriceFontFamily: 'arial',
                     androidNamePosition: 'top',
                     androidPricePosition: 'bottom',
+                    androidNameVerticalNudge: 0,
+                    androidPriceVerticalNudge: 0,
                     androidNameColor: '#FFFFFF',
                     androidNameBadgeEnabled: true,
                     androidNameBadgeColor: '#0F172A',
@@ -2196,9 +2270,12 @@
                     priceText,
                     nameFontSize,
                     priceFontSize,
-                    textFontFamily,
+                    nameFontFamily,
+                    priceFontFamily,
                     namePosition,
                     pricePosition,
+                    nameVerticalNudge,
+                    priceVerticalNudge,
                     nameColor,
                     nameBadgeEnabled,
                     nameBadgeColor,
@@ -2409,21 +2486,53 @@
                     priceFontSizeInput.setAttribute(platform === 'android' ? 'data-schedule-price-font-size-android' : 'data-schedule-price-font-size-windows', '1');
                     priceFontSizeWrap.appendChild(priceFontSizeInput);
 
-                    const fontFamilyWrap = document.createElement('label');
-                    fontFamilyWrap.className = 'block text-[11px] text-gray-600';
-                    fontFamilyWrap.textContent = 'Familia da fonte';
-                    const textFontFamilyInput = document.createElement('select');
-                    textFontFamilyInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}TextFontFamily]`;
-                    textFontFamilyInput.className = 'w-full border rounded px-2 py-1 text-xs';
-                    textFontFamilyInput.setAttribute(platform === 'android' ? 'data-schedule-font-family-android' : 'data-schedule-font-family-windows', '1');
-                    ['arial', 'verdana', 'tahoma', 'trebuchet', 'georgia', 'courier', 'system'].forEach((fontKey) => {
+                    const fontOptions = [
+                        { value: 'arial', label: 'Arial' },
+                        { value: 'verdana', label: 'Verdana' },
+                        { value: 'tahoma', label: 'Tahoma' },
+                        { value: 'trebuchet', label: 'Trebuchet' },
+                        { value: 'georgia', label: 'Georgia' },
+                        { value: 'courier', label: 'Courier' },
+                        { value: 'system', label: 'System UI' },
+                        { value: 'impact_shadow', label: 'Impacto Sombra' },
+                        { value: 'neon_glow', label: 'Neon Glow' },
+                        { value: 'serif_elegant', label: 'Serif Elegante' },
+                        { value: 'gold_lux', label: 'Dourado Luxo' },
+                        { value: 'retro_arcade', label: 'Retro Arcade' },
+                        { value: 'crystal_frost', label: 'Cristal Frost' },
+                    ];
+
+                    const nameFontFamilyWrap = document.createElement('label');
+                    nameFontFamilyWrap.className = 'block text-[11px] text-gray-600';
+                    nameFontFamilyWrap.textContent = 'Familia da fonte (nome)';
+                    const nameFontFamilyInput = document.createElement('select');
+                    nameFontFamilyInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameFontFamily]`;
+                    nameFontFamilyInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    nameFontFamilyInput.setAttribute(platform === 'android' ? 'data-schedule-name-font-family-android' : 'data-schedule-name-font-family-windows', '1');
+                    fontOptions.forEach((item) => {
                         const option = document.createElement('option');
-                        option.value = fontKey;
-                        option.textContent = fontKey === 'system' ? 'System UI' : fontKey;
-                        option.selected = String(textFontFamily || 'arial').toLowerCase() === fontKey;
-                        textFontFamilyInput.appendChild(option);
+                        option.value = item.value;
+                        option.textContent = item.label;
+                        option.selected = String(nameFontFamily || 'arial').toLowerCase() === item.value;
+                        nameFontFamilyInput.appendChild(option);
                     });
-                    fontFamilyWrap.appendChild(textFontFamilyInput);
+                    nameFontFamilyWrap.appendChild(nameFontFamilyInput);
+
+                    const priceFontFamilyWrap = document.createElement('label');
+                    priceFontFamilyWrap.className = 'block text-[11px] text-gray-600';
+                    priceFontFamilyWrap.textContent = 'Familia da fonte (preco)';
+                    const priceFontFamilyInput = document.createElement('select');
+                    priceFontFamilyInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceFontFamily]`;
+                    priceFontFamilyInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    priceFontFamilyInput.setAttribute(platform === 'android' ? 'data-schedule-price-font-family-android' : 'data-schedule-price-font-family-windows', '1');
+                    fontOptions.forEach((item) => {
+                        const option = document.createElement('option');
+                        option.value = item.value;
+                        option.textContent = item.label;
+                        option.selected = String(priceFontFamily || 'arial').toLowerCase() === item.value;
+                        priceFontFamilyInput.appendChild(option);
+                    });
+                    priceFontFamilyWrap.appendChild(priceFontFamilyInput);
 
                     const namePositionWrap = document.createElement('label');
                     namePositionWrap.className = 'block text-[11px] text-gray-600';
@@ -2463,6 +2572,32 @@
                     });
                     pricePositionWrap.appendChild(pricePositionInput);
 
+                    const nameVerticalNudgeWrap = document.createElement('label');
+                    nameVerticalNudgeWrap.className = 'block text-[11px] text-gray-600';
+                    nameVerticalNudgeWrap.textContent = 'Ajuste vertical nome (px)';
+                    const nameVerticalNudgeInput = document.createElement('input');
+                    nameVerticalNudgeInput.type = 'number';
+                    nameVerticalNudgeInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameVerticalNudge]`;
+                    nameVerticalNudgeInput.value = Number(nameVerticalNudge || 0);
+                    nameVerticalNudgeInput.min = '-120';
+                    nameVerticalNudgeInput.max = '120';
+                    nameVerticalNudgeInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    nameVerticalNudgeInput.setAttribute(platform === 'android' ? 'data-schedule-name-vertical-nudge-android' : 'data-schedule-name-vertical-nudge-windows', '1');
+                    nameVerticalNudgeWrap.appendChild(nameVerticalNudgeInput);
+
+                    const priceVerticalNudgeWrap = document.createElement('label');
+                    priceVerticalNudgeWrap.className = 'block text-[11px] text-gray-600';
+                    priceVerticalNudgeWrap.textContent = 'Ajuste vertical preco (px)';
+                    const priceVerticalNudgeInput = document.createElement('input');
+                    priceVerticalNudgeInput.type = 'number';
+                    priceVerticalNudgeInput.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceVerticalNudge]`;
+                    priceVerticalNudgeInput.value = Number(priceVerticalNudge || 0);
+                    priceVerticalNudgeInput.min = '-120';
+                    priceVerticalNudgeInput.max = '120';
+                    priceVerticalNudgeInput.className = 'w-full border rounded px-2 py-1 text-xs';
+                    priceVerticalNudgeInput.setAttribute(platform === 'android' ? 'data-schedule-price-vertical-nudge-android' : 'data-schedule-price-vertical-nudge-windows', '1');
+                    priceVerticalNudgeWrap.appendChild(priceVerticalNudgeInput);
+
                     const nameColorWrap = document.createElement('label');
                     nameColorWrap.className = 'block text-[11px] text-gray-600';
                     nameColorWrap.textContent = 'Cor nome';
@@ -2486,7 +2621,7 @@
                     priceColorWrap.appendChild(priceColorInput);
 
                     const nameBadgeEnabledWrap = document.createElement('label');
-                    nameBadgeEnabledWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-2';
+                    nameBadgeEnabledWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 border border-gray-200 rounded px-2 py-1';
                     const nameBadgeEnabledHidden = document.createElement('input');
                     nameBadgeEnabledHidden.type = 'hidden';
                     nameBadgeEnabledHidden.name = `rightSidebarImageSchedules[${index}][${keyPrefix}NameBadgeEnabled]`;
@@ -2516,7 +2651,7 @@
                     nameBadgeColorWrap.appendChild(nameBadgeColorInput);
 
                     const priceBadgeEnabledWrap = document.createElement('label');
-                    priceBadgeEnabledWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 md:col-span-2';
+                    priceBadgeEnabledWrap.className = 'inline-flex items-center gap-2 text-[11px] text-gray-700 border border-gray-200 rounded px-2 py-1';
                     const priceBadgeEnabledHidden = document.createElement('input');
                     priceBadgeEnabledHidden.type = 'hidden';
                     priceBadgeEnabledHidden.name = `rightSidebarImageSchedules[${index}][${keyPrefix}PriceBadgeEnabled]`;
@@ -2545,20 +2680,45 @@
                     priceBadgeColorInput.setAttribute(platform === 'android' ? 'data-schedule-price-badge-color-android' : 'data-schedule-price-badge-color-windows', '1');
                     priceBadgeColorWrap.appendChild(priceBadgeColorInput);
 
-                    platformGrid.appendChild(showNameWrap);
-                    platformGrid.appendChild(showPriceWrap);
-                    platformGrid.appendChild(priceTextWrap);
-                    platformGrid.appendChild(nameFontSizeWrap);
-                    platformGrid.appendChild(priceFontSizeWrap);
-                    platformGrid.appendChild(fontFamilyWrap);
-                    platformGrid.appendChild(namePositionWrap);
-                    platformGrid.appendChild(pricePositionWrap);
-                    platformGrid.appendChild(nameColorWrap);
-                    platformGrid.appendChild(nameBadgeEnabledWrap);
-                    platformGrid.appendChild(nameBadgeColorWrap);
-                    platformGrid.appendChild(priceColorWrap);
-                    platformGrid.appendChild(priceBadgeEnabledWrap);
-                    platformGrid.appendChild(priceBadgeColorWrap);
+                    const nameConfigBlock = document.createElement('div');
+                    nameConfigBlock.className = 'rounded border border-gray-200 bg-white p-2 space-y-2 md:col-span-3';
+                    const nameConfigTitle = document.createElement('p');
+                    nameConfigTitle.className = 'text-[11px] font-semibold uppercase tracking-wide text-gray-700';
+                    nameConfigTitle.textContent = 'Bloco nome';
+                    const nameConfigGrid = document.createElement('div');
+                    nameConfigGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
+                    nameConfigGrid.appendChild(showNameWrap);
+                    nameConfigGrid.appendChild(nameFontSizeWrap);
+                    nameConfigGrid.appendChild(nameFontFamilyWrap);
+                    nameConfigGrid.appendChild(namePositionWrap);
+                    nameConfigGrid.appendChild(nameVerticalNudgeWrap);
+                    nameConfigGrid.appendChild(nameColorWrap);
+                    nameConfigGrid.appendChild(nameBadgeEnabledWrap);
+                    nameConfigGrid.appendChild(nameBadgeColorWrap);
+                    nameConfigBlock.appendChild(nameConfigTitle);
+                    nameConfigBlock.appendChild(nameConfigGrid);
+
+                    const priceConfigBlock = document.createElement('div');
+                    priceConfigBlock.className = 'rounded border border-gray-200 bg-white p-2 space-y-2 md:col-span-3';
+                    const priceConfigTitle = document.createElement('p');
+                    priceConfigTitle.className = 'text-[11px] font-semibold uppercase tracking-wide text-gray-700';
+                    priceConfigTitle.textContent = 'Bloco preco';
+                    const priceConfigGrid = document.createElement('div');
+                    priceConfigGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
+                    priceConfigGrid.appendChild(showPriceWrap);
+                    priceConfigGrid.appendChild(priceTextWrap);
+                    priceConfigGrid.appendChild(priceFontSizeWrap);
+                    priceConfigGrid.appendChild(priceFontFamilyWrap);
+                    priceConfigGrid.appendChild(pricePositionWrap);
+                    priceConfigGrid.appendChild(priceVerticalNudgeWrap);
+                    priceConfigGrid.appendChild(priceColorWrap);
+                    priceConfigGrid.appendChild(priceBadgeEnabledWrap);
+                    priceConfigGrid.appendChild(priceBadgeColorWrap);
+                    priceConfigBlock.appendChild(priceConfigTitle);
+                    priceConfigBlock.appendChild(priceConfigGrid);
+
+                    platformGrid.appendChild(nameConfigBlock);
+                    platformGrid.appendChild(priceConfigBlock);
                     wrap.appendChild(platformGrid);
 
                     const previewWrap = document.createElement('div');
@@ -2601,41 +2761,123 @@
                     previewWrap.appendChild(previewFrame);
                     wrap.appendChild(previewWrap);
 
-                    const fontFamilies = {
-                        arial: 'Arial, sans-serif',
-                        verdana: 'Verdana, sans-serif',
-                        tahoma: 'Tahoma, sans-serif',
-                        trebuchet: 'Trebuchet MS, sans-serif',
-                        georgia: 'Georgia, serif',
-                        courier: 'Courier New, monospace',
-                        system: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+                    const resolveOverlayFontStyle = (fontKey, textColor, defaultWeight) => {
+                        const key = String(fontKey || 'arial').toLowerCase();
+                        const normalizedColor = String(textColor || '#FFFFFF');
+                        const base = {
+                            fontFamily: 'Arial, sans-serif',
+                            fontWeight: defaultWeight,
+                            textShadow: '0 2px 6px rgba(0, 0, 0, 0.9)',
+                            letterSpacing: '0.01em',
+                            textTransform: 'none',
+                            webkitTextStroke: '0px transparent',
+                            filter: 'none',
+                        };
+
+                        if (key === 'verdana') return { ...base, fontFamily: 'Verdana, sans-serif' };
+                        if (key === 'tahoma') return { ...base, fontFamily: 'Tahoma, sans-serif' };
+                        if (key === 'trebuchet') return { ...base, fontFamily: 'Trebuchet MS, sans-serif' };
+                        if (key === 'georgia') return { ...base, fontFamily: 'Georgia, serif' };
+                        if (key === 'courier') return { ...base, fontFamily: 'Courier New, monospace' };
+                        if (key === 'system') return { ...base, fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' };
+                        if (key === 'impact_shadow') {
+                            return {
+                                fontFamily: 'Impact, Haettenschweiler, Arial Black, sans-serif',
+                                fontWeight: '900',
+                                textShadow: '0 1px 0 rgba(0,0,0,0.95), 0 3px 8px rgba(0,0,0,0.85)',
+                                letterSpacing: '0.03em',
+                                textTransform: 'uppercase',
+                                webkitTextStroke: '0.7px rgba(0,0,0,0.65)',
+                            };
+                        }
+                        if (key === 'neon_glow') {
+                            return {
+                                fontFamily: 'Trebuchet MS, Tahoma, sans-serif',
+                                fontWeight: '800',
+                                textShadow: `0 0 6px ${normalizedColor}, 0 0 14px ${normalizedColor}, 0 2px 6px rgba(0,0,0,0.85)`,
+                                letterSpacing: '0.02em',
+                                filter: 'saturate(1.25) brightness(1.1)',
+                            };
+                        }
+                        if (key === 'serif_elegant') {
+                            return {
+                                fontFamily: 'Georgia, Times New Roman, serif',
+                                fontWeight: '700',
+                                textShadow: '0 1px 0 rgba(255,255,255,0.2), 0 3px 8px rgba(0,0,0,0.78)',
+                                letterSpacing: '0.02em',
+                                textTransform: 'capitalize',
+                            };
+                        }
+                        if (key === 'gold_lux') {
+                            return {
+                                fontFamily: 'Georgia, Times New Roman, serif',
+                                fontWeight: '800',
+                                textShadow: '0 1px 0 rgba(255,240,170,0.55), 0 0 10px rgba(251,191,36,0.8), 0 3px 10px rgba(0,0,0,0.78)',
+                                letterSpacing: '0.03em',
+                                textTransform: 'uppercase',
+                                webkitTextStroke: '0.7px rgba(120,53,15,0.7)',
+                                filter: 'saturate(1.15) contrast(1.08)',
+                            };
+                        }
+                        if (key === 'retro_arcade') {
+                            return {
+                                fontFamily: 'Courier New, monospace',
+                                fontWeight: '900',
+                                textShadow: '0 0 1px rgba(255,255,255,0.6), 0 0 7px rgba(34,211,238,0.75), 0 0 15px rgba(244,114,182,0.65), 0 2px 6px rgba(0,0,0,0.88)',
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase',
+                                webkitTextStroke: '0.5px rgba(15,23,42,0.55)',
+                                filter: 'saturate(1.2)',
+                            };
+                        }
+                        if (key === 'crystal_frost') {
+                            return {
+                                fontFamily: 'Trebuchet MS, Tahoma, sans-serif',
+                                fontWeight: '700',
+                                textShadow: '0 1px 0 rgba(255,255,255,0.35), 0 0 8px rgba(186,230,253,0.85), 0 3px 8px rgba(15,23,42,0.75)',
+                                letterSpacing: '0.02em',
+                                textTransform: 'none',
+                                webkitTextStroke: '0.4px rgba(125,211,252,0.45)',
+                                filter: 'brightness(1.08)',
+                            };
+                        }
+
+                        return base;
                     };
 
-                    const applyVerticalPosition = (element, position, defaultPosition) => {
+                    const applyVerticalPosition = (element, position, defaultPosition, nudgeValue) => {
                         const resolved = position === 'bottom' || position === 'top' ? position : defaultPosition;
+                        const nudge = Math.max(-120, Math.min(120, Number(nudgeValue || 0) || 0));
                         if (resolved === 'bottom') {
                             element.style.top = '';
-                            element.style.bottom = '4px';
+                            element.style.bottom = `calc(4px + ${nudge}px)`;
                         } else {
-                            element.style.top = '4px';
+                            element.style.top = `calc(4px + ${nudge}px)`;
                             element.style.bottom = '';
                         }
                     };
 
                     const updatePreview = () => {
-                        const selectedFont = String(textFontFamilyInput.value || 'arial').toLowerCase();
-                        const resolvedFont = fontFamilies[selectedFont] || fontFamilies.arial;
+                        const selectedNameFont = String(nameFontFamilyInput.value || 'arial').toLowerCase();
+                        const selectedPriceFont = String(priceFontFamilyInput.value || 'arial').toLowerCase();
 
                         const currentName = String(nameInput.value || '').trim();
                         if (showNameInput.checked && currentName !== '' && enabledInput.checked) {
                             previewName.textContent = currentName;
-                            previewName.style.fontFamily = resolvedFont;
+                            const nameStyle = resolveOverlayFontStyle(selectedNameFont, String(nameColorInput.value || '#FFFFFF'), '700');
+                            previewName.style.fontFamily = nameStyle.fontFamily;
+                            previewName.style.fontWeight = nameStyle.fontWeight;
+                            previewName.style.textShadow = nameStyle.textShadow;
+                            previewName.style.letterSpacing = nameStyle.letterSpacing;
+                            previewName.style.textTransform = nameStyle.textTransform;
+                            previewName.style.webkitTextStroke = nameStyle.webkitTextStroke;
+                            previewName.style.filter = nameStyle.filter;
                             previewName.style.fontSize = `${Math.max(8, Math.min(120, Number(nameFontSizeInput.value || 18) || 18))}px`;
                             previewName.style.color = String(nameColorInput.value || '#FFFFFF');
                             previewName.style.background = nameBadgeEnabledInput.checked
                                 ? String(nameBadgeColorInput.value || '#0F172A')
                                 : 'transparent';
-                            applyVerticalPosition(previewName, String(namePositionInput.value || 'top').toLowerCase(), 'top');
+                            applyVerticalPosition(previewName, String(namePositionInput.value || 'top').toLowerCase(), 'top', Number(nameVerticalNudgeInput.value || 0));
                             previewName.classList.remove('hidden');
                         } else {
                             previewName.classList.add('hidden');
@@ -2643,15 +2885,22 @@
                         }
 
                         const currentPrice = String(priceTextInput.value || '').trim();
-                        if (showPriceInput.checked && currentPrice !== '' && enabledInput.checked) {
-                            previewPrice.textContent = currentPrice;
-                            previewPrice.style.fontFamily = resolvedFont;
+                        if (showPriceInput.checked && enabledInput.checked) {
+                            previewPrice.textContent = currentPrice !== '' ? currentPrice : 'Preco';
+                            const priceStyle = resolveOverlayFontStyle(selectedPriceFont, String(priceColorInput.value || '#FDE68A'), '800');
+                            previewPrice.style.fontFamily = priceStyle.fontFamily;
+                            previewPrice.style.fontWeight = priceStyle.fontWeight;
+                            previewPrice.style.textShadow = priceStyle.textShadow;
+                            previewPrice.style.letterSpacing = priceStyle.letterSpacing;
+                            previewPrice.style.textTransform = priceStyle.textTransform;
+                            previewPrice.style.webkitTextStroke = priceStyle.webkitTextStroke;
+                            previewPrice.style.filter = priceStyle.filter;
                             previewPrice.style.fontSize = `${Math.max(8, Math.min(120, Number(priceFontSizeInput.value || 22) || 22))}px`;
                             previewPrice.style.color = String(priceColorInput.value || '#FDE68A');
                             previewPrice.style.background = priceBadgeEnabledInput.checked
                                 ? String(priceBadgeColorInput.value || '#0F172A')
                                 : 'transparent';
-                            applyVerticalPosition(previewPrice, String(pricePositionInput.value || 'bottom').toLowerCase(), 'bottom');
+                            applyVerticalPosition(previewPrice, String(pricePositionInput.value || 'bottom').toLowerCase(), 'bottom', Number(priceVerticalNudgeInput.value || 0));
                             previewPrice.classList.remove('hidden');
                         } else {
                             previewPrice.classList.add('hidden');
@@ -2672,9 +2921,12 @@
                         priceTextInput.disabled = !enabled;
                         nameFontSizeInput.disabled = !enabled;
                         priceFontSizeInput.disabled = !enabled;
-                        textFontFamilyInput.disabled = !enabled;
+                        nameFontFamilyInput.disabled = !enabled;
+                        priceFontFamilyInput.disabled = !enabled;
                         namePositionInput.disabled = !enabled;
                         pricePositionInput.disabled = !enabled;
+                        nameVerticalNudgeInput.disabled = !enabled;
+                        priceVerticalNudgeInput.disabled = !enabled;
                         nameColorInput.disabled = !enabled;
                         nameBadgeEnabledInput.disabled = !enabled;
                         nameBadgeColorInput.disabled = !enabled || !nameBadgeEnabledInput.checked;
@@ -2694,9 +2946,12 @@
                     priceTextInput.addEventListener('input', updatePreview);
                     nameFontSizeInput.addEventListener('input', updatePreview);
                     priceFontSizeInput.addEventListener('input', updatePreview);
-                    textFontFamilyInput.addEventListener('change', updatePreview);
+                    nameFontFamilyInput.addEventListener('change', updatePreview);
+                    priceFontFamilyInput.addEventListener('change', updatePreview);
                     namePositionInput.addEventListener('change', updatePreview);
                     pricePositionInput.addEventListener('change', updatePreview);
+                    nameVerticalNudgeInput.addEventListener('input', updatePreview);
+                    priceVerticalNudgeInput.addEventListener('input', updatePreview);
                     nameColorInput.addEventListener('input', updatePreview);
                     nameBadgeEnabledInput.addEventListener('change', updatePreview);
                     nameBadgeColorInput.addEventListener('input', updatePreview);
@@ -2719,9 +2974,12 @@
                         priceTextInput,
                         nameFontSizeInput,
                         priceFontSizeInput,
-                        textFontFamilyInput,
+                        nameFontFamilyInput,
+                        priceFontFamilyInput,
                         namePositionInput,
                         pricePositionInput,
+                        nameVerticalNudgeInput,
+                        priceVerticalNudgeInput,
                         nameColorInput,
                         nameBadgeEnabledInput,
                         nameBadgeColorInput,
@@ -2752,9 +3010,12 @@
                     priceText: state.windowsPriceText,
                     nameFontSize: state.windowsNameFontSize,
                     priceFontSize: state.windowsPriceFontSize,
-                    textFontFamily: state.windowsTextFontFamily,
+                    nameFontFamily: state.windowsNameFontFamily,
+                    priceFontFamily: state.windowsPriceFontFamily,
                     namePosition: state.windowsNamePosition,
                     pricePosition: state.windowsPricePosition,
+                    nameVerticalNudge: state.windowsNameVerticalNudge,
+                    priceVerticalNudge: state.windowsPriceVerticalNudge,
                     nameColor: state.windowsNameColor,
                     nameBadgeEnabled: state.windowsNameBadgeEnabled,
                     nameBadgeColor: state.windowsNameBadgeColor,
@@ -2777,9 +3038,12 @@
                     priceText: state.androidPriceText,
                     nameFontSize: state.androidNameFontSize,
                     priceFontSize: state.androidPriceFontSize,
-                    textFontFamily: state.androidTextFontFamily,
+                    nameFontFamily: state.androidNameFontFamily,
+                    priceFontFamily: state.androidPriceFontFamily,
                     namePosition: state.androidNamePosition,
                     pricePosition: state.androidPricePosition,
+                    nameVerticalNudge: state.androidNameVerticalNudge,
+                    priceVerticalNudge: state.androidPriceVerticalNudge,
                     nameColor: state.androidNameColor,
                     nameBadgeEnabled: state.androidNameBadgeEnabled,
                     nameBadgeColor: state.androidNameBadgeColor,
@@ -2807,9 +3071,12 @@
                         windowsPriceText: String(windowsConfig.priceTextInput.value || '').trim(),
                         windowsNameFontSize: Math.max(8, Math.min(120, Number(windowsConfig.nameFontSizeInput.value || 18) || 18)),
                         windowsPriceFontSize: Math.max(8, Math.min(120, Number(windowsConfig.priceFontSizeInput.value || 22) || 22)),
-                        windowsTextFontFamily: String(windowsConfig.textFontFamilyInput.value || 'arial').toLowerCase(),
+                        windowsNameFontFamily: String(windowsConfig.nameFontFamilyInput.value || 'arial').toLowerCase(),
+                        windowsPriceFontFamily: String(windowsConfig.priceFontFamilyInput.value || 'arial').toLowerCase(),
                         windowsNamePosition: String(windowsConfig.namePositionInput.value || 'top').toLowerCase(),
                         windowsPricePosition: String(windowsConfig.pricePositionInput.value || 'bottom').toLowerCase(),
+                        windowsNameVerticalNudge: Math.max(-120, Math.min(120, Number(windowsConfig.nameVerticalNudgeInput.value || 0) || 0)),
+                        windowsPriceVerticalNudge: Math.max(-120, Math.min(120, Number(windowsConfig.priceVerticalNudgeInput.value || 0) || 0)),
                         windowsNameColor: String(windowsConfig.nameColorInput.value || '#FFFFFF'),
                         windowsNameBadgeEnabled: Boolean(windowsConfig.nameBadgeEnabledInput.checked),
                         windowsNameBadgeColor: String(windowsConfig.nameBadgeColorInput.value || '#0F172A'),
@@ -2826,9 +3093,12 @@
                         androidPriceText: String(androidConfig.priceTextInput.value || '').trim(),
                         androidNameFontSize: Math.max(8, Math.min(120, Number(androidConfig.nameFontSizeInput.value || 18) || 18)),
                         androidPriceFontSize: Math.max(8, Math.min(120, Number(androidConfig.priceFontSizeInput.value || 22) || 22)),
-                        androidTextFontFamily: String(androidConfig.textFontFamilyInput.value || 'arial').toLowerCase(),
+                        androidNameFontFamily: String(androidConfig.nameFontFamilyInput.value || 'arial').toLowerCase(),
+                        androidPriceFontFamily: String(androidConfig.priceFontFamilyInput.value || 'arial').toLowerCase(),
                         androidNamePosition: String(androidConfig.namePositionInput.value || 'top').toLowerCase(),
                         androidPricePosition: String(androidConfig.pricePositionInput.value || 'bottom').toLowerCase(),
+                        androidNameVerticalNudge: Math.max(-120, Math.min(120, Number(androidConfig.nameVerticalNudgeInput.value || 0) || 0)),
+                        androidPriceVerticalNudge: Math.max(-120, Math.min(120, Number(androidConfig.priceVerticalNudgeInput.value || 0) || 0)),
                         androidNameColor: String(androidConfig.nameColorInput.value || '#FFFFFF'),
                         androidNameBadgeEnabled: Boolean(androidConfig.nameBadgeEnabledInput.checked),
                         androidNameBadgeColor: String(androidConfig.nameBadgeColorInput.value || '#0F172A'),
@@ -2890,9 +3160,12 @@
                 windowsConfig.priceTextInput.addEventListener('input', syncStateFromInputs);
                 windowsConfig.nameFontSizeInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.priceFontSizeInput.addEventListener('change', syncStateFromInputs);
-                windowsConfig.textFontFamilyInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.nameFontFamilyInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.priceFontFamilyInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.namePositionInput.addEventListener('change', syncStateFromInputs);
                 windowsConfig.pricePositionInput.addEventListener('change', syncStateFromInputs);
+                windowsConfig.nameVerticalNudgeInput.addEventListener('input', syncStateFromInputs);
+                windowsConfig.priceVerticalNudgeInput.addEventListener('input', syncStateFromInputs);
                 windowsConfig.nameColorInput.addEventListener('input', syncStateFromInputs);
                 windowsConfig.nameBadgeEnabledInput.addEventListener('change', () => {
                     windowsConfig.updatePlatformEnabledState();
@@ -2915,9 +3188,12 @@
                 androidConfig.priceTextInput.addEventListener('input', syncStateFromInputs);
                 androidConfig.nameFontSizeInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.priceFontSizeInput.addEventListener('change', syncStateFromInputs);
-                androidConfig.textFontFamilyInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.nameFontFamilyInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.priceFontFamilyInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.namePositionInput.addEventListener('change', syncStateFromInputs);
                 androidConfig.pricePositionInput.addEventListener('change', syncStateFromInputs);
+                androidConfig.nameVerticalNudgeInput.addEventListener('input', syncStateFromInputs);
+                androidConfig.priceVerticalNudgeInput.addEventListener('input', syncStateFromInputs);
                 androidConfig.nameColorInput.addEventListener('input', syncStateFromInputs);
                 androidConfig.nameBadgeEnabledInput.addEventListener('change', () => {
                     androidConfig.updatePlatformEnabledState();
@@ -3185,6 +3461,12 @@
 
         if (rightSidebarImageUrls) {
             rightSidebarImageUrls.addEventListener('input', () => {
+                renderRightSidebarImageScheduleEditor();
+            });
+        }
+
+        if (rightSidebarImageFit) {
+            rightSidebarImageFit.addEventListener('change', () => {
                 renderRightSidebarImageScheduleEditor();
             });
         }
