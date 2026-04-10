@@ -3,6 +3,14 @@
         $navUser = Auth::user();
         $isRevendaNav = $navUser ? \App\Support\EmpresaContext::requiresSelection($navUser) : false;
         $empresaAtivaNav = $navUser ? \App\Support\EmpresaContext::activeEmpresa($navUser) : null;
+        $hasCadastroMenu = $navUser && (
+            $navUser->hasMenuAccess('produtos')
+            || $navUser->hasMenuAccess('departamentos')
+            || $navUser->hasMenuAccess('grupos')
+        );
+        $cadastroMenuActive = request()->is('admin/produtos*')
+            || request()->is('admin/departamentos*')
+            || request()->is('admin/grupos*');
     @endphp
 
     <!-- Primary Navigation Menu -->
@@ -39,24 +47,46 @@
                     @endif
 
                     <!-- Admin Menu -->
-                    @if (Auth::user()->hasMenuAccess('produtos'))
-                        <a href="/admin/produtos" class="{{ $desktopNavBase }} {{ request()->is('admin/produtos*') ? $desktopNavActive : '' }}">
-                            {{ __('Produtos') }}
-                        </a>
+                    @if ($hasCadastroMenu)
+                        <div x-data="{ cadastroOpen: {{ $cadastroMenuActive ? 'true' : 'false' }} }" class="relative">
+                            <button
+                                type="button"
+                                @click="cadastroOpen = !cadastroOpen"
+                                class="{{ $desktopNavBase }} {{ $cadastroMenuActive ? $desktopNavActive : '' }}"
+                            >
+                                <span>{{ __('Cadastro') }}</span>
+                                <svg class="ml-2 h-4 w-4 transition-transform" :class="{ 'rotate-180': cadastroOpen }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.512a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+
+                            <div
+                                x-cloak
+                                x-show="cadastroOpen"
+                                @click.outside="cadastroOpen = false"
+                                class="absolute left-0 z-50 mt-2 w-56 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
+                            >
+                                @if ($navUser->hasMenuAccess('produtos'))
+                                    <a href="/admin/produtos" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 {{ request()->is('admin/produtos*') ? 'bg-sky-50 text-sky-700' : '' }}">
+                                        {{ __('Produtos') }}
+                                    </a>
+                                @endif
+                                @if ($navUser->hasMenuAccess('departamentos'))
+                                    <a href="/admin/departamentos" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 {{ request()->is('admin/departamentos*') ? 'bg-sky-50 text-sky-700' : '' }}">
+                                        {{ __('Departamentos') }}
+                                    </a>
+                                @endif
+                                @if ($navUser->hasMenuAccess('grupos'))
+                                    <a href="/admin/grupos" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 {{ request()->is('admin/grupos*') ? 'bg-sky-50 text-sky-700' : '' }}">
+                                        {{ __('Grupos') }}
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
                     @endif
                     @if (Auth::user()->hasMenuAccess('empresas'))
                         <a href="/admin/empresas" class="{{ $desktopNavBase }} {{ request()->is('admin/empresas*') ? $desktopNavActive : '' }}">
                             {{ __('Empresas') }}
-                        </a>
-                    @endif
-                    @if (Auth::user()->hasMenuAccess('departamentos'))
-                        <a href="/admin/departamentos" class="{{ $desktopNavBase }} {{ request()->is('admin/departamentos*') ? $desktopNavActive : '' }}">
-                            {{ __('Departamentos') }}
-                        </a>
-                    @endif
-                    @if (Auth::user()->hasMenuAccess('grupos'))
-                        <a href="/admin/grupos" class="{{ $desktopNavBase }} {{ request()->is('admin/grupos*') ? $desktopNavActive : '' }}">
-                            {{ __('Grupos') }}
                         </a>
                     @endif
                     <a href="{{ route('admin.financeiro.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/financeiro*') ? $desktopNavActive : '' }}">
@@ -193,24 +223,41 @@
             @endif
 
             <!-- Admin Menu (Mobile) -->
-            @if (Auth::user()->hasMenuAccess('produtos'))
-                <x-responsive-nav-link href="/admin/produtos">
-                    {{ __('Produtos') }}
-                </x-responsive-nav-link>
+            @if ($hasCadastroMenu)
+                <div x-data="{ cadastroMobileOpen: {{ $cadastroMenuActive ? 'true' : 'false' }} }" class="border-b border-slate-100 pb-1">
+                    <button
+                        type="button"
+                        @click="cadastroMobileOpen = !cadastroMobileOpen"
+                        class="flex w-full items-center justify-between px-3 py-2 text-left text-base font-medium {{ $cadastroMenuActive ? 'border-l-4 border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-l-4 border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-800' }}"
+                    >
+                        <span>{{ __('Cadastro') }}</span>
+                        <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': cadastroMobileOpen }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.512a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+
+                    <div x-cloak x-show="cadastroMobileOpen" class="space-y-1 pb-2">
+                        @if ($navUser->hasMenuAccess('produtos'))
+                            <x-responsive-nav-link href="/admin/produtos" :active="request()->is('admin/produtos*')">
+                                {{ __('Produtos') }}
+                            </x-responsive-nav-link>
+                        @endif
+                        @if ($navUser->hasMenuAccess('departamentos'))
+                            <x-responsive-nav-link href="/admin/departamentos" :active="request()->is('admin/departamentos*')">
+                                {{ __('Departamentos') }}
+                            </x-responsive-nav-link>
+                        @endif
+                        @if ($navUser->hasMenuAccess('grupos'))
+                            <x-responsive-nav-link href="/admin/grupos" :active="request()->is('admin/grupos*')">
+                                {{ __('Grupos') }}
+                            </x-responsive-nav-link>
+                        @endif
+                    </div>
+                </div>
             @endif
             @if (Auth::user()->hasMenuAccess('empresas'))
                 <x-responsive-nav-link href="/admin/empresas">
                     {{ __('Empresas') }}
-                </x-responsive-nav-link>
-            @endif
-            @if (Auth::user()->hasMenuAccess('departamentos'))
-                <x-responsive-nav-link href="/admin/departamentos">
-                    {{ __('Departamentos') }}
-                </x-responsive-nav-link>
-            @endif
-            @if (Auth::user()->hasMenuAccess('grupos'))
-                <x-responsive-nav-link href="/admin/grupos">
-                    {{ __('Grupos') }}
                 </x-responsive-nav-link>
             @endif
             <x-responsive-nav-link :href="route('admin.financeiro.index')">
