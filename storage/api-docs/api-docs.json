@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "API Totem",
-        "description": "Documentação da API Totem com autenticação por token de empresa e token de dispositivo (TV).",
+        "description": "Documentação da API Totem com autenticação por token de empresa e token de dispositivo (TV).\n\nComo usar o token da empresa:\n- Em chamadas HTTP reais envie `Authorization: Bearer TOKEN_DA_EMPRESA`.\n- No botão `Authorize` do Swagger, informe apenas `TOKEN_DA_EMPRESA`.\n- No endpoint `/api/login`, também é aceito body com `{\\\"token\\\":\\\"TOKEN_DA_EMPRESA\\\"}` ou `{\\\"api_token\\\":\\\"TOKEN_DA_EMPRESA\\\"}`.\n\nComo usar o token do dispositivo TV:\n- Em chamadas HTTP reais envie `Authorization: Bearer TOKEN_DA_TV`.\n- No botão `Authorize` do Swagger, informe apenas `TOKEN_DA_TV`.",
         "version": "2.0.0"
     },
     "servers": [
@@ -61,24 +61,51 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Autentica empresa e retorna token da API",
+                "summary": "Valida o token da empresa e mantém compatibilidade temporária com login legado",
+                "description": "Formas recomendadas de uso: 1) enviar {\"token\":\"TOKEN_DA_EMPRESA\"} no body; 2) enviar {\"api_token\":\"TOKEN_DA_EMPRESA\"} no body; 3) enviar o header Authorization: Bearer TOKEN_DA_EMPRESA. Apos validar, reutilize o mesmo token no header Authorization das rotas protegidas.",
                 "operationId": "dcf90ce65219b0ad51fc32e9f7f69843",
+                "parameters": [
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Opcional no /api/login. Exemplo de uso real: Bearer TOKEN_DA_EMPRESA",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Bearer TOKEN_DA_EMPRESA"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/EmpresaLoginPayload"
+                            },
+                            "examples": {
+                                "token": {
+                                    "summary": "Login com campo token",
+                                    "value": {
+                                        "token": "TOKEN_DA_EMPRESA"
+                                    }
+                                },
+                                "api_token": {
+                                    "summary": "Login com campo api_token",
+                                    "value": {
+                                        "api_token": "TOKEN_DA_EMPRESA"
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Login realizado com sucesso"
+                        "description": "Token validado com sucesso"
                     },
                     "401": {
-                        "description": "Credenciais inválidas"
+                        "description": "Token ou credenciais inválidos"
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -715,48 +742,27 @@
                 "type": "object"
             },
             "EmpresaLoginPayload": {
+                "description": "O login pode validar o token da empresa de tres formas: body com campo token, body com campo api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.",
                 "properties": {
-                    "cnpj": {
+                    "token": {
                         "type": "string",
-                        "example": "12345678000199"
+                        "example": "TOKEN_DA_EMPRESA"
                     },
-                    "cnpj_cpf": {
+                    "api_token": {
                         "type": "string",
-                        "example": "12345678000199"
-                    },
-                    "senha": {
-                        "type": "string",
-                        "example": "senha_da_empresa"
-                    },
-                    "chave": {
-                        "type": "string",
-                        "example": "senha_da_empresa"
+                        "example": "TOKEN_DA_EMPRESA"
                     }
                 },
                 "type": "object",
                 "anyOf": [
                     {
                         "required": [
-                            "cnpj",
-                            "senha"
+                            "token"
                         ]
                     },
                     {
                         "required": [
-                            "cnpj",
-                            "chave"
-                        ]
-                    },
-                    {
-                        "required": [
-                            "cnpj_cpf",
-                            "senha"
-                        ]
-                    },
-                    {
-                        "required": [
-                            "cnpj_cpf",
-                            "chave"
+                            "api_token"
                         ]
                     }
                 ]
@@ -826,11 +832,13 @@
         "securitySchemes": {
             "CompanyBearer": {
                 "type": "http",
+                "description": "Autenticacao da empresa. Em chamadas HTTP reais envie o header Authorization: Bearer TOKEN_DA_EMPRESA. No botao Authorize do Swagger, informe apenas o valor do token, sem o prefixo Bearer.",
                 "bearerFormat": "Token",
                 "scheme": "bearer"
             },
             "DeviceBearer": {
                 "type": "http",
+                "description": "Autenticacao do dispositivo TV. Em chamadas HTTP reais envie o header Authorization: Bearer TOKEN_DA_TV. No botao Authorize do Swagger, informe apenas o valor do token, sem o prefixo Bearer.",
                 "bearerFormat": "Token",
                 "scheme": "bearer"
             }

@@ -65,6 +65,7 @@
                     <div>
                         <label for="api_token" class="block text-sm font-medium text-gray-700">Token atual</label>
                         <textarea id="api_token" rows="3" readonly class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ $token ?? 'Nenhum token gerado.' }}</textarea>
+                        <p class="mt-2 text-xs text-gray-500">Use este valor no header <strong>Authorization: Bearer TOKEN_DA_EMPRESA</strong> nas rotas protegidas da API.</p>
                     </div>
 
                     <form method="POST" action="{{ route('admin.api-token.regenerate') }}" class="flex items-center justify-between gap-4">

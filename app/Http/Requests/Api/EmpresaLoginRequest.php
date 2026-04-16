@@ -14,10 +14,12 @@ class EmpresaLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cnpj' => ['required_without:cnpj_cpf', 'string', 'max:18'],
-            'cnpj_cpf' => ['required_without:cnpj', 'string', 'max:18'],
-            'senha' => ['required_without:chave', 'string', 'min:6', 'max:120'],
-            'chave' => ['required_without:senha', 'string', 'min:6', 'max:120'],
+            'cnpj' => ['required_without_all:cnpj_cpf,token,api_token', 'nullable', 'string', 'max:18'],
+            'cnpj_cpf' => ['required_without_all:cnpj,token,api_token', 'nullable', 'string', 'max:18'],
+            'senha' => ['required_without_all:token,api_token,chave', 'nullable', 'string', 'min:6', 'max:120'],
+            'chave' => ['required_without_all:token,api_token,senha', 'nullable', 'string', 'min:6', 'max:120'],
+            'token' => ['required_without_all:cnpj,cnpj_cpf,senha,chave,api_token', 'nullable', 'string', 'max:120'],
+            'api_token' => ['required_without_all:cnpj,cnpj_cpf,senha,chave,token', 'nullable', 'string', 'max:120'],
         ];
     }
 }

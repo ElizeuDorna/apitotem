@@ -110,6 +110,7 @@ class ProdutoController extends Controller
         $validatedData['OFERTA'] = isset($validatedData['OFERTA']) && $validatedData['OFERTA'] !== ''
             ? (float) $validatedData['OFERTA']
             : 0;
+        $validatedData['cnpj_cpf'] = preg_replace('/\D/', '', (string) ($empresa->cnpj_cpf ?? ''));
         $validatedData['empresa_id'] = $empresa->id;
 
         try {
@@ -253,6 +254,7 @@ class ProdutoController extends Controller
                 ? (float) $validatedData['OFERTA']
                 : 0;
         }
+        $validatedData['cnpj_cpf'] = preg_replace('/\D/', '', (string) ($empresa->cnpj_cpf ?? ''));
         $validatedData['empresa_id'] = $empresa->id;
 
         try {

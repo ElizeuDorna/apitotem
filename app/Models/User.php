@@ -98,7 +98,7 @@ class User extends Authenticatable
     public static function availableMenuPermissions(): array
     {
         return [
-            self::MENU_CADASTRO_PUBLICO => 'Cadastro Público',
+            self::MENU_CADASTRO_PUBLICO => 'Cadastro Usuarios',
             self::MENU_PRODUTOS => 'Produtos',
             self::MENU_EMPRESAS => 'Empresas',
             self::MENU_DEPARTAMENTOS => 'Departamentos',

@@ -62,10 +62,9 @@
             </div>
         </div>
 
-        <div>
-            <label class="block font-semibold">SENHA</label>
-            <input type="password" name="password" class="w-full border rounded px-2 py-1 @error('password') border-red-500 @enderror" required />
-            @error('password')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+        <div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            O token da API e gerado automaticamente ao criar a empresa.
+            Use a tela "Token da API" para visualizar ou regenerar o token quando necessario.
         </div>
 
         @if($isDefaultAdmin ?? false)

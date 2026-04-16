@@ -6,7 +6,14 @@ use OpenApi\Attributes as OA;
 
 #[OA\Info(
     version: '2.0.0',
-    description: 'Documentação da API Totem com autenticação por token de empresa e token de dispositivo (TV).',
+    description: 'Documentação da API Totem com autenticação por token de empresa e token de dispositivo (TV).' . "\n\n" .
+        'Como usar o token da empresa:' . "\n" .
+        '- Em chamadas HTTP reais envie `Authorization: Bearer TOKEN_DA_EMPRESA`.' . "\n" .
+        '- No botão `Authorize` do Swagger, informe apenas `TOKEN_DA_EMPRESA`.' . "\n" .
+        '- No endpoint `/api/login`, também é aceito body com `{\"token\":\"TOKEN_DA_EMPRESA\"}` ou `{\"api_token\":\"TOKEN_DA_EMPRESA\"}`.' . "\n\n" .
+        'Como usar o token do dispositivo TV:' . "\n" .
+        '- Em chamadas HTTP reais envie `Authorization: Bearer TOKEN_DA_TV`.' . "\n" .
+        '- No botão `Authorize` do Swagger, informe apenas `TOKEN_DA_TV`.',
     title: 'API Totem'
 )]
 #[OA\Server(
@@ -17,13 +24,15 @@ use OpenApi\Attributes as OA;
     securityScheme: 'CompanyBearer',
     type: 'http',
     scheme: 'bearer',
-    bearerFormat: 'Token'
+    bearerFormat: 'Token',
+    description: 'Autenticacao da empresa. Em chamadas HTTP reais envie o header Authorization: Bearer TOKEN_DA_EMPRESA. No botao Authorize do Swagger, informe apenas o valor do token, sem o prefixo Bearer.'
 )]
 #[OA\SecurityScheme(
     securityScheme: 'DeviceBearer',
     type: 'http',
     scheme: 'bearer',
-    bearerFormat: 'Token'
+    bearerFormat: 'Token',
+    description: 'Autenticacao do dispositivo TV. Em chamadas HTTP reais envie o header Authorization: Bearer TOKEN_DA_TV. No botao Authorize do Swagger, informe apenas o valor do token, sem o prefixo Bearer.'
 )]
 class ApiDocumentation
 {
@@ -50,16 +59,13 @@ class ProdutoPayloadSchema
 #[OA\Schema(
     schema: 'EmpresaLoginPayload',
     anyOf: [
-        new OA\Schema(required: ['cnpj', 'senha']),
-        new OA\Schema(required: ['cnpj', 'chave']),
-        new OA\Schema(required: ['cnpj_cpf', 'senha']),
-        new OA\Schema(required: ['cnpj_cpf', 'chave']),
+        new OA\Schema(required: ['token']),
+        new OA\Schema(required: ['api_token']),
     ],
+    description: 'O login pode validar o token da empresa de tres formas: body com campo token, body com campo api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.',
     properties: [
-        new OA\Property(property: 'cnpj', type: 'string', example: '12345678000199'),
-        new OA\Property(property: 'cnpj_cpf', type: 'string', example: '12345678000199'),
-        new OA\Property(property: 'senha', type: 'string', example: 'senha_da_empresa'),
-        new OA\Property(property: 'chave', type: 'string', example: 'senha_da_empresa')
+        new OA\Property(property: 'token', type: 'string', example: 'TOKEN_DA_EMPRESA'),
+        new OA\Property(property: 'api_token', type: 'string', example: 'TOKEN_DA_EMPRESA')
     ],
     type: 'object'
 )]

@@ -63,15 +63,9 @@
             </div>
         </div>
 
-        <div>
-            <label class="block font-semibold">SENHA</label>
-            <input type="password" name="password" class="w-full border rounded px-2 py-1 @error('password') border-red-500 @enderror" />
-            @if($empresa->password)
-                <p class="text-sm text-gray-600 mt-1">Deixe em branco para manter a senha atual</p>
-            @else
-                <p class="text-sm text-red-600">Obrigatório</p>
-            @endif
-            @error('password')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+        <div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            A empresa nao usa mais senha para a API.
+            Gerencie o token em "Token da API". Ao regenerar, o token anterior e invalidado imediatamente.
         </div>
 
         @if($isDefaultAdmin ?? false)

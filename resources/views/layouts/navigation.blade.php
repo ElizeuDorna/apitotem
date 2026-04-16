@@ -42,7 +42,7 @@
 
                     @if (Auth::user()->hasMenuAccess('cadastro_publico'))
                         <a href="{{ route('register') }}" class="{{ $desktopNavBase }} {{ (request()->routeIs('register') || request()->routeIs('register.users.*')) ? $desktopNavActive : '' }}">
-                            {{ __('Cadastro Público') }}
+                                {{ __('Cadastro Usuarios') }}
                         </a>
                     @endif
 
@@ -94,10 +94,10 @@
                     </a>
                     @if (Auth::user()->hasMenuAccess('configuracao'))
                         <a href="/admin/configuracao" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao') ? $desktopNavActive : '' }}">
-                            {{ __('Configuração') }}
+                            {{ __('Config Android') }}
                         </a>
                         <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
-                            {{ __('Configuracao da Tela') }}
+                            {{ __('Config Totem Web') }}
                         </a>
                         <a href="{{ route('admin.organizar-lista.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/organizar-lista') ? $desktopNavActive : '' }}">
                             {{ __('Organizar Lista') }}
@@ -218,7 +218,7 @@
 
             @if (Auth::user()->hasMenuAccess('cadastro_publico'))
                 <x-responsive-nav-link :href="route('register')" :active="request()->routeIs('register') || request()->routeIs('register.users.*')">
-                    {{ __('Cadastro Público') }}
+                        {{ __('Cadastro Usuarios') }}
                 </x-responsive-nav-link>
             @endif
 
@@ -265,10 +265,10 @@
             </x-responsive-nav-link>
             @if (Auth::user()->hasMenuAccess('configuracao'))
                 <x-responsive-nav-link href="/admin/configuracao">
-                    {{ __('Configuração') }}
+                    {{ __('Config Android') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.web-screen-config.edit')">
-                    {{ __('Configuracao da Tela') }}
+                    {{ __('Config Totem Web') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.organizar-lista.edit')">
                     {{ __('Organizar Lista') }}

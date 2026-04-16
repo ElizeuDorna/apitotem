@@ -19,6 +19,12 @@ class ApiTokenController extends Controller
 
         $empresa = $this->resolveEmpresaForUser($request);
 
+        if (! $empresa->api_token) {
+            $empresa->api_token = Str::random(60);
+            $empresa->save();
+            $empresa = $empresa->fresh();
+        }
+
         $empresas = $user->isDefaultAdmin()
             ? Empresa::query()->orderBy('NOME')->get(['id', 'NOME', 'CNPJ_CPF', 'api_token'])
             : collect();

@@ -26,7 +26,6 @@ class Empresa extends Model
         'cnpj_cpf',
         'email',
         'fone',
-        'password',
         'api_token',
         'nivel_acesso',
         'revenda_id',

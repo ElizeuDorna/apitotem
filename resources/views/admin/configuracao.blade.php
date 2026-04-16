@@ -1,6 +1,6 @@
 @extends('home')
 
-@section('title', 'Administração - Configuração')
+@section('title', 'Administração - Config Android')
 
 @section('content')
 <div class="mb-4 px-2 sm:px-4">
@@ -8,7 +8,7 @@
 </div>
 
 <div class="max-w-4xl mx-auto bg-white p-4 sm:p-6 md:p-8 shadow rounded-lg">
-    <h2 class="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">Configuração do Aplicativo</h2>
+    <h2 class="text-xl sm:text-2xl font-bold mb-5 sm:mb-6">Config Android</h2>
 
     @if(session('success'))
         <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">{{ session('success') }}</div>

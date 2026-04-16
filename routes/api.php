@@ -15,7 +15,7 @@ Route::get('/', function () {
         'mensagem' => 'Bem-vindo à API Totem',
         'versao' => '1.0.0',
         'endpoints' => [
-            'POST /api/login' => 'Autenticar empresa e gerar token',
+            'POST /api/login' => 'Validar token da empresa (compatibilidade com login legado)',
             'GET /api/produtos' => 'Listar produtos da empresa autenticada',
             'GET /api/produtos/{CODIGO}' => 'Obter um produto específico',
             'POST /api/produtos' => 'Cadastrar novo produto',

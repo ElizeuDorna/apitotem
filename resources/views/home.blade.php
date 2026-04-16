@@ -32,7 +32,7 @@
                         <a href="{{ route('admin.empresas.index') }}" class="block px-4 py-2 hover:bg-gray-100">Empresas</a>
                         <a href="{{ route('admin.departamentos.index') }}" class="block px-4 py-2 hover:bg-gray-100">Departamentos</a>
                         <a href="{{ route('admin.grupos.index') }}" class="block px-4 py-2 hover:bg-gray-100">Grupos</a>
-                        <a href="{{ url('/admin/configuracao') }}" class="block px-4 py-2 hover:bg-gray-100">Configuração</a>
+                        <a href="{{ url('/admin/configuracao') }}" class="block px-4 py-2 hover:bg-gray-100">Config Android</a>
                     </div>
                 </div>
 
@@ -63,7 +63,7 @@
                     <a href="{{ route('admin.empresas.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Empresas</a>
                     <a href="{{ route('admin.departamentos.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Departamentos</a>
                     <a href="{{ route('admin.grupos.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Grupos</a>
-                    <a href="{{ url('/admin/configuracao') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Configuração</a>
+                    <a href="{{ url('/admin/configuracao') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Config Android</a>
                     @if($authUser && \App\Support\EmpresaContext::requiresSelection($authUser))
                         <a href="{{ route('admin.empresas.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Trocar empresa ativa</a>
                         @if($empresaAtiva)

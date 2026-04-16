@@ -39,7 +39,7 @@ class EmpresaAuthService
             });
     }
 
-    public function attemptLogin(string $documento, string $senha): ?Empresa
+    public function attemptPasswordLogin(string $documento, string $senha): ?Empresa
     {
         $empresa = $this->findByDocumento($documento);
 
@@ -58,6 +58,18 @@ class EmpresaAuthService
         if (! $empresa->api_token) {
             $empresa->api_token = Str::random(60);
             $empresa->save();
+        }
+
+        return $empresa;
+    }
+
+    public function ensureApiToken(Empresa $empresa): Empresa
+    {
+        if (! $empresa->api_token) {
+            $empresa->api_token = Str::random(60);
+            $empresa->save();
+
+            return $empresa->fresh();
         }
 
         return $empresa;

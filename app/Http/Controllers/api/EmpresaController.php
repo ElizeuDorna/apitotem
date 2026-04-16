@@ -7,7 +7,6 @@ use App\Rules\CpfCnpjValido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Hash;
 
 class EmpresaController extends Controller
 {
@@ -42,7 +41,6 @@ class EmpresaController extends Controller
             'cnpj_cpf' => ['required', 'string', 'max:14', 'unique:empresa,cnpj_cpf', new CpfCnpjValido()],
             'email' => 'required|email|max:255|unique:empresa,email',
             'fone' => 'required|string|max:20',
-            'password' => 'required|string|min:6|max:60',
             'endereco' => 'nullable|string|max:255',
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
@@ -51,7 +49,6 @@ class EmpresaController extends Controller
 
         $validated['fantasia'] = $validated['nome'];
         $validated['urlimagem'] = '';
-        $validated['password'] = Hash::make($validated['password']);
 
         try {
             $tentativas = 0;
@@ -112,7 +109,6 @@ class EmpresaController extends Controller
             'cnpj_cpf' => ['sometimes', 'required', 'string', 'max:14', 'unique:empresa,cnpj_cpf,' . $empresa->id, new CpfCnpjValido()],
             'email' => 'sometimes|required|email|max:255|unique:empresa,email,' . $empresa->id,
             'fone' => 'sometimes|required|string|max:20',
-            'password' => 'sometimes|nullable|string|min:6|max:60',
             'endereco' => 'nullable|string|max:255',
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
@@ -124,11 +120,6 @@ class EmpresaController extends Controller
         }
         if (empty($empresa->urlimagem)) {
             $validated['urlimagem'] = '';
-        }
-        if (isset($validated['password']) && $validated['password']) {
-            $validated['password'] = Hash::make($validated['password']);
-        } else {
-            unset($validated['password']);
         }
 
         $empresa->update($validated);

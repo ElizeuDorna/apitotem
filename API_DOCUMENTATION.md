@@ -4,20 +4,49 @@
 
 ## Autenticação Multiempresa (Atual)
 
-### Login da empresa
+### Token da empresa
 **POST** `/api/login`
+
+Voce pode validar o token de 3 formas.
 
 **Body (JSON):**
 ```json
 {
-  "cnpj": "12345678000199",
-  "senha": "senha_da_empresa"
+  "token": "TOKEN_DA_EMPRESA"
 }
 ```
 
 Também aceita:
-- `cnpj_cpf` no lugar de `cnpj`
-- `chave` no lugar de `senha`
+- `api_token` no lugar de `token`
+- header `Authorization: Bearer TOKEN_DA_EMPRESA`
+
+Exemplo com `api_token`:
+```json
+{
+  "api_token": "TOKEN_DA_EMPRESA"
+}
+```
+
+Exemplo com header:
+```http
+POST /api/login HTTP/1.1
+Host: localhost:8000
+Content-Type: application/json
+Authorization: Bearer TOKEN_DA_EMPRESA
+
+{}
+```
+
+No Swagger em `/api/documentation`:
+- no endpoint `/api/login`, voce pode testar pelo body com `token` ou `api_token`
+- no botao `Authorize`, informe apenas o valor do token quando usar os esquemas bearer; o Swagger adiciona `Bearer` automaticamente
+
+Fluxo recomendado:
+- gerar ou regenerar o token no painel em `admin/api-token`
+- usar esse token diretamente nas rotas protegidas
+
+Compatibilidade temporária:
+- o backend ainda aceita o login legado por `cnpj/cnpj_cpf` + `senha/chave` para empresas antigas, mas esse formato esta em descontinuação
 
 **Resposta de sucesso (200):**
 ```json
@@ -35,6 +64,14 @@ Também aceita:
 ### Uso do token nas próximas requisições
 Enviar no header:
 ```http
+Authorization: Bearer TOKEN_DA_EMPRESA
+```
+
+Exemplo completo:
+```http
+GET /api/produtos HTTP/1.1
+Host: localhost:8000
+Accept: application/json
 Authorization: Bearer TOKEN_DA_EMPRESA
 ```
 
