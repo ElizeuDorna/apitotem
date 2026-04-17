@@ -19,7 +19,22 @@ class GrupoController extends Controller
         summary: 'Lista grupos da empresa autenticada',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => [
+                        [
+                            'id' => 10,
+                            'nome' => 'Refrigerantes',
+                            'empresa_id' => 1,
+                            'departamento_id' => 1,
+                            'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                        ],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado')
         ]
     )]
@@ -53,8 +68,31 @@ class GrupoController extends Controller
         tags: ['Grupos'],
         summary: 'Cria grupo',
         security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/GrupoPayload')
+                ),
+            ]
+        ),
         responses: [
-            new OA\Response(response: 201, description: 'Criado'),
+            new OA\Response(
+                response: 201,
+                description: 'Criado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Grupo criado com sucesso',
+                    'dados' => [
+                        'id' => 10,
+                        'nome' => 'Refrigerantes',
+                        'empresa_id' => 1,
+                        'departamento_id' => 1,
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -97,6 +135,33 @@ class GrupoController extends Controller
     /**
      * Display the specified resource.
      */
+    #[OA\Get(
+        path: '/api/grupos/{grupo}',
+        tags: ['Grupos'],
+        summary: 'Busca grupo',
+        security: [['CompanyBearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'grupo', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => [
+                        'id' => 10,
+                        'nome' => 'Refrigerantes',
+                        'empresa_id' => 1,
+                        'departamento_id' => 1,
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado')
+        ]
+    )]
     public function show(Request $request, Grupo $grupo)
     {
         $empresa = $request->attributes->get('empresa');
@@ -125,6 +190,44 @@ class GrupoController extends Controller
     /**
      * Update the specified resource in storage.
      */
+    #[OA\Put(
+        path: '/api/grupos/{grupo}',
+        tags: ['Grupos'],
+        summary: 'Atualiza grupo',
+        security: [['CompanyBearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'grupo', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/GrupoPayload')
+                ),
+            ]
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Atualizado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Grupo atualizado com sucesso',
+                    'dados' => [
+                        'id' => 10,
+                        'nome' => 'Sucos',
+                        'empresa_id' => 1,
+                        'departamento_id' => 1,
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado'),
+            new OA\Response(response: 422, description: 'Erro de validação')
+        ]
+    )]
     public function update(Request $request, Grupo $grupo)
     {
         $empresa = $request->attributes->get('empresa');
@@ -168,6 +271,27 @@ class GrupoController extends Controller
     /**
      * Remove the specified resource from storage.
      */
+    #[OA\Delete(
+        path: '/api/grupos/{grupo}',
+        tags: ['Grupos'],
+        summary: 'Remove grupo',
+        security: [['CompanyBearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'grupo', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Removido',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Grupo removido com sucesso',
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado')
+        ]
+    )]
     public function destroy(Request $request, Grupo $grupo)
     {
         $empresa = $request->attributes->get('empresa');

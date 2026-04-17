@@ -123,7 +123,39 @@
                 "operationId": "2edec197249cd4e6c11a719ed1d78b9a",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": {
+                                        "id": 1,
+                                        "empresa_id": 1,
+                                        "apiUrl": "https://api.seudominio.com/api/produtos",
+                                        "apiRefreshInterval": 30,
+                                        "priceColor": "#ffffff",
+                                        "offerColor": "#facc15",
+                                        "rowBackgroundColor": "#0f172a",
+                                        "borderColor": "#334155",
+                                        "appBackgroundColor": "#020617",
+                                        "mainBorderColor": "#000000",
+                                        "gradientStartColor": "#0f172a",
+                                        "gradientEndColor": "#1e293b",
+                                        "useGradient": true,
+                                        "gradientStop1": 0.2,
+                                        "gradientStop2": 0.9,
+                                        "showBorder": true,
+                                        "isMainBorderEnabled": false,
+                                        "showImage": true,
+                                        "imageSize": 56,
+                                        "isPaginationEnabled": true,
+                                        "pageSize": 10,
+                                        "paginationInterval": 5
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -142,9 +174,52 @@
                 "summary": "Atualiza configuração da empresa autenticada",
                 "description": "Update (PUT) the configuration.\nPUT /api/configuracao",
                 "operationId": "062a3c5dfe5af7890d0104eba3325ab8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfiguracaoPayload"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Configuração atualizada"
+                        "description": "Configuração atualizada",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Configuração salva com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "empresa_id": 1,
+                                        "apiUrl": "https://api.seudominio.com/api/produtos",
+                                        "apiRefreshInterval": 45,
+                                        "priceColor": "#ffffff",
+                                        "offerColor": "#facc15",
+                                        "rowBackgroundColor": "#0f172a",
+                                        "borderColor": "#334155",
+                                        "appBackgroundColor": "#020617",
+                                        "mainBorderColor": "#000000",
+                                        "gradientStartColor": "#0f172a",
+                                        "gradientEndColor": "#1e293b",
+                                        "useGradient": true,
+                                        "gradientStop1": 0.2,
+                                        "gradientStop2": 0.9,
+                                        "showBorder": true,
+                                        "isMainBorderEnabled": false,
+                                        "showImage": true,
+                                        "imageSize": 56,
+                                        "isPaginationEnabled": true,
+                                        "pageSize": 10,
+                                        "paginationInterval": 5
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -163,9 +238,52 @@
                 "summary": "Salva configuração da empresa autenticada",
                 "description": "Update the configuration.\nPOST/PUT /api/configuracao",
                 "operationId": "01aa8dee7795651d5ad188a51ceb1fe2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfiguracaoPayload"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Configuração salva"
+                        "description": "Configuração salva",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Configuração salva com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "empresa_id": 1,
+                                        "apiUrl": "https://api.seudominio.com/api/produtos",
+                                        "apiRefreshInterval": 30,
+                                        "priceColor": "#ffffff",
+                                        "offerColor": "#facc15",
+                                        "rowBackgroundColor": "#0f172a",
+                                        "borderColor": "#334155",
+                                        "appBackgroundColor": "#020617",
+                                        "mainBorderColor": "#000000",
+                                        "gradientStartColor": "#0f172a",
+                                        "gradientEndColor": "#1e293b",
+                                        "useGradient": true,
+                                        "gradientStop1": 0.2,
+                                        "gradientStop2": 0.9,
+                                        "showBorder": true,
+                                        "isMainBorderEnabled": false,
+                                        "showImage": true,
+                                        "imageSize": 56,
+                                        "isPaginationEnabled": true,
+                                        "pageSize": 10,
+                                        "paginationInterval": 5
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -186,7 +304,16 @@
                 "operationId": "8c9101fd811073ba7576d77aad6f7d44",
                 "responses": {
                     "405": {
-                        "description": "Método não permitido"
+                        "description": "Método não permitido",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": false,
+                                    "mensagem": "Para resetar uma configuração, utilize PUT /api/configuracao com os valores desejados."
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -205,7 +332,39 @@
                 "operationId": "aed36f8bca518e5b3a75620912164c0b",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": {
+                                        "id": 1,
+                                        "empresa_id": 1,
+                                        "apiUrl": "https://api.seudominio.com/api/produtos",
+                                        "apiRefreshInterval": 30,
+                                        "priceColor": "#ffffff",
+                                        "offerColor": "#facc15",
+                                        "rowBackgroundColor": "#0f172a",
+                                        "borderColor": "#334155",
+                                        "appBackgroundColor": "#020617",
+                                        "mainBorderColor": "#000000",
+                                        "gradientStartColor": "#0f172a",
+                                        "gradientEndColor": "#1e293b",
+                                        "useGradient": true,
+                                        "gradientStop1": 0.2,
+                                        "gradientStop2": 0.9,
+                                        "showBorder": true,
+                                        "isMainBorderEnabled": false,
+                                        "showImage": true,
+                                        "imageSize": 56,
+                                        "isPaginationEnabled": true,
+                                        "pageSize": 10,
+                                        "paginationInterval": 5
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -223,9 +382,52 @@
                 ],
                 "summary": "Atualiza configuração da empresa autenticada",
                 "operationId": "581ada9fc01b4a5904101a2759261104",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfiguracaoPayload"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Configuração atualizada"
+                        "description": "Configuração atualizada",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Configuração salva com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "empresa_id": 1,
+                                        "apiUrl": "https://api.seudominio.com/api/produtos",
+                                        "apiRefreshInterval": 45,
+                                        "priceColor": "#ffffff",
+                                        "offerColor": "#facc15",
+                                        "rowBackgroundColor": "#0f172a",
+                                        "borderColor": "#334155",
+                                        "appBackgroundColor": "#020617",
+                                        "mainBorderColor": "#000000",
+                                        "gradientStartColor": "#0f172a",
+                                        "gradientEndColor": "#1e293b",
+                                        "useGradient": true,
+                                        "gradientStop1": 0.2,
+                                        "gradientStop2": 0.9,
+                                        "showBorder": true,
+                                        "isMainBorderEnabled": false,
+                                        "showImage": true,
+                                        "imageSize": 56,
+                                        "isPaginationEnabled": true,
+                                        "pageSize": 10,
+                                        "paginationInterval": 5
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -243,9 +445,52 @@
                 ],
                 "summary": "Salva configuração da empresa autenticada",
                 "operationId": "523baccdb2453d9da1e7855a9960b8f4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfiguracaoPayload"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Configuração salva"
+                        "description": "Configuração salva",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Configuração salva com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "empresa_id": 1,
+                                        "apiUrl": "https://api.seudominio.com/api/produtos",
+                                        "apiRefreshInterval": 30,
+                                        "priceColor": "#ffffff",
+                                        "offerColor": "#facc15",
+                                        "rowBackgroundColor": "#0f172a",
+                                        "borderColor": "#334155",
+                                        "appBackgroundColor": "#020617",
+                                        "mainBorderColor": "#000000",
+                                        "gradientStartColor": "#0f172a",
+                                        "gradientEndColor": "#1e293b",
+                                        "useGradient": true,
+                                        "gradientStop1": 0.2,
+                                        "gradientStop2": 0.9,
+                                        "showBorder": true,
+                                        "isMainBorderEnabled": false,
+                                        "showImage": true,
+                                        "imageSize": 56,
+                                        "isPaginationEnabled": true,
+                                        "pageSize": 10,
+                                        "paginationInterval": 5
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -265,7 +510,16 @@
                 "operationId": "570afb8508e2c80631ce9a68be6a9c68",
                 "responses": {
                     "405": {
-                        "description": "Método não permitido"
+                        "description": "Método não permitido",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": false,
+                                    "mensagem": "Para resetar uma configuração, utilize PUT /api/configuracao com os valores desejados."
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -285,7 +539,27 @@
                 "operationId": "8f67cca908527786195d5efd02911ab4",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": [
+                                        {
+                                            "id": 1,
+                                            "nome": "Bebidas",
+                                            "empresa_id": 1
+                                        },
+                                        {
+                                            "id": 2,
+                                            "nome": "Padaria",
+                                            "empresa_id": 1
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -303,9 +577,33 @@
                 ],
                 "summary": "Cria departamento",
                 "operationId": "c288cfc72036fe95d515c7c0ef3df4f7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DepartamentoPayload"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Criado"
+                        "description": "Criado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Departamento criado com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "nome": "Bebidas",
+                                        "empresa_id": 1
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -318,6 +616,348 @@
                 ]
             }
         },
+        "/api/departamentos/{departamento}": {
+            "get": {
+                "tags": [
+                    "Departamentos"
+                ],
+                "summary": "Busca departamento",
+                "operationId": "67cb973392d61ccd4f05f643c6fbc3f9",
+                "parameters": [
+                    {
+                        "name": "departamento",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": {
+                                        "id": 1,
+                                        "nome": "Bebidas",
+                                        "empresa_id": 1
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Departamentos"
+                ],
+                "summary": "Atualiza departamento",
+                "operationId": "fc1263eb4109fba2fcccfecb4ef4db63",
+                "parameters": [
+                    {
+                        "name": "departamento",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DepartamentoPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Departamento atualizado com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "nome": "Bebidas Geladas",
+                                        "empresa_id": 1
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Departamentos"
+                ],
+                "summary": "Remove departamento",
+                "operationId": "e3de5a5fc4abcbdda085b2de98984d42",
+                "parameters": [
+                    {
+                        "name": "departamento",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removido",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Departamento removido"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/empresas": {
+            "get": {
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Lista empresas",
+                "description": "Display a listing of the resource.",
+                "operationId": "36141613f0ea8ee2efd9003b0cd0d57f",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Empresas listadas com sucesso",
+                                    "dados": [
+                                        {
+                                            "id": 1,
+                                            "codigo": "1",
+                                            "nome": "Mercado Exemplo",
+                                            "razaosocial": "Mercado Exemplo LTDA",
+                                            "cnpj_cpf": "12345678000199",
+                                            "email": "contato@mercadoexemplo.com",
+                                            "fone": "11999998888",
+                                            "endereco": "Rua Central",
+                                            "bairro": "Centro",
+                                            "numero": "100",
+                                            "cep": "01001000",
+                                            "fantasia": "Mercado Exemplo",
+                                            "urlimagem": ""
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Cria empresa",
+                "description": "Store a newly created resource in storage.",
+                "operationId": "999dc1d615ab1842b2f2174e827698f3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmpresaPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Criado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Empresa cadastrada com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "codigo": "1",
+                                        "nome": "Mercado Exemplo",
+                                        "razaosocial": "Mercado Exemplo LTDA",
+                                        "cnpj_cpf": "12345678000199",
+                                        "email": "contato@mercadoexemplo.com",
+                                        "fone": "11999998888",
+                                        "endereco": "Rua Central",
+                                        "bairro": "Centro",
+                                        "numero": "100",
+                                        "cep": "01001000",
+                                        "fantasia": "Mercado Exemplo",
+                                        "urlimagem": ""
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                }
+            }
+        },
+        "/api/empresas/{id}": {
+            "put": {
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Atualiza empresa",
+                "description": "Update the specified resource in storage.",
+                "operationId": "4ad51dd5df31ff7d414566ecd76479ba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmpresaPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Empresa atualizada com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "codigo": "1",
+                                        "nome": "Mercado Exemplo Atualizado",
+                                        "razaosocial": "Mercado Exemplo LTDA",
+                                        "cnpj_cpf": "12345678000199",
+                                        "email": "contato@mercadoexemplo.com",
+                                        "fone": "11999998888",
+                                        "endereco": "Rua Central",
+                                        "bairro": "Centro",
+                                        "numero": "100",
+                                        "cep": "01001000",
+                                        "fantasia": "Mercado Exemplo Atualizado",
+                                        "urlimagem": ""
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Remove empresa",
+                "description": "Remove the specified resource from storage.",
+                "operationId": "e85cdf6d0f4a7b6d523dce73dd132fea",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removido",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Empresa deletada com sucesso",
+                                    "dados": null
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                }
+            }
+        },
         "/api/grupos": {
             "get": {
                 "tags": [
@@ -328,7 +968,27 @@
                 "operationId": "97063c2305e129495d0968c0fc0b8084",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": [
+                                        {
+                                            "id": 10,
+                                            "nome": "Refrigerantes",
+                                            "empresa_id": 1,
+                                            "departamento_id": 1,
+                                            "departamento": {
+                                                "id": 1,
+                                                "nome": "Bebidas"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -347,12 +1007,204 @@
                 "summary": "Cria grupo",
                 "description": "Store a newly created resource in storage.",
                 "operationId": "711593bbabd74fa797fc020e29eab58e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GrupoPayload"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Criado"
+                        "description": "Criado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Grupo criado com sucesso",
+                                    "dados": {
+                                        "id": 10,
+                                        "nome": "Refrigerantes",
+                                        "empresa_id": 1,
+                                        "departamento_id": 1,
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/grupos/{grupo}": {
+            "get": {
+                "tags": [
+                    "Grupos"
+                ],
+                "summary": "Busca grupo",
+                "description": "Display the specified resource.",
+                "operationId": "060ffb31c1fbcd295c2e4e1fdf14d5d2",
+                "parameters": [
+                    {
+                        "name": "grupo",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": {
+                                        "id": 10,
+                                        "nome": "Refrigerantes",
+                                        "empresa_id": 1,
+                                        "departamento_id": 1,
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Grupos"
+                ],
+                "summary": "Atualiza grupo",
+                "description": "Update the specified resource in storage.",
+                "operationId": "39edf5b7064ca52ec472eb51d5d27253",
+                "parameters": [
+                    {
+                        "name": "grupo",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GrupoPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Grupo atualizado com sucesso",
+                                    "dados": {
+                                        "id": 10,
+                                        "nome": "Sucos",
+                                        "empresa_id": 1,
+                                        "departamento_id": 1,
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Grupos"
+                ],
+                "summary": "Remove grupo",
+                "description": "Remove the specified resource from storage.",
+                "operationId": "d30d25c6c19818ea9a89acd91d88ffb0",
+                "parameters": [
+                    {
+                        "name": "grupo",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removido",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Grupo removido com sucesso"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Não encontrado"
                     }
                 },
                 "security": [
@@ -371,7 +1223,38 @@
                 "operationId": "ff4eeb91e587a0df77631ccd714d9344",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "produtos": [
+                                            {
+                                                "id": 100,
+                                                "codigo": "78901",
+                                                "nome": "Coca-Cola 2L",
+                                                "preco": 9.99,
+                                                "oferta": 8.99,
+                                                "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                                "grupo": {
+                                                    "id": 10,
+                                                    "nome": "Refrigerantes"
+                                                },
+                                                "departamento": {
+                                                    "id": 1,
+                                                    "nome": "Bebidas"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "meta": {
+                                        "total_produtos": 1
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -395,13 +1278,52 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/ProdutoPayload"
+                            },
+                            "examples": {
+                                "produto": {
+                                    "summary": "Criar produto com código, preço e vínculos",
+                                    "value": {
+                                        "CODIGO": "78901",
+                                        "NOME": "Coca-Cola 2L",
+                                        "PRECO": 9.99,
+                                        "OFERTA": 8.99,
+                                        "IMG": "https://exemplo.com/imagens/coca-2l.jpg",
+                                        "departamento_id": 1,
+                                        "grupo_id": 10
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Criado"
+                        "description": "Criado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Produto cadastrado com sucesso",
+                                    "dados": {
+                                        "id": 100,
+                                        "codigo": "78901",
+                                        "nome": "Coca-Cola 2L",
+                                        "preco": 9.99,
+                                        "oferta": 8.99,
+                                        "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                        "grupo": {
+                                            "id": 10,
+                                            "nome": "Refrigerantes"
+                                        },
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -436,7 +1358,31 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "dados": {
+                                        "id": 100,
+                                        "codigo": "78901",
+                                        "nome": "Coca-Cola 2L",
+                                        "preco": 9.99,
+                                        "oferta": 8.99,
+                                        "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                        "grupo": {
+                                            "id": 10,
+                                            "nome": "Refrigerantes"
+                                        },
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -473,13 +1419,51 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/ProdutoPayload"
+                            },
+                            "examples": {
+                                "produto_update": {
+                                    "summary": "Atualizar preço e oferta do produto",
+                                    "value": {
+                                        "NOME": "Coca-Cola 2L",
+                                        "PRECO": 10.49,
+                                        "OFERTA": 9.49,
+                                        "IMG": "https://exemplo.com/imagens/coca-2l.jpg",
+                                        "departamento_id": 1,
+                                        "grupo_id": 10
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Atualizado"
+                        "description": "Atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Produto atualizado com sucesso",
+                                    "dados": {
+                                        "id": 100,
+                                        "codigo": "78901",
+                                        "nome": "Coca-Cola 2L",
+                                        "preco": 10.49,
+                                        "oferta": 9.49,
+                                        "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                        "grupo": {
+                                            "id": 10,
+                                            "nome": "Refrigerantes"
+                                        },
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -512,7 +1496,17 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Removido"
+                        "description": "Removido",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Produto deletado com sucesso",
+                                    "CODIGO": "78901"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Não autenticado"
@@ -541,13 +1535,30 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/TvActivationCodePayload"
+                            },
+                            "examples": {
+                                "device_uuid": {
+                                    "summary": "Gerar código para um dispositivo ainda não ativado",
+                                    "value": {
+                                        "device_uuid": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Código gerado"
+                        "description": "Código gerado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "code": "AB12CD34EF",
+                                    "expires_in": 300
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -568,13 +1579,41 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/TvCheckActivationPayload"
+                            },
+                            "examples": {
+                                "device_uuid": {
+                                    "summary": "Consultar se o dispositivo já recebeu token",
+                                    "value": {
+                                        "device_uuid": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Status pending ou activated"
+                        "description": "Status pending ou activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "examples": {
+                                    "pending": {
+                                        "summary": "Dispositivo ainda não ativado",
+                                        "value": {
+                                            "status": "pending"
+                                        }
+                                    },
+                                    "activated": {
+                                        "summary": "Dispositivo ativado",
+                                        "value": {
+                                            "status": "activated",
+                                            "token": "TOKEN_DA_TV"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Erro de validação"
@@ -595,13 +1634,30 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/TvHeartbeatPayload"
+                            },
+                            "examples": {
+                                "token": {
+                                    "summary": "Heartbeat enviado no body quando não usar Bearer token",
+                                    "value": {
+                                        "token": "TOKEN_DA_TV"
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Heartbeat atualizado"
+                        "description": "Heartbeat atualizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": "ok",
+                                    "last_seen_at": "2026-04-17T10:30:00Z"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Token inválido"
@@ -621,7 +1677,38 @@
                 "operationId": "1f3740dba350072b33ed34058b871440",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "success": true,
+                                    "data": {
+                                        "produtos": [
+                                            {
+                                                "id": 100,
+                                                "codigo": "78901",
+                                                "nome": "Coca-Cola 2L",
+                                                "preco": 9.99,
+                                                "oferta": 8.99,
+                                                "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                                "grupo": {
+                                                    "id": 10,
+                                                    "nome": "Refrigerantes"
+                                                },
+                                                "departamento": {
+                                                    "id": 1,
+                                                    "nome": "Bebidas"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "meta": {
+                                        "total_produtos": 1
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Token do device inválido"
@@ -643,7 +1730,48 @@
                 "operationId": "8033a85db8791fc4a6a26359814a9a35",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": "ok",
+                                    "device": {
+                                        "id": 1,
+                                        "nome": "TV Açougue",
+                                        "local": "Setor Açougue",
+                                        "empresa_id": 1,
+                                        "last_seen_at": "2026-04-17T10:30:00Z"
+                                    },
+                                    "empresa": {
+                                        "id": 1,
+                                        "nome": "Mercado Exemplo",
+                                        "cnpj_cpf": "12345678000199"
+                                    },
+                                    "configuracao": {
+                                        "id": 1,
+                                        "template_id": 2,
+                                        "atualizar_produtos_segundos": 30,
+                                        "volume": 10,
+                                        "orientacao": "landscape"
+                                    },
+                                    "template": {
+                                        "id": 2,
+                                        "nome": "Template Principal",
+                                        "tipo_layout": "split"
+                                    },
+                                    "items": [
+                                        {
+                                            "id": 11,
+                                            "tipo": "video",
+                                            "ordem": 1,
+                                            "conteudo": "https://exemplo.com/video.mp4",
+                                            "config_json": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Token do device inválido"
@@ -665,7 +1793,32 @@
                 "operationId": "5f675de7bbbf665224a9a65dfff9119f",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": "ok",
+                                    "videos": [
+                                        {
+                                            "id": 11,
+                                            "ordem": 1,
+                                            "conteudo": "https://exemplo.com/video.mp4",
+                                            "config_json": null
+                                        }
+                                    ],
+                                    "imagens": [
+                                        {
+                                            "id": 12,
+                                            "ordem": 2,
+                                            "conteudo": "https://exemplo.com/banner.jpg",
+                                            "config_json": null
+                                        }
+                                    ],
+                                    "banners": []
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Token do device inválido"
@@ -687,7 +1840,36 @@
                 "operationId": "bbc1997266d9dc5396a6047ea429e47c",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "status": "ok",
+                                    "empresa_id": 1,
+                                    "device_id": 1,
+                                    "total": 1,
+                                    "dados": [
+                                        {
+                                            "id": 100,
+                                            "codigo": "78901",
+                                            "nome": "Coca-Cola 2L",
+                                            "preco": 9.99,
+                                            "oferta": 8.99,
+                                            "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                            "grupo": {
+                                                "id": 10,
+                                                "nome": "Refrigerantes"
+                                            },
+                                            "departamento": {
+                                                "id": 1,
+                                                "nome": "Bebidas"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Token do device inválido"
@@ -741,6 +1923,247 @@
                 },
                 "type": "object"
             },
+            "DepartamentoPayload": {
+                "required": [
+                    "nome"
+                ],
+                "properties": {
+                    "nome": {
+                        "type": "string",
+                        "example": "Bebidas",
+                        "maxLength": 255
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "nome": "Bebidas"
+                }
+            },
+            "GrupoPayload": {
+                "required": [
+                    "departamento_id",
+                    "nome"
+                ],
+                "properties": {
+                    "departamento_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nome": {
+                        "type": "string",
+                        "example": "Refrigerantes",
+                        "maxLength": 255
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "departamento_id": 1,
+                    "nome": "Refrigerantes"
+                }
+            },
+            "ConfiguracaoPayload": {
+                "properties": {
+                    "apiUrl": {
+                        "type": "string",
+                        "example": "https://api.seudominio.com/api/produtos",
+                        "nullable": true,
+                        "maxLength": 500
+                    },
+                    "apiRefreshInterval": {
+                        "type": "integer",
+                        "example": 30,
+                        "nullable": true
+                    },
+                    "priceColor": {
+                        "type": "string",
+                        "example": "#ffffff",
+                        "nullable": true
+                    },
+                    "offerColor": {
+                        "type": "string",
+                        "example": "#facc15",
+                        "nullable": true
+                    },
+                    "rowBackgroundColor": {
+                        "type": "string",
+                        "example": "#0f172a",
+                        "nullable": true
+                    },
+                    "showBorder": {
+                        "type": "boolean",
+                        "example": true,
+                        "nullable": true
+                    },
+                    "borderColor": {
+                        "type": "string",
+                        "example": "#334155",
+                        "nullable": true
+                    },
+                    "useGradient": {
+                        "type": "boolean",
+                        "example": true,
+                        "nullable": true
+                    },
+                    "gradientStartColor": {
+                        "type": "string",
+                        "example": "#0f172a",
+                        "nullable": true
+                    },
+                    "gradientEndColor": {
+                        "type": "string",
+                        "example": "#1e293b",
+                        "nullable": true
+                    },
+                    "gradientStop1": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.2,
+                        "nullable": true
+                    },
+                    "gradientStop2": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.9,
+                        "nullable": true
+                    },
+                    "appBackgroundColor": {
+                        "type": "string",
+                        "example": "#020617",
+                        "nullable": true
+                    },
+                    "isMainBorderEnabled": {
+                        "type": "boolean",
+                        "example": false,
+                        "nullable": true
+                    },
+                    "mainBorderColor": {
+                        "type": "string",
+                        "example": "#000000",
+                        "nullable": true
+                    },
+                    "showImage": {
+                        "type": "boolean",
+                        "example": true,
+                        "nullable": true
+                    },
+                    "imageSize": {
+                        "type": "integer",
+                        "example": 56,
+                        "nullable": true
+                    },
+                    "isPaginationEnabled": {
+                        "type": "boolean",
+                        "example": true,
+                        "nullable": true
+                    },
+                    "pageSize": {
+                        "type": "integer",
+                        "example": 10,
+                        "nullable": true
+                    },
+                    "paginationInterval": {
+                        "type": "integer",
+                        "example": 5,
+                        "nullable": true
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "apiUrl": "https://api.seudominio.com/api/produtos",
+                    "apiRefreshInterval": 30,
+                    "priceColor": "#ffffff",
+                    "offerColor": "#facc15",
+                    "rowBackgroundColor": "#0f172a",
+                    "showBorder": true,
+                    "borderColor": "#334155",
+                    "useGradient": true,
+                    "gradientStartColor": "#0f172a",
+                    "gradientEndColor": "#1e293b",
+                    "gradientStop1": 0.2,
+                    "gradientStop2": 0.9,
+                    "appBackgroundColor": "#020617",
+                    "isMainBorderEnabled": false,
+                    "mainBorderColor": "#000000",
+                    "showImage": true,
+                    "imageSize": 56,
+                    "isPaginationEnabled": true,
+                    "pageSize": 10,
+                    "paginationInterval": 5
+                }
+            },
+            "EmpresaPayload": {
+                "required": [
+                    "nome",
+                    "razaosocial",
+                    "cnpj_cpf",
+                    "email",
+                    "fone"
+                ],
+                "properties": {
+                    "nome": {
+                        "type": "string",
+                        "example": "Mercado Exemplo",
+                        "maxLength": 255
+                    },
+                    "razaosocial": {
+                        "type": "string",
+                        "example": "Mercado Exemplo LTDA",
+                        "maxLength": 255
+                    },
+                    "cnpj_cpf": {
+                        "type": "string",
+                        "example": "12345678000199",
+                        "maxLength": 14
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "contato@mercadoexemplo.com",
+                        "maxLength": 255
+                    },
+                    "fone": {
+                        "type": "string",
+                        "example": "11999998888",
+                        "maxLength": 20
+                    },
+                    "endereco": {
+                        "type": "string",
+                        "example": "Rua Central",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "bairro": {
+                        "type": "string",
+                        "example": "Centro",
+                        "nullable": true,
+                        "maxLength": 100
+                    },
+                    "numero": {
+                        "type": "string",
+                        "example": "100",
+                        "nullable": true,
+                        "maxLength": 20
+                    },
+                    "cep": {
+                        "type": "string",
+                        "example": "01001000",
+                        "nullable": true,
+                        "maxLength": 10
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "nome": "Mercado Exemplo",
+                    "razaosocial": "Mercado Exemplo LTDA",
+                    "cnpj_cpf": "12345678000199",
+                    "email": "contato@mercadoexemplo.com",
+                    "fone": "11999998888",
+                    "endereco": "Rua Central",
+                    "bairro": "Centro",
+                    "numero": "100",
+                    "cep": "01001000"
+                }
+            },
             "EmpresaLoginPayload": {
                 "description": "O login pode validar o token da empresa de tres formas: body com campo token, body com campo api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.",
                 "properties": {
@@ -777,7 +2200,10 @@
                         "example": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
                     }
                 },
-                "type": "object"
+                "type": "object",
+                "example": {
+                    "device_uuid": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
+                }
             },
             "TvCheckActivationPayload": {
                 "required": [
@@ -789,7 +2215,10 @@
                         "example": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
                     }
                 },
-                "type": "object"
+                "type": "object",
+                "example": {
+                    "device_uuid": "9f23edc7-9a60-4f18-bf4b-29f5d71b7030"
+                }
             },
             "TvHeartbeatPayload": {
                 "properties": {
@@ -799,7 +2228,10 @@
                         "nullable": true
                     }
                 },
-                "type": "object"
+                "type": "object",
+                "example": {
+                    "token": "TOKEN_DA_TV"
+                }
             },
             "AdminActivateDevicePayload": {
                 "required": [
@@ -860,6 +2292,10 @@
         {
             "name": "Departamentos",
             "description": "Departamentos"
+        },
+        {
+            "name": "Empresas",
+            "description": "Empresas"
         },
         {
             "name": "Grupos",

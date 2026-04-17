@@ -1,18 +1,52 @@
 <?php
 
 namespace App\Http\Controllers\api;
+
 use App\Http\Controllers\Controller; 
 use App\Models\Empresa;
 use App\Rules\CpfCnpjValido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use OpenApi\Attributes as OA;
 
 class EmpresaController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+    #[OA\Get(
+        path: '/api/empresas',
+        tags: ['Empresas'],
+        summary: 'Lista empresas',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Empresas listadas com sucesso',
+                    'dados' => [
+                        [
+                            'id' => 1,
+                            'codigo' => '1',
+                            'nome' => 'Mercado Exemplo',
+                            'razaosocial' => 'Mercado Exemplo LTDA',
+                            'cnpj_cpf' => '12345678000199',
+                            'email' => 'contato@mercadoexemplo.com',
+                            'fone' => '11999998888',
+                            'endereco' => 'Rua Central',
+                            'bairro' => 'Centro',
+                            'numero' => '100',
+                            'cep' => '01001000',
+                            'fantasia' => 'Mercado Exemplo',
+                            'urlimagem' => '',
+                        ],
+                    ],
+                ])
+            ),
+        ]
+    )]
     public function index()
     {
         $empresas = Empresa::all();
@@ -27,6 +61,46 @@ class EmpresaController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    #[OA\Post(
+        path: '/api/empresas',
+        tags: ['Empresas'],
+        summary: 'Cria empresa',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/EmpresaPayload')
+                ),
+            ]
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Criado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Empresa cadastrada com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'codigo' => '1',
+                        'nome' => 'Mercado Exemplo',
+                        'razaosocial' => 'Mercado Exemplo LTDA',
+                        'cnpj_cpf' => '12345678000199',
+                        'email' => 'contato@mercadoexemplo.com',
+                        'fone' => '11999998888',
+                        'endereco' => 'Rua Central',
+                        'bairro' => 'Centro',
+                        'numero' => '100',
+                        'cep' => '01001000',
+                        'fantasia' => 'Mercado Exemplo',
+                        'urlimagem' => '',
+                    ],
+                ])
+            ),
+            new OA\Response(response: 422, description: 'Erro de validação')
+        ]
+    )]
     public function store(Request $request)
     {
         if ($request->filled('cnpj_cpf')) {
@@ -85,6 +159,50 @@ class EmpresaController extends Controller
     /**
      * Update the specified resource in storage.
      */
+    #[OA\Put(
+        path: '/api/empresas/{id}',
+        tags: ['Empresas'],
+        summary: 'Atualiza empresa',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/EmpresaPayload')
+                ),
+            ]
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Atualizado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Empresa atualizada com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'codigo' => '1',
+                        'nome' => 'Mercado Exemplo Atualizado',
+                        'razaosocial' => 'Mercado Exemplo LTDA',
+                        'cnpj_cpf' => '12345678000199',
+                        'email' => 'contato@mercadoexemplo.com',
+                        'fone' => '11999998888',
+                        'endereco' => 'Rua Central',
+                        'bairro' => 'Centro',
+                        'numero' => '100',
+                        'cep' => '01001000',
+                        'fantasia' => 'Mercado Exemplo Atualizado',
+                        'urlimagem' => '',
+                    ],
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Não encontrado'),
+            new OA\Response(response: 422, description: 'Erro de validação')
+        ]
+    )]
     public function update(Request $request, string $id)
     {
         $empresa = Empresa::find($id);
@@ -134,6 +252,26 @@ class EmpresaController extends Controller
     /**
      * Remove the specified resource from storage.
      */
+    #[OA\Delete(
+        path: '/api/empresas/{id}',
+        tags: ['Empresas'],
+        summary: 'Remove empresa',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Removido',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Empresa deletada com sucesso',
+                    'dados' => null,
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Não encontrado')
+        ]
+    )]
     public function destroy(string $id)
     {
         $empresa = Empresa::find($id);

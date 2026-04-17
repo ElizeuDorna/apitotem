@@ -19,7 +19,30 @@ class ProdutoController extends Controller
         summary: 'Lista produtos da empresa autenticada',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'success' => true,
+                    'data' => [
+                        'produtos' => [
+                            [
+                                'id' => 100,
+                                'codigo' => '78901',
+                                'nome' => 'Coca-Cola 2L',
+                                'preco' => 9.99,
+                                'oferta' => 8.99,
+                                'imagem' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                                'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                                'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                            ],
+                        ],
+                    ],
+                    'meta' => [
+                        'total_produtos' => 1,
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado')
         ]
     )]
@@ -54,12 +77,44 @@ class ProdutoController extends Controller
             content: [
                 new OA\MediaType(
                     mediaType: 'application/json',
-                    schema: new OA\Schema(ref: '#/components/schemas/ProdutoPayload')
+                    schema: new OA\Schema(ref: '#/components/schemas/ProdutoPayload'),
+                    examples: [
+                        new OA\Examples(
+                            example: 'produto',
+                            summary: 'Criar produto com código, preço e vínculos',
+                            value: [
+                                'CODIGO' => '78901',
+                                'NOME' => 'Coca-Cola 2L',
+                                'PRECO' => 9.99,
+                                'OFERTA' => 8.99,
+                                'IMG' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                                'departamento_id' => 1,
+                                'grupo_id' => 10,
+                            ]
+                        ),
+                    ]
                 ),
             ]
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Criado'),
+            new OA\Response(
+                response: 201,
+                description: 'Criado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Produto cadastrado com sucesso',
+                    'dados' => [
+                        'id' => 100,
+                        'codigo' => '78901',
+                        'nome' => 'Coca-Cola 2L',
+                        'preco' => 9.99,
+                        'oferta' => 8.99,
+                        'imagem' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                        'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
@@ -139,7 +194,23 @@ class ProdutoController extends Controller
             new OA\Parameter(name: 'produto', in: 'path', required: true, schema: new OA\Schema(type: 'string'))
         ],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => [
+                        'id' => 100,
+                        'codigo' => '78901',
+                        'nome' => 'Coca-Cola 2L',
+                        'preco' => 9.99,
+                        'oferta' => 8.99,
+                        'imagem' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                        'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 404, description: 'Não encontrado')
         ]
@@ -180,12 +251,43 @@ class ProdutoController extends Controller
             content: [
                 new OA\MediaType(
                     mediaType: 'application/json',
-                    schema: new OA\Schema(ref: '#/components/schemas/ProdutoPayload')
+                    schema: new OA\Schema(ref: '#/components/schemas/ProdutoPayload'),
+                    examples: [
+                        new OA\Examples(
+                            example: 'produto_update',
+                            summary: 'Atualizar preço e oferta do produto',
+                            value: [
+                                'NOME' => 'Coca-Cola 2L',
+                                'PRECO' => 10.49,
+                                'OFERTA' => 9.49,
+                                'IMG' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                                'departamento_id' => 1,
+                                'grupo_id' => 10,
+                            ]
+                        ),
+                    ]
                 ),
             ]
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Atualizado'),
+            new OA\Response(
+                response: 200,
+                description: 'Atualizado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Produto atualizado com sucesso',
+                    'dados' => [
+                        'id' => 100,
+                        'codigo' => '78901',
+                        'nome' => 'Coca-Cola 2L',
+                        'preco' => 10.49,
+                        'oferta' => 9.49,
+                        'imagem' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                        'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
@@ -283,7 +385,15 @@ class ProdutoController extends Controller
             new OA\Parameter(name: 'produto', in: 'path', required: true, schema: new OA\Schema(type: 'string'))
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Removido'),
+            new OA\Response(
+                response: 200,
+                description: 'Removido',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Produto deletado com sucesso',
+                    'CODIGO' => '78901',
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 404, description: 'Não encontrado')
         ]

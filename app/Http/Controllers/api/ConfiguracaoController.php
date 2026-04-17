@@ -20,7 +20,37 @@ class ConfiguracaoController extends Controller
         summary: 'Obtém configuração da empresa autenticada',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => [
+                        'id' => 1,
+                        'empresa_id' => 1,
+                        'apiUrl' => 'https://api.seudominio.com/api/produtos',
+                        'apiRefreshInterval' => 30,
+                        'priceColor' => '#ffffff',
+                        'offerColor' => '#facc15',
+                        'rowBackgroundColor' => '#0f172a',
+                        'borderColor' => '#334155',
+                        'appBackgroundColor' => '#020617',
+                        'mainBorderColor' => '#000000',
+                        'gradientStartColor' => '#0f172a',
+                        'gradientEndColor' => '#1e293b',
+                        'useGradient' => true,
+                        'gradientStop1' => 0.2,
+                        'gradientStop2' => 0.9,
+                        'showBorder' => true,
+                        'isMainBorderEnabled' => false,
+                        'showImage' => true,
+                        'imageSize' => 56,
+                        'isPaginationEnabled' => true,
+                        'pageSize' => 10,
+                        'paginationInterval' => 5,
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado')
         ]
     )]
@@ -30,7 +60,37 @@ class ConfiguracaoController extends Controller
         summary: 'Obtém configuração da empresa autenticada',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => [
+                        'id' => 1,
+                        'empresa_id' => 1,
+                        'apiUrl' => 'https://api.seudominio.com/api/produtos',
+                        'apiRefreshInterval' => 30,
+                        'priceColor' => '#ffffff',
+                        'offerColor' => '#facc15',
+                        'rowBackgroundColor' => '#0f172a',
+                        'borderColor' => '#334155',
+                        'appBackgroundColor' => '#020617',
+                        'mainBorderColor' => '#000000',
+                        'gradientStartColor' => '#0f172a',
+                        'gradientEndColor' => '#1e293b',
+                        'useGradient' => true,
+                        'gradientStop1' => 0.2,
+                        'gradientStop2' => 0.9,
+                        'showBorder' => true,
+                        'isMainBorderEnabled' => false,
+                        'showImage' => true,
+                        'imageSize' => 56,
+                        'isPaginationEnabled' => true,
+                        'pageSize' => 10,
+                        'paginationInterval' => 5,
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado')
         ]
     )]
@@ -59,8 +119,48 @@ class ConfiguracaoController extends Controller
         tags: ['Configurações'],
         summary: 'Salva configuração da empresa autenticada',
         security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/ConfiguracaoPayload')
+                ),
+            ]
+        ),
         responses: [
-            new OA\Response(response: 200, description: 'Configuração salva'),
+            new OA\Response(
+                response: 200,
+                description: 'Configuração salva',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Configuração salva com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'empresa_id' => 1,
+                        'apiUrl' => 'https://api.seudominio.com/api/produtos',
+                        'apiRefreshInterval' => 30,
+                        'priceColor' => '#ffffff',
+                        'offerColor' => '#facc15',
+                        'rowBackgroundColor' => '#0f172a',
+                        'borderColor' => '#334155',
+                        'appBackgroundColor' => '#020617',
+                        'mainBorderColor' => '#000000',
+                        'gradientStartColor' => '#0f172a',
+                        'gradientEndColor' => '#1e293b',
+                        'useGradient' => true,
+                        'gradientStop1' => 0.2,
+                        'gradientStop2' => 0.9,
+                        'showBorder' => true,
+                        'isMainBorderEnabled' => false,
+                        'showImage' => true,
+                        'imageSize' => 56,
+                        'isPaginationEnabled' => true,
+                        'pageSize' => 10,
+                        'paginationInterval' => 5,
+                    ],
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -69,8 +169,48 @@ class ConfiguracaoController extends Controller
         tags: ['Configurações'],
         summary: 'Salva configuração da empresa autenticada',
         security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/ConfiguracaoPayload')
+                ),
+            ]
+        ),
         responses: [
-            new OA\Response(response: 200, description: 'Configuração salva'),
+            new OA\Response(
+                response: 200,
+                description: 'Configuração salva',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Configuração salva com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'empresa_id' => 1,
+                        'apiUrl' => 'https://api.seudominio.com/api/produtos',
+                        'apiRefreshInterval' => 30,
+                        'priceColor' => '#ffffff',
+                        'offerColor' => '#facc15',
+                        'rowBackgroundColor' => '#0f172a',
+                        'borderColor' => '#334155',
+                        'appBackgroundColor' => '#020617',
+                        'mainBorderColor' => '#000000',
+                        'gradientStartColor' => '#0f172a',
+                        'gradientEndColor' => '#1e293b',
+                        'useGradient' => true,
+                        'gradientStop1' => 0.2,
+                        'gradientStop2' => 0.9,
+                        'showBorder' => true,
+                        'isMainBorderEnabled' => false,
+                        'showImage' => true,
+                        'imageSize' => 56,
+                        'isPaginationEnabled' => true,
+                        'pageSize' => 10,
+                        'paginationInterval' => 5,
+                    ],
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -125,8 +265,48 @@ class ConfiguracaoController extends Controller
         tags: ['Configurações'],
         summary: 'Atualiza configuração da empresa autenticada',
         security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/ConfiguracaoPayload')
+                ),
+            ]
+        ),
         responses: [
-            new OA\Response(response: 200, description: 'Configuração atualizada'),
+            new OA\Response(
+                response: 200,
+                description: 'Configuração atualizada',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Configuração salva com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'empresa_id' => 1,
+                        'apiUrl' => 'https://api.seudominio.com/api/produtos',
+                        'apiRefreshInterval' => 45,
+                        'priceColor' => '#ffffff',
+                        'offerColor' => '#facc15',
+                        'rowBackgroundColor' => '#0f172a',
+                        'borderColor' => '#334155',
+                        'appBackgroundColor' => '#020617',
+                        'mainBorderColor' => '#000000',
+                        'gradientStartColor' => '#0f172a',
+                        'gradientEndColor' => '#1e293b',
+                        'useGradient' => true,
+                        'gradientStop1' => 0.2,
+                        'gradientStop2' => 0.9,
+                        'showBorder' => true,
+                        'isMainBorderEnabled' => false,
+                        'showImage' => true,
+                        'imageSize' => 56,
+                        'isPaginationEnabled' => true,
+                        'pageSize' => 10,
+                        'paginationInterval' => 5,
+                    ],
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -135,8 +315,48 @@ class ConfiguracaoController extends Controller
         tags: ['Configurações'],
         summary: 'Atualiza configuração da empresa autenticada',
         security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/ConfiguracaoPayload')
+                ),
+            ]
+        ),
         responses: [
-            new OA\Response(response: 200, description: 'Configuração atualizada'),
+            new OA\Response(
+                response: 200,
+                description: 'Configuração atualizada',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Configuração salva com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'empresa_id' => 1,
+                        'apiUrl' => 'https://api.seudominio.com/api/produtos',
+                        'apiRefreshInterval' => 45,
+                        'priceColor' => '#ffffff',
+                        'offerColor' => '#facc15',
+                        'rowBackgroundColor' => '#0f172a',
+                        'borderColor' => '#334155',
+                        'appBackgroundColor' => '#020617',
+                        'mainBorderColor' => '#000000',
+                        'gradientStartColor' => '#0f172a',
+                        'gradientEndColor' => '#1e293b',
+                        'useGradient' => true,
+                        'gradientStop1' => 0.2,
+                        'gradientStop2' => 0.9,
+                        'showBorder' => true,
+                        'isMainBorderEnabled' => false,
+                        'showImage' => true,
+                        'imageSize' => 56,
+                        'isPaginationEnabled' => true,
+                        'pageSize' => 10,
+                        'paginationInterval' => 5,
+                    ],
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -155,7 +375,14 @@ class ConfiguracaoController extends Controller
         summary: 'Operação não suportada para reset automático',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 405, description: 'Método não permitido')
+            new OA\Response(
+                response: 405,
+                description: 'Método não permitido',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => false,
+                    'mensagem' => 'Para resetar uma configuração, utilize PUT /api/configuracao com os valores desejados.',
+                ])
+            )
         ]
     )]
     #[OA\Delete(
@@ -164,7 +391,14 @@ class ConfiguracaoController extends Controller
         summary: 'Operação não suportada para reset automático',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 405, description: 'Método não permitido')
+            new OA\Response(
+                response: 405,
+                description: 'Método não permitido',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => false,
+                    'mensagem' => 'Para resetar uma configuração, utilize PUT /api/configuracao com os valores desejados.',
+                ])
+            )
         ]
     )]
     public function destroy()

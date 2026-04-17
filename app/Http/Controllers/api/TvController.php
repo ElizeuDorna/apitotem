@@ -38,12 +38,26 @@ class TvController extends Controller
             content: [
                 new OA\MediaType(
                     mediaType: 'application/json',
-                    schema: new OA\Schema(ref: '#/components/schemas/TvActivationCodePayload')
+                    schema: new OA\Schema(ref: '#/components/schemas/TvActivationCodePayload'),
+                    examples: [
+                        new OA\Examples(
+                            example: 'device_uuid',
+                            summary: 'Gerar código para um dispositivo ainda não ativado',
+                            value: ['device_uuid' => '9f23edc7-9a60-4f18-bf4b-29f5d71b7030']
+                        ),
+                    ]
                 ),
             ]
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Código gerado'),
+            new OA\Response(
+                response: 200,
+                description: 'Código gerado',
+                content: new OA\JsonContent(example: [
+                    'code' => 'AB12CD34EF',
+                    'expires_in' => 300,
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -77,12 +91,26 @@ class TvController extends Controller
             content: [
                 new OA\MediaType(
                     mediaType: 'application/json',
-                    schema: new OA\Schema(ref: '#/components/schemas/TvCheckActivationPayload')
+                    schema: new OA\Schema(ref: '#/components/schemas/TvCheckActivationPayload'),
+                    examples: [
+                        new OA\Examples(
+                            example: 'device_uuid',
+                            summary: 'Consultar se o dispositivo já recebeu token',
+                            value: ['device_uuid' => '9f23edc7-9a60-4f18-bf4b-29f5d71b7030']
+                        ),
+                    ]
                 ),
             ]
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Status pending ou activated'),
+            new OA\Response(
+                response: 200,
+                description: 'Status pending ou activated',
+                content: new OA\JsonContent(examples: [
+                    new OA\Examples(example: 'pending', summary: 'Dispositivo ainda não ativado', value: ['status' => 'pending']),
+                    new OA\Examples(example: 'activated', summary: 'Dispositivo ativado', value: ['status' => 'activated', 'token' => 'TOKEN_DA_TV']),
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -119,12 +147,26 @@ class TvController extends Controller
             content: [
                 new OA\MediaType(
                     mediaType: 'application/json',
-                    schema: new OA\Schema(ref: '#/components/schemas/TvHeartbeatPayload')
+                    schema: new OA\Schema(ref: '#/components/schemas/TvHeartbeatPayload'),
+                    examples: [
+                        new OA\Examples(
+                            example: 'token',
+                            summary: 'Heartbeat enviado no body quando não usar Bearer token',
+                            value: ['token' => 'TOKEN_DA_TV']
+                        ),
+                    ]
                 ),
             ]
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Heartbeat atualizado'),
+            new OA\Response(
+                response: 200,
+                description: 'Heartbeat atualizado',
+                content: new OA\JsonContent(example: [
+                    'status' => 'ok',
+                    'last_seen_at' => '2026-04-17T10:30:00Z',
+                ])
+            ),
             new OA\Response(response: 401, description: 'Token inválido'),
             new OA\Response(response: 422, description: 'Token não informado')
         ]
@@ -171,7 +213,28 @@ class TvController extends Controller
         summary: 'Lista produtos da empresa vinculada ao dispositivo',
         security: [['DeviceBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'success' => true,
+                    'data' => [
+                        'produtos' => [
+                            [
+                                'id' => 100,
+                                'codigo' => '78901',
+                                'nome' => 'Coca-Cola 2L',
+                                'preco' => 9.99,
+                                'oferta' => 8.99,
+                                'imagem' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                                'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                                'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                            ],
+                        ],
+                    ],
+                    'meta' => ['total_produtos' => 1],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Token do device inválido')
         ]
     )]
@@ -283,7 +346,46 @@ class TvController extends Controller
         summary: 'Retorna bootstrap da TV com dados de device, configuração e template',
         security: [['DeviceBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'status' => 'ok',
+                    'device' => [
+                        'id' => 1,
+                        'nome' => 'TV Açougue',
+                        'local' => 'Setor Açougue',
+                        'empresa_id' => 1,
+                        'last_seen_at' => '2026-04-17T10:30:00Z',
+                    ],
+                    'empresa' => [
+                        'id' => 1,
+                        'nome' => 'Mercado Exemplo',
+                        'cnpj_cpf' => '12345678000199',
+                    ],
+                    'configuracao' => [
+                        'id' => 1,
+                        'template_id' => 2,
+                        'atualizar_produtos_segundos' => 30,
+                        'volume' => 10,
+                        'orientacao' => 'landscape',
+                    ],
+                    'template' => [
+                        'id' => 2,
+                        'nome' => 'Template Principal',
+                        'tipo_layout' => 'split',
+                    ],
+                    'items' => [
+                        [
+                            'id' => 11,
+                            'tipo' => 'video',
+                            'ordem' => 1,
+                            'conteudo' => 'https://exemplo.com/video.mp4',
+                            'config_json' => null,
+                        ],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Token do device inválido')
         ]
     )]
@@ -336,7 +438,30 @@ class TvController extends Controller
         summary: 'Retorna mídias do template da TV (vídeos, imagens, banners)',
         security: [['DeviceBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'status' => 'ok',
+                    'videos' => [
+                        [
+                            'id' => 11,
+                            'ordem' => 1,
+                            'conteudo' => 'https://exemplo.com/video.mp4',
+                            'config_json' => null,
+                        ],
+                    ],
+                    'imagens' => [
+                        [
+                            'id' => 12,
+                            'ordem' => 2,
+                            'conteudo' => 'https://exemplo.com/banner.jpg',
+                            'config_json' => null,
+                        ],
+                    ],
+                    'banners' => [],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Token do device inválido')
         ]
     )]
@@ -381,7 +506,28 @@ class TvController extends Controller
         summary: 'Lista ofertas da empresa vinculada ao dispositivo',
         security: [['DeviceBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'status' => 'ok',
+                    'empresa_id' => 1,
+                    'device_id' => 1,
+                    'total' => 1,
+                    'dados' => [
+                        [
+                            'id' => 100,
+                            'codigo' => '78901',
+                            'nome' => 'Coca-Cola 2L',
+                            'preco' => 9.99,
+                            'oferta' => 8.99,
+                            'imagem' => 'https://exemplo.com/imagens/coca-2l.jpg',
+                            'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                            'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                        ],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Token do device inválido')
         ]
     )]

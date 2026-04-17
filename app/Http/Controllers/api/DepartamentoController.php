@@ -18,7 +18,17 @@ class DepartamentoController extends Controller
         summary: 'Lista departamentos da empresa autenticada',
         security: [['CompanyBearer' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'OK'),
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => [
+                        ['id' => 1, 'nome' => 'Bebidas', 'empresa_id' => 1],
+                        ['id' => 2, 'nome' => 'Padaria', 'empresa_id' => 1],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado')
         ]
     )]
@@ -41,8 +51,25 @@ class DepartamentoController extends Controller
         tags: ['Departamentos'],
         summary: 'Cria departamento',
         security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/DepartamentoPayload')
+                ),
+            ]
+        ),
         responses: [
-            new OA\Response(response: 201, description: 'Criado'),
+            new OA\Response(
+                response: 201,
+                description: 'Criado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Departamento criado com sucesso',
+                    'dados' => ['id' => 1, 'nome' => 'Bebidas', 'empresa_id' => 1],
+                ])
+            ),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
     )]
@@ -68,6 +95,27 @@ class DepartamentoController extends Controller
         ], 201);
     }
 
+    #[OA\Get(
+        path: '/api/departamentos/{departamento}',
+        tags: ['Departamentos'],
+        summary: 'Busca departamento',
+        security: [['CompanyBearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'departamento', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'OK',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'dados' => ['id' => 1, 'nome' => 'Bebidas', 'empresa_id' => 1],
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado')
+        ]
+    )]
     public function show(Request $request, Departamento $departamento)
     {
         $empresa = $request->attributes->get('empresa');
@@ -85,6 +133,38 @@ class DepartamentoController extends Controller
         ], 200);
     }
 
+    #[OA\Put(
+        path: '/api/departamentos/{departamento}',
+        tags: ['Departamentos'],
+        summary: 'Atualiza departamento',
+        security: [['CompanyBearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'departamento', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(ref: '#/components/schemas/DepartamentoPayload')
+                ),
+            ]
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Atualizado',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Departamento atualizado com sucesso',
+                    'dados' => ['id' => 1, 'nome' => 'Bebidas Geladas', 'empresa_id' => 1],
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado'),
+            new OA\Response(response: 422, description: 'Erro de validação')
+        ]
+    )]
     public function update(Request $request, Departamento $departamento)
     {
         $empresa = $request->attributes->get('empresa');
@@ -113,6 +193,27 @@ class DepartamentoController extends Controller
         ], 200);
     }
 
+    #[OA\Delete(
+        path: '/api/departamentos/{departamento}',
+        tags: ['Departamentos'],
+        summary: 'Remove departamento',
+        security: [['CompanyBearer' => []]],
+        parameters: [
+            new OA\Parameter(name: 'departamento', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Removido',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Departamento removido',
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 404, description: 'Não encontrado')
+        ]
+    )]
     public function destroy(Request $request, Departamento $departamento)
     {
         $empresa = $request->attributes->get('empresa');
