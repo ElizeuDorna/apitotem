@@ -22,4 +22,5 @@ yarn-error.log
 .md
 docker-compose.yml
 docker-compose.prod.yml
+api-docs.json
 
