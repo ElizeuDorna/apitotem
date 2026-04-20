@@ -32,8 +32,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+        <title>Sobre | Tabela de Preço Digital</title>
+        <meta name="description" content="Conheça a proposta da Tabela de Preço Digital para modernizar a comunicação visual e a atualização de preços no ponto de venda.">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    </head>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Custom Tailwind Config -->
