@@ -124,8 +124,18 @@
                         </a>
                     @endif
                     @if (Auth::user()->isDefaultAdmin())
+                        <a href="{{ route('admin.home-carousel.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/home-carousel*') ? $desktopNavActive : '' }}">
+                            {{ __('Carrossel Inicial') }}
+                        </a>
+                        <a href="{{ route('admin.revenda-public-page.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/revenda/frente-publica*') ? $desktopNavActive : '' }}">
+                            {{ __('Frente Publica Revenda') }}
+                        </a>
                         <a href="{{ route('admin.user-permissions.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/permissoes-usuarios*') ? $desktopNavActive : '' }}">
                             {{ __('Permissões de Acesso') }}
+                        </a>
+                    @elseif (($navUser->empresa?->isRevenda() ?? false) && ($navUser->empresa?->public_page_enabled ?? false))
+                        <a href="{{ route('admin.revenda-public-page.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/revenda/frente-publica*') ? $desktopNavActive : '' }}">
+                            {{ __('Frente Publica Revenda') }}
                         </a>
                     @endif
                 </div>
@@ -295,8 +305,18 @@
                 </x-responsive-nav-link>
             @endif
             @if (Auth::user()->isDefaultAdmin())
+                <x-responsive-nav-link :href="route('admin.home-carousel.index')" :active="request()->is('admin/home-carousel*')">
+                    {{ __('Carrossel Inicial') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.revenda-public-page.edit')" :active="request()->is('admin/revenda/frente-publica*')">
+                    {{ __('Frente Publica Revenda') }}
+                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.user-permissions.index')">
                     {{ __('Permissões de Acesso') }}
+                </x-responsive-nav-link>
+            @elseif (($navUser->empresa?->isRevenda() ?? false) && ($navUser->empresa?->public_page_enabled ?? false))
+                <x-responsive-nav-link :href="route('admin.revenda-public-page.edit')" :active="request()->is('admin/revenda/frente-publica*')">
+                    {{ __('Frente Publica Revenda') }}
                 </x-responsive-nav-link>
             @endif
         </div>

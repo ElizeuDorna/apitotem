@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class EmpresaController extends Controller
 {
@@ -121,6 +123,8 @@ class EmpresaController extends Controller
 
     public function store(Request $request)
     {
+        $this->normalizePublicPageInput($request);
+
         // Remove formatting from cnpj_cpf
         if ($request->filled('cnpj_cpf')) {
             $request->merge([
@@ -140,6 +144,8 @@ class EmpresaController extends Controller
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
             'cep' => 'nullable|string|max:10',
+            'public_page_enabled' => 'nullable|boolean',
+            'public_page_slug' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('empresa', 'public_page_slug')],
         ]);
 
         $user = Auth::user();
@@ -162,6 +168,11 @@ class EmpresaController extends Controller
                     ->withErrors(['revenda_id' => 'Selecione uma revenda valida.'])
                     ->withInput();
             }
+        }
+
+        if ((int) $validated['nivel_acesso'] !== Empresa::NIVEL_REVENDA) {
+            $validated['public_page_enabled'] = false;
+            $validated['public_page_slug'] = null;
         }
 
         $validated['fantasia'] = $validated['nome'];
@@ -206,6 +217,7 @@ class EmpresaController extends Controller
     public function update(Request $request, Empresa $empresa)
     {
         $this->authorizeEmpresaAccess($empresa);
+        $this->normalizePublicPageInput($request);
 
         // Remove formatting from cnpj_cpf
         if ($request->filled('cnpj_cpf')) {
@@ -226,6 +238,8 @@ class EmpresaController extends Controller
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
             'cep' => 'nullable|string|max:10',
+            'public_page_enabled' => 'nullable|boolean',
+            'public_page_slug' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('empresa', 'public_page_slug')->ignore($empresa->id)],
         ]);
 
         $user = Auth::user();
@@ -258,6 +272,11 @@ class EmpresaController extends Controller
                     ->withErrors(['revenda_id' => 'Selecione uma revenda valida.'])
                     ->withInput();
             }
+        }
+
+        if ((int) $validated['nivel_acesso'] !== Empresa::NIVEL_REVENDA) {
+            $validated['public_page_enabled'] = false;
+            $validated['public_page_slug'] = null;
         }
 
         $validated['fantasia'] = $validated['nome'];
@@ -305,5 +324,17 @@ class EmpresaController extends Controller
         }
 
         abort_unless((int) $empresa->id === (int) $empresaVinculada->id, 403);
+    }
+
+    private function normalizePublicPageInput(Request $request): void
+    {
+        $enabled = filter_var($request->input('public_page_enabled'), FILTER_VALIDATE_BOOLEAN);
+        $isRevendaRequest = (int) $request->input('nivel_acesso', 1) === Empresa::NIVEL_REVENDA;
+
+        if ($enabled && $isRevendaRequest && ! $request->filled('public_page_slug') && $request->filled('nome')) {
+            $request->merge([
+                'public_page_slug' => Str::slug((string) $request->input('nome')),
+            ]);
+        }
     }
 }

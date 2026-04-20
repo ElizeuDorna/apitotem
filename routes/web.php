@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RevendaSiteController;
 use App\Models\Device;
 use App\Models\Empresa;
 use App\Models\Produto;
@@ -8,9 +10,7 @@ use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', HomeController::class)->name('home');
 
 Route::get('/sobre', function () {
     return view('sobre');
@@ -19,6 +19,10 @@ Route::get('/sobre', function () {
 Route::get('/contato', function () {
     return view('contato');
 });
+
+Route::get('/r/{slug}', [RevendaSiteController::class, 'home'])->name('revenda.site.home');
+Route::get('/r/{slug}/sobre', [RevendaSiteController::class, 'about'])->name('revenda.site.about');
+Route::get('/r/{slug}/contato', [RevendaSiteController::class, 'contact'])->name('revenda.site.contact');
 
 Route::view('/tv/totemweb', 'tv.produtos')->name('tv.totemweb');
 Route::view('/tv/totemweb/configuracao', 'tv.configuracao')->name('tv.totemweb.configuracao');
@@ -124,6 +128,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::resource('admin/home-carousel', \App\Http\Controllers\Admin\HomeCarouselController::class, ['as' => 'admin'])
+        ->parameters(['home-carousel' => 'homeCarousel'])
+        ->except(['show']);
+    Route::get('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'edit'])
+        ->name('admin.revenda-public-page.edit');
+    Route::put('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'update'])
+        ->name('admin.revenda-public-page.update');
+    Route::resource('/admin/revenda/frente-publica/slides', \App\Http\Controllers\Admin\RevendaPublicPageSlideController::class)
+        ->parameters(['slides' => 'revendaPublicPageSlide'])
+        ->names('admin.revenda-public-page-slides')
+        ->except(['show']);
 
     Route::get('/admin/revenda/empresas', [\App\Http\Controllers\Admin\RevendaEmpresaContextController::class, 'index'])
         ->name('admin.revenda.empresas.index')

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -34,7 +35,9 @@ class Empresa extends Model
         'numero',
         'cep',
         'fantasia',
-        'urlimagem'
+        'urlimagem',
+        'public_page_enabled',
+        'public_page_slug',
     ];
 
     protected $hidden = [
@@ -45,6 +48,7 @@ class Empresa extends Model
     protected $casts = [
         'nivel_acesso' => 'integer',
         'revenda_id' => 'integer',
+        'public_page_enabled' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -134,5 +138,15 @@ class Empresa extends Model
     public function templates(): HasMany
     {
         return $this->hasMany(Template::class);
+    }
+
+    public function publicPage(): HasOne
+    {
+        return $this->hasOne(EmpresaPublicPage::class);
+    }
+
+    public function publicSlides(): HasMany
+    {
+        return $this->hasMany(HomeCarouselSlide::class);
     }
 }

@@ -91,6 +91,25 @@
                     @error('revenda_id')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
                 </div>
             </div>
+
+            <div id="public-page-wrapper" class="rounded border border-sky-200 bg-sky-50 px-4 py-4 space-y-4 hidden">
+                <div>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold text-sky-900">
+                        <input type="checkbox" name="public_page_enabled" value="1" class="rounded border-sky-300" @checked(old('public_page_enabled', $empresa->public_page_enabled))>
+                        Permitir que esta revenda personalize a propria frente publica
+                    </label>
+                    @error('public_page_enabled')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block font-semibold">SLUG PUBLICO DA REVENDA</label>
+                    <input type="text" name="public_page_slug" value="{{ old('public_page_slug', $empresa->public_page_slug) }}" class="w-full border rounded px-2 py-1 @error('public_page_slug') border-red-500 @enderror" placeholder="minha-revenda">
+                    <p class="mt-1 text-xs text-sky-900">O link publico ficara em /r/slug-da-revenda</p>
+                    @if($empresa->public_page_slug)
+                        <p class="mt-1 text-xs text-sky-900">Link atual: {{ url('/r/' . $empresa->public_page_slug) }}</p>
+                    @endif
+                    @error('public_page_slug')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+                </div>
+            </div>
         @else
             <div>
                 <p class="text-sm text-gray-700">
@@ -188,9 +207,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const revendaSelect = document.getElementById('revenda_id');
 
     if (nivelAcesso && revendaWrapper && revendaSelect) {
+        const publicPageWrapper = document.getElementById('public-page-wrapper');
         const toggleRevendaField = () => {
             const isRevenda = nivelAcesso.value === '2';
             revendaWrapper.classList.toggle('hidden', isRevenda);
+            if (publicPageWrapper) {
+                publicPageWrapper.classList.toggle('hidden', !isRevenda);
+            }
             if (isRevenda) {
                 revendaSelect.value = '';
             }
