@@ -18,6 +18,8 @@
                 <a href="{{ url('/contato') }}" class="hover:text-white">Contato</a>
                 @auth
                     <a href="{{ route('dashboard') }}" class="rounded-full border border-white/20 px-4 py-2 hover:bg-white/10">Admin</a>
+                @else
+                    <a href="{{ route('login') }}" class="rounded-full border border-cyan-300/50 bg-cyan-300 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-200">Login</a>
                 @endauth
             </nav>
         </div>
