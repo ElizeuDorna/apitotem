@@ -7,26 +7,30 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
+        <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-slate-100 font-sans antialiased text-slate-900">
         <div class="min-h-screen bg-slate-100">
             @include('layouts.navigation')
 
-            <div class="sm:pl-72">
+            <div class="ml-64 min-w-0">
                 @isset($header)
-                    <header class="border-b border-slate-200 bg-white/85 shadow-sm backdrop-blur">
-                        <div class="px-4 py-5 sm:px-6 lg:px-8">
+                    <header class="border-b border-slate-200 bg-white shadow-sm">
+                        <div class="px-3 py-5 sm:px-4 lg:px-6">
                             {{ $header }}
                         </div>
                     </header>
                 @endisset
 
-                <main class="px-4 py-6 sm:px-6 lg:px-8">
-                    {{ $slot }}
+                <main class="px-3 py-6 sm:px-4 lg:px-6">
+                    <div class="lg:pl-4 [&>div.py-6]:!pt-0 [&>div.py-8]:!pt-0 [&>div.py-10]:!pt-0 [&>div.py-6]:!mt-0 [&>div.py-8]:!mt-0 [&>div.py-10]:!mt-0 [&>div>div.mx-auto]:!ml-0 [&>div>div.mx-auto]:!mr-auto">
+                        {{ $slot }}
+                    </div>
                 </main>
             </div>
         </div>
