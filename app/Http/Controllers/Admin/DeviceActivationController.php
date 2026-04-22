@@ -28,6 +28,7 @@ class DeviceActivationController extends Controller
     {
         $user = Auth::user();
         $empresaIdAtiva = EmpresaContext::resolveEmpresaIdForUser($user);
+        $showAllDevices = $user->isDefaultAdmin() && $this->requestWantsAllDevices();
 
         $empresaAtiva = $empresaIdAtiva
             ? Empresa::query()->find($empresaIdAtiva, ['id', 'NOME', 'nome', 'CNPJ_CPF', 'cnpj_cpf'])
@@ -38,7 +39,9 @@ class DeviceActivationController extends Controller
             ->orderByDesc('id');
 
         if ($user->isDefaultAdmin()) {
-            if ($empresaIdAtiva) {
+            if ($showAllDevices) {
+                // Admin principal pode optar por ver todos os dispositivos, independente da empresa ativa.
+            } elseif ($empresaIdAtiva) {
                 $devicesQuery->where('empresa_id', $empresaIdAtiva);
             } else {
                 $devicesQuery->whereRaw('1 = 0');
@@ -47,11 +50,14 @@ class DeviceActivationController extends Controller
             $devicesQuery->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
 
-        $devices = $devicesQuery->paginate(15, ['*'], 'devices_page');
+        $devices = $devicesQuery
+            ->paginate(15, ['*'], 'devices_page')
+            ->appends(['show_all_devices' => $showAllDevices ? '1' : '0']);
 
         return view('admin.activate-tv', [
             'isDefaultAdmin' => $user->isDefaultAdmin(),
             'adminSemEmpresaAtiva' => $user->isDefaultAdmin() && ! $empresaIdAtiva,
+            'showAllDevices' => $showAllDevices,
             'empresaAtiva' => $empresaAtiva,
             'empresaVinculada' => $user->empresa,
             'activatedToken' => session('activated_token'),
@@ -103,10 +109,16 @@ class DeviceActivationController extends Controller
             ->first();
 
         if (! $activation) {
+            $latestActivation = DeviceActivation::query()
+                ->with(['device.empresa'])
+                ->where('code', $activationCode)
+                ->latest('id')
+                ->first();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['code' => 'Código inválido, expirado ou já utilizado.']);
+                ->withErrors(['code' => $this->buildActivationCodeErrorMessage($latestActivation)]);
         }
 
         $device = Device::query()->firstOrNew([
@@ -212,5 +224,47 @@ class DeviceActivationController extends Controller
         } while (Device::query()->where('token', $token)->exists());
 
         return $token;
+    }
+
+    private function requestWantsAllDevices(): bool
+    {
+        $value = request()->query('show_all_devices', '0');
+
+        return in_array((string) $value, ['1', 'true', 'on'], true);
+    }
+
+    private function buildActivationCodeErrorMessage(?DeviceActivation $activation): string
+    {
+        if (! $activation) {
+            return 'Código inválido. Verifique o código mostrado na TV e tente novamente.';
+        }
+
+        if ($activation->activated) {
+            $device = $activation->device;
+
+            if (! $device) {
+                return 'Este código já foi utilizado anteriormente, mas o dispositivo vinculado não foi localizado na base.';
+            }
+
+            $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? 'Empresa não identificada';
+            $deviceNome = $device->nome ?: 'TV sem nome';
+            $deviceUuid = $device->device_uuid ?: $activation->device_uuid;
+
+            return sprintf(
+                'Este código já foi utilizado pela TV "%s" da empresa "%s". Identificação do dispositivo: %s. Verifique em TVs cadastradas ou atualize o cadastro existente.',
+                $deviceNome,
+                $empresaNome,
+                $deviceUuid ?: 'não disponível'
+            );
+        }
+
+        if ($activation->expires_at && $activation->expires_at->isPast()) {
+            return sprintf(
+                'Este código expirou em %s e precisa ser gerado novamente na TV.',
+                $activation->expires_at->format('d/m/Y H:i:s')
+            );
+        }
+
+        return 'Código inválido, expirado ou já utilizado.';
     }
 }

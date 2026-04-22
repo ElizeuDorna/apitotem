@@ -78,7 +78,42 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 space-y-4">
-                    <h3 class="text-lg font-semibold">TVs cadastradas</h3>
+                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold">TVs cadastradas</h3>
+                            <p class="mt-1 text-sm text-gray-600">
+                                @if ($isDefaultAdmin && ($showAllDevices ?? false))
+                                    Exibindo dispositivos de todas as empresas.
+                                @elseif ($isDefaultAdmin)
+                                    Exibindo apenas os dispositivos da empresa ativa.
+                                @else
+                                    Exibindo apenas os dispositivos da sua empresa.
+                                @endif
+                            </p>
+                        </div>
+
+                        @if ($isDefaultAdmin)
+                            <form method="GET" action="{{ route('admin.activate-tv.index') }}" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                    <input
+                                        type="hidden"
+                                        name="show_all_devices"
+                                        value="0"
+                                    >
+                                    <input
+                                        type="checkbox"
+                                        name="show_all_devices"
+                                        value="1"
+                                        class="rounded border-gray-300 text-indigo-600 shadow-sm"
+                                        @checked($showAllDevices ?? false)
+                                        onchange="this.form.submit()"
+                                    >
+                                    <span>Ver lista de todas as empresas</span>
+                                </label>
+                                <p class="mt-1 text-xs text-slate-500">Disponível somente para admin principal. O padrão é desmarcado.</p>
+                            </form>
+                        @endif
+                    </div>
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">

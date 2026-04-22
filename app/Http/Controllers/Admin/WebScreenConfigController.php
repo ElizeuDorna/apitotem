@@ -7,6 +7,7 @@ use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
+use App\Models\Template;
 use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\RedirectResponse;
@@ -52,6 +53,15 @@ class WebScreenConfigController extends Controller
             'config' => $config,
             'templateDevModeEnabled' => $this->isTemplateDevModeEnabled($empresaId),
             'responsiveModeEnabled' => $this->isResponsiveModeEnabled($empresaId),
+            'availableTemplates' => Template::query()
+                ->where('empresa_id', $empresaId)
+                ->orderByDesc('is_default_web')
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'tipo_layout', 'is_default_web', 'web_config_payload']),
+            'defaultWebTemplateId' => Template::query()
+                ->where('empresa_id', $empresaId)
+                ->where('is_default_web', true)
+                ->value('id'),
             'companyGalleryImages' => $this->listCompanyGalleryImages(),
             'availableGroups' => Grupo::query()
                 ->where('empresa_id', $empresaId)
@@ -163,6 +173,7 @@ class WebScreenConfigController extends Controller
 
         $validated = $request->validate([
             'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,fullScreenSlideConfig,imageSizeConfigSection,paginationConfigSection'],
+            'default_web_template_id' => ['nullable', 'integer', 'exists:templates,id'],
             'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig,fullScreenSlideConfig'],
             'forceClearRightSidebarSlides' => ['nullable', 'boolean'],
             'apiRefreshInterval' => ['nullable', 'integer', 'min:5', 'max:3600'],
@@ -639,6 +650,30 @@ class WebScreenConfigController extends Controller
         $validated['showGroupLabelBadge'] = (bool) ($validated['showGroupLabelBadge'] ?? false);
         $validated['groupLabelBadgeColor'] = (string) ($validated['groupLabelBadgeColor'] ?? '#0f172a');
 
+        $selectedDefaultTemplateId = null;
+        if ($shouldProcessGeneralConfig) {
+            $rawDefaultTemplateId = $validated['default_web_template_id'] ?? null;
+            $selectedDefaultTemplateId = $rawDefaultTemplateId !== null && $rawDefaultTemplateId !== ''
+                ? (int) $rawDefaultTemplateId
+                : null;
+
+            if ($selectedDefaultTemplateId !== null) {
+                $templateBelongsToEmpresa = Template::query()
+                    ->where('empresa_id', $empresaId)
+                    ->where('id', $selectedDefaultTemplateId)
+                    ->exists();
+
+                if (! $templateBelongsToEmpresa) {
+                    return redirect()
+                        ->back()
+                        ->withErrors([
+                            'default_web_template_id' => 'Template inválido para a empresa selecionada.',
+                        ])
+                        ->withInput();
+                }
+            }
+        }
+
         if ($validated['titleText'] === '') {
             $validated['titleText'] = 'Lista de Produtos (TV)';
         }
@@ -647,6 +682,7 @@ class WebScreenConfigController extends Controller
         unset($validated['video_duration_seconds']);
         unset($validated['video_heights']);
         unset($validated['saveSection']);
+        unset($validated['default_web_template_id']);
         unset($validated['openCompanyGalleryTarget']);
         unset($validated['openRightSidebarImageScheduleUrl']);
 
@@ -1050,6 +1086,10 @@ class WebScreenConfigController extends Controller
             $validated
         );
 
+        if ($shouldProcessGeneralConfig) {
+            $this->setDefaultWebTemplateForEmpresa($empresaId, $selectedDefaultTemplateId);
+        }
+
         $redirect = redirect()->back();
 
         if ($saveSection !== '') {
@@ -1107,6 +1147,22 @@ class WebScreenConfigController extends Controller
             })
             ->filter(fn ($url) => $url !== '')
             ->all();
+    }
+
+    private function setDefaultWebTemplateForEmpresa(int $empresaId, ?int $templateId): void
+    {
+        Template::query()
+            ->where('empresa_id', $empresaId)
+            ->update(['is_default_web' => false]);
+
+        if ($templateId === null) {
+            return;
+        }
+
+        Template::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id', $templateId)
+            ->update(['is_default_web' => true]);
     }
 
     private function hydrateMissingInputsFromCurrentConfig(Request $request, Configuracao $config): void

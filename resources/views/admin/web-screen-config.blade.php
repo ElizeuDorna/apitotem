@@ -121,6 +121,20 @@
                                     @error('apiRefreshInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="default_web_template_id">Template padrão da Totem Web</label>
+                                    <select id="default_web_template_id" name="default_web_template_id" class="w-full border rounded px-3 py-2 bg-white">
+                                        <option value="">Nao usar template padrao</option>
+                                        @foreach($availableTemplates as $templateOption)
+                                            <option value="{{ $templateOption->id }}" @selected((string) old('default_web_template_id', $defaultWebTemplateId ?? '') === (string) $templateOption->id)>
+                                                {{ $templateOption->nome }} - {{ $templateOption->tipo_layout }}{{ !empty($templateOption->web_config_payload) ? ' - snapshot OK' : ' - sem snapshot' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">Ao salvar Configuração geral, este template passa a ser o padrão da empresa na tela web. O menu Templates refletirá a mesma seleção.</p>
+                                    @error('default_web_template_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
                                 <h4 class="text-sm font-semibold text-gray-800">Borda geral</h4>
                                 <p class="text-xs text-gray-600">Aplica uma borda em toda a tela <code>/tv/totemweb</code>.</p>
 

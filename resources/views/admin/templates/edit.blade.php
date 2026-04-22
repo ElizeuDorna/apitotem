@@ -11,15 +11,50 @@
             'promocao' => ['pt' => 'Promocao', 'en' => 'Promotion'],
             'misto' => ['pt' => 'Misto', 'en' => 'Mixed'],
         ];
+
+        $typeLabels = [
+            'produto_lista' => 'Lista de produtos',
+            'imagem' => 'Imagem',
+            'video' => 'Video',
+            'banner' => 'Banner',
+            'texto' => 'Texto',
+        ];
     @endphp
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div class="rounded-xl border border-sky-100 bg-sky-50/70 p-4">
+                <h3 class="text-sm font-semibold text-sky-900">Leitura rapida deste template</h3>
+                <div class="mt-2 grid gap-3 md:grid-cols-4">
+                    <div class="rounded-lg border border-sky-100 bg-white/80 p-3">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Layout</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900">{{ $layoutLabels[$template->tipo_layout]['pt'] ?? $template->tipo_layout }}</p>
+                    </div>
+                    <div class="rounded-lg border border-sky-100 bg-white/80 p-3">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Snapshot Web</p>
+                        <p class="mt-1 text-sm font-semibold {{ empty($template->web_config_payload) ? 'text-amber-700' : 'text-emerald-700' }}">{{ empty($template->web_config_payload) ? 'Nao capturado' : 'Capturado' }}</p>
+                    </div>
+                    <div class="rounded-lg border border-sky-100 bg-white/80 p-3">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Template padrao</p>
+                        <p class="mt-1 text-sm font-semibold {{ $template->is_default_web ? 'text-emerald-700' : 'text-slate-700' }}">{{ $template->is_default_web ? 'Sim, para esta empresa' : 'Nao' }}</p>
+                    </div>
+                    <div class="rounded-lg border border-sky-100 bg-white/80 p-3">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">TV vinculada</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-900">{{ $assignedDeviceId ? 'Sim' : 'Nao' }}</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     @if (session('success'))
                         <div class="rounded-md bg-green-50 p-3 text-sm text-green-800 mb-4">{{ session('success') }}</div>
                     @endif
+
+                    <div class="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                        <p class="font-semibold text-slate-900">Dados principais do template</p>
+                        <p class="mt-1">Aqui voce define nome, layout, snapshot da Totem Web, padrao da empresa e TV vinculada.</p>
+                    </div>
 
                     <form method="POST" action="{{ route('admin.templates.update', $template) }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         @csrf
@@ -60,18 +95,18 @@
                             <label class="inline-flex items-center gap-2">
                                 <input type="hidden" name="capture_web_config" value="0">
                                 <input type="checkbox" name="capture_web_config" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('capture_web_config') === '1')>
-                                <span class="text-sm text-gray-700">Atualizar snapshot com configuração atual da Totem Web</span>
+                                <span class="text-sm text-gray-700">Atualizar snapshot com a configuração atual da Totem Web</span>
                             </label>
 
                             <label class="inline-flex items-center gap-2">
                                 <input type="hidden" name="is_default_web" value="0">
                                 <input type="checkbox" name="is_default_web" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('is_default_web', $template->is_default_web) == '1')>
-                                <span class="text-sm text-gray-700">Template padrão da empresa</span>
+                                <span class="text-sm text-gray-700">Definir este template como padrão da empresa</span>
                             </label>
                         </div>
 
                         <div class="md:col-span-3 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                            Snapshot Totem Web: <strong>{{ empty($template->web_config_payload) ? 'Nao capturado' : 'Capturado' }}</strong>
+                            Snapshot Totem Web: <strong>{{ empty($template->web_config_payload) ? 'Nao capturado' : 'Capturado' }}</strong>. Se voce marcar a caixa de atualizar snapshot, o template guarda uma copia da configuracao atual da tela web.
                         </div>
 
                         <div class="flex items-end gap-2">
@@ -83,18 +118,36 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <h3 class="font-semibold mb-4">Adicionar bloco</h3>
+                    <div class="mb-4">
+                        <h3 class="font-semibold">Adicionar bloco</h3>
+                        <p class="mt-1 text-sm text-slate-600">Os blocos controlam o conteudo exibido pela TV dentro deste template.</p>
+                    </div>
                     <form method="POST" action="{{ route('admin.templates.items.store', $template) }}" class="grid grid-cols-1 md:grid-cols-5 gap-3">
                         @csrf
-                        <select name="tipo" class="rounded-md border-gray-300 shadow-sm" required>
-                            @foreach($tipos as $tipo)
-                                <option value="{{ $tipo }}">{{ $tipo }}</option>
-                            @endforeach
-                        </select>
-                        <input name="ordem" type="number" min="1" value="{{ old('ordem', 1) }}" class="rounded-md border-gray-300 shadow-sm" placeholder="Ordem" required>
-                        <input name="conteudo" type="text" value="{{ old('conteudo') }}" class="rounded-md border-gray-300 shadow-sm" placeholder="Conteúdo (URL/texto)">
-                        <input name="tempo_exibicao" type="number" min="1" max="600" value="{{ old('tempo_exibicao') }}" class="rounded-md border-gray-300 shadow-sm" placeholder="Tempo (s)">
-                        <input name="tamanho" type="text" value="{{ old('tamanho') }}" class="rounded-md border-gray-300 shadow-sm" placeholder="Tamanho (ex: full, 50%)">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Tipo de bloco</label>
+                            <select name="tipo" class="w-full rounded-md border-gray-300 shadow-sm" required>
+                                @foreach($tipos as $tipo)
+                                    <option value="{{ $tipo }}">{{ $typeLabels[$tipo] ?? $tipo }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Ordem</label>
+                            <input name="ordem" type="number" min="1" value="{{ old('ordem', 1) }}" class="w-full rounded-md border-gray-300 shadow-sm" placeholder="1" required>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Conteudo</label>
+                            <input name="conteudo" type="text" value="{{ old('conteudo') }}" class="w-full rounded-md border-gray-300 shadow-sm" placeholder="URL, texto ou referencia">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Tempo de exibicao</label>
+                            <input name="tempo_exibicao" type="number" min="1" max="600" value="{{ old('tempo_exibicao') }}" class="w-full rounded-md border-gray-300 shadow-sm" placeholder="Segundos">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-slate-700">Tamanho</label>
+                            <input name="tamanho" type="text" value="{{ old('tamanho') }}" class="w-full rounded-md border-gray-300 shadow-sm" placeholder="Ex: full, 50%">
+                        </div>
                         <div class="md:col-span-5 flex justify-end">
                             <x-primary-button>Adicionar bloco</x-primary-button>
                         </div>
@@ -104,7 +157,10 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <h3 class="font-semibold mb-4">Blocos do template</h3>
+                    <div class="mb-4">
+                        <h3 class="font-semibold">Blocos do template</h3>
+                        <p class="mt-1 text-sm text-slate-600">Veja abaixo a ordem de exibicao e as configuracoes de cada bloco.</p>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
@@ -120,9 +176,27 @@
                                 @forelse($items as $item)
                                     <tr>
                                         <td class="px-3 py-2">{{ $item->ordem }}</td>
-                                        <td class="px-3 py-2">{{ $item->tipo }}</td>
-                                        <td class="px-3 py-2">{{ $item->conteudo }}</td>
-                                        <td class="px-3 py-2">{{ json_encode($item->config_json) }}</td>
+                                        <td class="px-3 py-2">{{ $typeLabels[$item->tipo] ?? $item->tipo }}</td>
+                                        <td class="px-3 py-2">
+                                            <div class="max-w-md break-words text-slate-800">{{ $item->conteudo ?: '-' }}</div>
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            @php
+                                                $itemConfig = (array) ($item->config_json ?? []);
+                                            @endphp
+                                            @if(empty($itemConfig))
+                                                <span class="text-slate-500">Sem configuracao extra</span>
+                                            @else
+                                                <div class="flex flex-wrap gap-2">
+                                                    @if(!empty($itemConfig['tempo_exibicao']))
+                                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">Tempo: {{ $itemConfig['tempo_exibicao'] }}s</span>
+                                                    @endif
+                                                    @if(!empty($itemConfig['tamanho']))
+                                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">Tamanho: {{ $itemConfig['tamanho'] }}</span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </td>
                                         <td class="px-3 py-2 text-right">
                                             <form method="POST" action="{{ route('admin.templates.items.destroy', [$template, $item]) }}">
                                                 @csrf
