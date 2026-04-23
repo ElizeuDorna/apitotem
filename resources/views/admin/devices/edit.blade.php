@@ -25,19 +25,6 @@
                             <x-input-error :messages="$errors->get('local')" class="mt-2" />
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Template</label>
-                            <select name="template_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                <option value="">Sem template</option>
-                                @foreach($templates as $template)
-                                    <option value="{{ $template->id }}" @selected((string) old('template_id', $configuration->template_id) === (string) $template->id)>
-                                        {{ $template->nome }} ({{ $template->tipo_layout }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('template_id')" class="mt-2" />
-                        </div>
-
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Atualizar produtos (seg)</label>

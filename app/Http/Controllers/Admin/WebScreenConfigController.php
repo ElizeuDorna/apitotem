@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
+use App\Models\Device;
+use App\Models\DeviceConfiguration;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
-use App\Models\Template;
+use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\RedirectResponse;
@@ -22,18 +24,25 @@ use Throwable;
 
 class WebScreenConfigController extends Controller
 {
-    private const TEMPLATE_DEV_MODE_CACHE_PREFIX = 'tv:web:disable-templates:empresa:';
     private const RESPONSIVE_MODE_CACHE_PREFIX = 'tv:web:enable-responsive:empresa:';
 
-    public function edit(): View
+    public function edit(Request $request): View
     {
         $empresaId = $this->resolveEmpresaId();
 
-        $config = Configuracao::firstOrCreate([
+        $companyConfig = Configuracao::firstOrCreate([
             'empresa_id' => $empresaId,
         ], []);
 
-        $config = $config->fresh();
+        $companyConfig = $companyConfig->fresh() ?? $companyConfig;
+        $selectedDevice = $this->resolveSelectedDevice($empresaId, $request->query('device_id'));
+        $selectedModel = $this->resolveSelectedModel($empresaId, $request->query('model_id'));
+        $config = $this->buildEffectiveConfig($companyConfig, $selectedDevice?->configuration);
+
+        if (is_array($selectedModel?->config_payload) && ! empty($selectedModel->config_payload)) {
+            $this->applyConfigPayload($config, $selectedModel->config_payload);
+        }
+
         $config->rightSidebarImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
         if ($config->rightSidebarImageUrls === '') {
             $scheduleUrls = collect((array) ($config->rightSidebarImageSchedules ?? []))
@@ -51,17 +60,19 @@ class WebScreenConfigController extends Controller
 
         return view('admin.web-screen-config', [
             'config' => $config,
-            'templateDevModeEnabled' => $this->isTemplateDevModeEnabled($empresaId),
             'responsiveModeEnabled' => $this->isResponsiveModeEnabled($empresaId),
-            'availableTemplates' => Template::query()
+            'availableDevices' => Device::query()
                 ->where('empresa_id', $empresaId)
-                ->orderByDesc('is_default_web')
                 ->orderBy('nome')
-                ->get(['id', 'nome', 'tipo_layout', 'is_default_web', 'web_config_payload']),
-            'defaultWebTemplateId' => Template::query()
+                ->get(['id', 'nome', 'local']),
+            'selectedDevice' => $selectedDevice,
+            'selectedDeviceId' => $selectedDevice?->id,
+            'availableModels' => WebScreenModel::query()
                 ->where('empresa_id', $empresaId)
-                ->where('is_default_web', true)
-                ->value('id'),
+                ->orderBy('nome')
+                ->get(['id', 'nome']),
+            'selectedModel' => $selectedModel,
+            'selectedModelId' => $selectedModel?->id,
             'companyGalleryImages' => $this->listCompanyGalleryImages(),
             'availableGroups' => Grupo::query()
                 ->where('empresa_id', $empresaId)
@@ -73,17 +84,27 @@ class WebScreenConfigController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $empresaId = $this->resolveEmpresaId();
-        $toggleTemplateDevMode = trim((string) $request->input('toggleTemplateDevMode', ''));
-        if (in_array($toggleTemplateDevMode, ['enable', 'disable'], true)) {
-            $enabled = $toggleTemplateDevMode === 'enable';
-            $this->setTemplateDevModeEnabled($empresaId, $enabled);
 
+        $selectedDeviceInput = $request->input('selected_device_id');
+        $selectedDevice = $this->resolveSelectedDevice($empresaId, $selectedDeviceInput);
+        if ($selectedDeviceInput !== null && $selectedDeviceInput !== '' && ! $selectedDevice) {
             return redirect()
                 ->back()
-                ->with('success', $enabled
-                    ? 'Modo desenvolvimento ativado: templates da TV desativados para esta empresa.'
-                    : 'Modo desenvolvimento desativado: templates da TV reativados para esta empresa.')
-                ->with('openConfigSection', 'generalConfigSection');
+                ->withErrors([
+                    'selected_device_id' => 'Dispositivo inválido para a empresa selecionada.',
+                ])
+                ->withInput();
+        }
+
+        $selectedModelInput = $request->input('selected_model_id');
+        $selectedModel = $this->resolveSelectedModel($empresaId, $selectedModelInput);
+        if ($selectedModelInput !== null && $selectedModelInput !== '' && ! $selectedModel) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'selected_model_id' => 'Modelo invalido para a empresa selecionada.',
+                ])
+                ->withInput();
         }
 
         $toggleResponsiveMode = trim((string) $request->input('toggleResponsiveMode', ''));
@@ -100,13 +121,50 @@ class WebScreenConfigController extends Controller
                 ->with('openCompanyGalleryTarget', 'rightSidebarImageConfig');
         }
 
+        $currentCompanyConfig = Configuracao::firstOrCreate(['empresa_id' => $empresaId], []);
+        $currentConfig = $this->buildEffectiveConfig($currentCompanyConfig, $selectedDevice?->configuration);
+
+        if (is_array($selectedModel?->config_payload) && ! empty($selectedModel->config_payload)) {
+            $this->applyConfigPayload($currentConfig, $selectedModel->config_payload);
+        }
+
+        $modelAction = trim((string) $request->input('model_action', ''));
+        if ($modelAction === 'create') {
+            $validatedModel = $request->validate([
+                'new_model_name' => ['required', 'string', 'max:120'],
+            ], [
+                'new_model_name.required' => 'Informe o nome do novo modelo.',
+            ]);
+
+            $createdModel = WebScreenModel::query()->create([
+                'empresa_id' => $empresaId,
+                'nome' => trim((string) $validatedModel['new_model_name']),
+                'config_payload' => $this->extractConfigPayloadFromConfig($currentConfig),
+            ]);
+
+            return redirect()
+                ->route('admin.web-screen-config.edit', array_filter([
+                    'device_id' => $selectedDevice?->id,
+                    'model_id' => $createdModel->id,
+                ], static fn ($value) => $value !== null && $value !== ''))
+                ->with('success', 'Modelo criado com a configuracao atual da tela.');
+        }
+
         $saveSection = trim((string) $request->input('saveSection', ''));
+        if ($saveSection !== '' && ! $selectedModel) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'selected_model_id' => 'Selecione ou crie um modelo antes de editar qualquer configuracao.',
+                ])
+                ->withInput();
+        }
+
         $shouldProcessRightSidebarMedia = in_array($saveSection, ['', 'companyGalleryConfigSection', 'fullScreenSlideConfig'], true);
         $shouldProcessGeneralConfig = in_array($saveSection, ['', 'generalConfigSection'], true);
         $shouldProcessVideoValidation = in_array($saveSection, ['', 'videoConfigSection'], true);
         $slideSelectionSubmitted = (bool) $request->boolean('suggestedSlideSelectionSubmitted', false);
         $forceClearRightSidebarSlides = (bool) $request->boolean('forceClearRightSidebarSlides', false);
-        $currentConfig = Configuracao::firstOrCreate(['empresa_id' => $empresaId], []);
 
         if ($saveSection !== '') {
             $this->hydrateMissingInputsFromCurrentConfig($request, $currentConfig);
@@ -173,7 +231,7 @@ class WebScreenConfigController extends Controller
 
         $validated = $request->validate([
             'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,fullScreenSlideConfig,imageSizeConfigSection,paginationConfigSection'],
-            'default_web_template_id' => ['nullable', 'integer', 'exists:templates,id'],
+            'selected_device_id' => ['nullable', 'integer', 'exists:devices,id'],
             'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig,fullScreenSlideConfig'],
             'forceClearRightSidebarSlides' => ['nullable', 'boolean'],
             'apiRefreshInterval' => ['nullable', 'integer', 'min:5', 'max:3600'],
@@ -405,7 +463,9 @@ class WebScreenConfigController extends Controller
         $validated['isListBorderTransparent'] = (bool) ($validated['isListBorderTransparent'] ?? false);
         $validated['isVideoPanelTransparent'] = (bool) ($validated['isVideoPanelTransparent'] ?? false);
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
-        $validated['showRightSidebarPanel'] = (bool) ($validated['showRightSidebarPanel'] ?? true);
+        $validated['showRightSidebarPanel'] = $request->has('showRightSidebarPanel')
+            ? $this->resolveBooleanInput($request, 'showRightSidebarPanel')
+            : (bool) ($currentConfig->showRightSidebarPanel ?? true);
         $validated['showRightSidebarLogo'] = (bool) ($validated['showRightSidebarLogo'] ?? false);
         $validated['rightSidebarLogoPositionWindows'] = (string) ($validated['rightSidebarLogoPositionWindows'] ?? $validated['rightSidebarLogoPosition'] ?? 'sidebar_top');
         $validated['rightSidebarLogoPositionAndroid'] = (string) ($validated['rightSidebarLogoPositionAndroid'] ?? $validated['rightSidebarLogoPositionWindows'] ?? 'sidebar_top');
@@ -649,30 +709,14 @@ class WebScreenConfigController extends Controller
         $validated['paginationInterval'] = (int) ($validated['paginationInterval'] ?? 5);
         $validated['showGroupLabelBadge'] = (bool) ($validated['showGroupLabelBadge'] ?? false);
         $validated['groupLabelBadgeColor'] = (string) ($validated['groupLabelBadgeColor'] ?? '#0f172a');
-
-        $selectedDefaultTemplateId = null;
-        if ($shouldProcessGeneralConfig) {
-            $rawDefaultTemplateId = $validated['default_web_template_id'] ?? null;
-            $selectedDefaultTemplateId = $rawDefaultTemplateId !== null && $rawDefaultTemplateId !== ''
-                ? (int) $rawDefaultTemplateId
-                : null;
-
-            if ($selectedDefaultTemplateId !== null) {
-                $templateBelongsToEmpresa = Template::query()
-                    ->where('empresa_id', $empresaId)
-                    ->where('id', $selectedDefaultTemplateId)
-                    ->exists();
-
-                if (! $templateBelongsToEmpresa) {
-                    return redirect()
-                        ->back()
-                        ->withErrors([
-                            'default_web_template_id' => 'Template inválido para a empresa selecionada.',
-                        ])
-                        ->withInput();
-                }
-            }
-        }
+        $validated['gradientStartColor'] = $this->normalizeHexColor(
+            $validated['gradientStartColor'] ?? null,
+            (string) ($validated['rowBackgroundColor'] ?? '#0b1220')
+        );
+        $validated['gradientEndColor'] = $this->normalizeHexColor(
+            $validated['gradientEndColor'] ?? null,
+            (string) ($validated['rowBackgroundColor'] ?? '#0b1220')
+        );
 
         if ($validated['titleText'] === '') {
             $validated['titleText'] = 'Lista de Produtos (TV)';
@@ -682,7 +726,7 @@ class WebScreenConfigController extends Controller
         unset($validated['video_duration_seconds']);
         unset($validated['video_heights']);
         unset($validated['saveSection']);
-        unset($validated['default_web_template_id']);
+        unset($validated['selected_device_id']);
         unset($validated['openCompanyGalleryTarget']);
         unset($validated['openRightSidebarImageScheduleUrl']);
 
@@ -695,8 +739,8 @@ class WebScreenConfigController extends Controller
             $validated['backgroundImageUrl'] = null;
         }
 
-        if ($validated['showRightSidebarPanel'] && $validated['productListType'] === '2') {
-            $validated['productListType'] = '1';
+        if ($validated['productListType'] === '2') {
+            $validated['showRightSidebarPanel'] = false;
         }
 
         // Backward compatibility: if migration has not run yet, avoid writing unknown column.
@@ -1081,19 +1125,58 @@ class WebScreenConfigController extends Controller
                 ->all();
         }
 
-        Configuracao::updateOrCreate(
-            ['empresa_id' => $empresaId],
-            $validated
-        );
+        $configPayload = $this->extractConfigPayload($validated);
 
-        if ($shouldProcessGeneralConfig) {
-            $this->setDefaultWebTemplateForEmpresa($empresaId, $selectedDefaultTemplateId);
+        if ($selectedModel) {
+            $selectedModel->forceFill([
+                'config_payload' => $configPayload,
+            ])->save();
+        }
+
+        if ($selectedDevice) {
+            if (! Schema::hasColumn('device_configurations', 'web_config_payload')) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selected_device_id' => 'A configuracao por dispositivo exige a migration da coluna web_config_payload em device_configurations.',
+                    ])
+                    ->withInput();
+            }
+
+            $existingConfiguration = $selectedDevice->configuration;
+
+            DeviceConfiguration::query()->updateOrCreate(
+                ['device_id' => $selectedDevice->id],
+                [
+                    'web_config_payload' => $configPayload,
+                    'atualizar_produtos_segundos' => $existingConfiguration?->atualizar_produtos_segundos ?? 30,
+                    'volume' => $existingConfiguration?->volume ?? 50,
+                    'orientacao' => $existingConfiguration?->orientacao ?? 'landscape',
+                ]
+            );
+        } else {
+            $missingConfigColumns = $this->resolveMissingConfiguracaoColumns($configPayload);
+            if ($missingConfigColumns !== []) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'saveSection' => 'A configuracao nao foi salva porque faltam colunas no banco de dados: '.implode(', ', array_slice($missingConfigColumns, 0, 8)).'. Rode as migrations pendentes no servidor.',
+                    ])
+                    ->withInput();
+            }
+
+            Configuracao::updateOrCreate(
+                ['empresa_id' => $empresaId],
+                $configPayload
+            );
         }
 
         $redirect = redirect()->back();
 
         if ($saveSection !== '') {
-            $redirect->with('success', 'Menu salvo com sucesso.');
+            $redirect->with('success', $selectedDevice
+                ? 'Menu salvo para o dispositivo selecionado com sucesso.'
+                : 'Menu salvo com sucesso.');
             $redirect->with('openConfigSection', $saveSection);
 
             if ($saveSection === 'companyGalleryConfigSection') {
@@ -1149,20 +1232,109 @@ class WebScreenConfigController extends Controller
             ->all();
     }
 
-    private function setDefaultWebTemplateForEmpresa(int $empresaId, ?int $templateId): void
+    private function resolveSelectedDevice(int $empresaId, mixed $deviceId): ?Device
     {
-        Template::query()
-            ->where('empresa_id', $empresaId)
-            ->update(['is_default_web' => false]);
-
-        if ($templateId === null) {
-            return;
+        $normalizedDeviceId = (int) $deviceId;
+        if ($normalizedDeviceId <= 0) {
+            return null;
         }
 
-        Template::query()
+        return Device::query()
             ->where('empresa_id', $empresaId)
-            ->where('id', $templateId)
-            ->update(['is_default_web' => true]);
+            ->where('id', $normalizedDeviceId)
+            ->with('configuration')
+            ->first();
+    }
+
+    private function buildEffectiveConfig(Configuracao $companyConfig, ?DeviceConfiguration $deviceConfiguration): Configuracao
+    {
+        $config = $companyConfig->replicate();
+        $config->empresa_id = $companyConfig->empresa_id;
+
+        $payload = $deviceConfiguration?->web_config_payload;
+        if (is_array($payload) && ! empty($payload)) {
+            $this->applyConfigPayload($config, $payload);
+        }
+
+        return $config;
+    }
+
+    private function resolveSelectedModel(int $empresaId, mixed $modelId): ?WebScreenModel
+    {
+        $normalizedModelId = (int) $modelId;
+        if ($normalizedModelId <= 0) {
+            return null;
+        }
+
+        return WebScreenModel::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id', $normalizedModelId)
+            ->first();
+    }
+
+    private function applyConfigPayload(Configuracao $config, array $payload): void
+    {
+        $fillable = array_flip((new Configuracao())->getFillable());
+
+        foreach ($payload as $key => $value) {
+            if (! is_string($key) || ! isset($fillable[$key]) || $key === 'empresa_id') {
+                continue;
+            }
+
+            $config->setAttribute($key, $value);
+        }
+    }
+
+    private function extractConfigPayload(array $validated): array
+    {
+        $fillable = array_flip((new Configuracao())->getFillable());
+        $payload = [];
+
+        foreach ($validated as $key => $value) {
+            if (! is_string($key) || ! isset($fillable[$key]) || $key === 'empresa_id') {
+                continue;
+            }
+
+            $payload[$key] = $value;
+        }
+
+        return $payload;
+    }
+
+    private function extractConfigPayloadFromConfig(Configuracao $config): array
+    {
+        $payload = [];
+
+        foreach ((new Configuracao())->getFillable() as $field) {
+            if ($field === 'empresa_id') {
+                continue;
+            }
+
+            $payload[$field] = $config->getAttribute($field);
+        }
+
+        return $payload;
+    }
+
+    private function resolveMissingConfiguracaoColumns(array $payload): array
+    {
+        $existingColumns = array_flip(Schema::getColumnListing('configuracoes'));
+
+        return array_values(array_filter(
+            array_keys($payload),
+            static fn ($key) => is_string($key) && ! isset($existingColumns[$key])
+        ));
+    }
+
+    private function resolveBooleanInput(Request $request, string $key, bool $default = false): bool
+    {
+        $rawValue = $request->input($key, $default);
+
+        if (is_array($rawValue)) {
+            $rawValue = end($rawValue);
+        }
+
+        return filter_var($rawValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
     }
 
     private function hydrateMissingInputsFromCurrentConfig(Request $request, Configuracao $config): void
@@ -1324,21 +1496,6 @@ class WebScreenConfigController extends Controller
         if (! empty($merge)) {
             $request->merge($merge);
         }
-    }
-
-    private function templateDevModeCacheKey(int $empresaId): string
-    {
-        return self::TEMPLATE_DEV_MODE_CACHE_PREFIX.$empresaId;
-    }
-
-    private function isTemplateDevModeEnabled(int $empresaId): bool
-    {
-        return (bool) Cache::get($this->templateDevModeCacheKey($empresaId), false);
-    }
-
-    private function setTemplateDevModeEnabled(int $empresaId, bool $enabled): void
-    {
-        Cache::forever($this->templateDevModeCacheKey($empresaId), $enabled);
     }
 
     private function responsiveModeCacheKey(int $empresaId): string

@@ -5,10 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>TV Produtos</title>
+    <script>
+        (function () {
+            const cacheVersionKey = 'tv_client_cache_version';
+            const expectedCacheVersion = '2026-04-23-1';
+
+            try {
+                if (localStorage.getItem(cacheVersionKey) === expectedCacheVersion) {
+                    return;
+                }
+
+                [
+                    'tv_cached_visual_config_v1',
+                    'tv_cached_products_v1',
+                    'tv_fullscreen_slide_completed_signature_v1'
+                ].forEach((key) => localStorage.removeItem(key));
+
+                localStorage.setItem(cacheVersionKey, expectedCacheVersion);
+            } catch (_error) {
+            }
+        }());
+    </script>
     @vite(['resources/css/app.css', 'resources/js/tv-produtos.js'])
     <style>
         .hidden {
+            display: none !important;
+        }
+
+        #tvOfflineIndicator {
             display: none !important;
         }
 

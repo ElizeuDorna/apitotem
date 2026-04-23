@@ -25,7 +25,6 @@
                                 <tr>
                                     <th class="px-3 py-2 text-left">TV</th>
                                     <th class="px-3 py-2 text-left">Empresa</th>
-                                    <th class="px-3 py-2 text-left">Template</th>
                                     <th class="px-3 py-2 text-left">Status</th>
                                     <th class="px-3 py-2 text-left">Última comunicação</th>
                                     <th class="px-3 py-2 text-right">Ações</th>
@@ -42,7 +41,6 @@
                                             <div class="text-gray-500">{{ $device->local }}</div>
                                         </td>
                                         <td class="px-3 py-2">{{ $device->empresa?->NOME }}</td>
-                                        <td class="px-3 py-2">{{ $device->configuration?->template?->nome ?? 'Sem template' }}</td>
                                         <td class="px-3 py-2">
                                             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs {{ $isOnline ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700' }}">
                                                 {{ $isOnline ? 'Online' : 'Offline' }}
@@ -55,7 +53,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-3 py-8 text-center text-gray-500">Nenhuma TV encontrada.</td>
+                                        <td colspan="5" class="px-3 py-8 text-center text-gray-500">Nenhuma TV encontrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

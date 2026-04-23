@@ -34,8 +34,6 @@ class User extends Authenticatable
 
     public const MENU_GESTAO_TVS = 'gestao_tvs';
 
-    public const MENU_EDITOR_TEMPLATE = 'editor_template';
-
     public const MENU_GALERIA_NOVA = 'galeria_nova';
 
     /**
@@ -107,7 +105,6 @@ class User extends Authenticatable
             self::MENU_TOKEN_API => 'Gerar Token API',
             self::MENU_ATIVAR_TV => 'Ativar TV',
             self::MENU_GESTAO_TVS => 'Gestão de TVs',
-            self::MENU_EDITOR_TEMPLATE => 'Editor de Template',
             self::MENU_GALERIA_NOVA => 'Galeria de Imagem',
         ];
     }

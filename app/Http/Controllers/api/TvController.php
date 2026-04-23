@@ -12,8 +12,6 @@ use App\Models\DeviceActivation;
 use App\Models\GlobalImageGallery;
 use App\Models\Empresa;
 use App\Models\Produto;
-use App\Models\Template;
-use App\Models\TemplateItem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +24,6 @@ class TvController extends Controller
 {
     private const ACTIVATION_EXPIRES_SECONDS = 300;
     private const ACTIVATION_CODE_LENGTH = 10;
-    private const TEMPLATE_DEV_MODE_CACHE_PREFIX = 'tv:web:disable-templates:empresa:';
     private const RESPONSIVE_MODE_CACHE_PREFIX = 'tv:web:enable-responsive:empresa:';
 
     #[OA\Post(
@@ -290,9 +287,7 @@ class TvController extends Controller
 
         $empresaId = (int) $device->empresa_id;
         $configuration = $this->resolveDeviceConfiguration($device->id);
-        $screenConfig = Configuracao::query()->firstOrCreate([
-            'empresa_id' => $empresaId,
-        ], []);
+        $screenConfig = $this->resolveEffectiveScreenConfig($device, $configuration);
 
         $showImage = (bool) ($screenConfig->showImage ?? true);
         $orderMode = (string) ($screenConfig->productListOrderMode ?? 'grupo');
@@ -343,7 +338,7 @@ class TvController extends Controller
     #[OA\Get(
         path: '/api/tv/bootstrap',
         tags: ['TV'],
-        summary: 'Retorna bootstrap da TV com dados de device, configuração e template',
+        summary: 'Retorna bootstrap da TV com dados de device e configuração',
         security: [['DeviceBearer' => []]],
         responses: [
             new OA\Response(
@@ -365,24 +360,9 @@ class TvController extends Controller
                     ],
                     'configuracao' => [
                         'id' => 1,
-                        'template_id' => 2,
                         'atualizar_produtos_segundos' => 30,
                         'volume' => 10,
                         'orientacao' => 'landscape',
-                    ],
-                    'template' => [
-                        'id' => 2,
-                        'nome' => 'Template Principal',
-                        'tipo_layout' => 'split',
-                    ],
-                    'items' => [
-                        [
-                            'id' => 11,
-                            'tipo' => 'video',
-                            'ordem' => 1,
-                            'conteudo' => 'https://exemplo.com/video.mp4',
-                            'config_json' => null,
-                        ],
                     ],
                 ])
             ),
@@ -393,8 +373,6 @@ class TvController extends Controller
     {
         $device = $request->attributes->get('device');
         $configuration = $this->resolveDeviceConfiguration($device->id);
-        $template = $configuration->template;
-        $items = $template ? $template->items()->orderBy('ordem')->get() : collect();
 
         return response()->json([
             'status' => 'ok',
@@ -412,30 +390,17 @@ class TvController extends Controller
             ],
             'configuracao' => [
                 'id' => $configuration->id,
-                'template_id' => $configuration->template_id,
                 'atualizar_produtos_segundos' => $configuration->atualizar_produtos_segundos,
                 'volume' => $configuration->volume,
                 'orientacao' => $configuration->orientacao,
             ],
-            'template' => $template ? [
-                'id' => $template->id,
-                'nome' => $template->nome,
-                'tipo_layout' => $template->tipo_layout,
-            ] : null,
-            'items' => $items->map(fn ($item) => [
-                'id' => $item->id,
-                'tipo' => $item->tipo,
-                'ordem' => $item->ordem,
-                'conteudo' => $item->conteudo,
-                'config_json' => $item->config_json,
-            ])->values(),
         ]);
     }
 
     #[OA\Get(
         path: '/api/tv/midias',
         tags: ['TV'],
-        summary: 'Retorna mídias do template da TV (vídeos, imagens, banners)',
+        summary: 'Retorna mídias extras da TV',
         security: [['DeviceBearer' => []]],
         responses: [
             new OA\Response(
@@ -467,36 +432,11 @@ class TvController extends Controller
     )]
     public function midias(Request $request): JsonResponse
     {
-        $device = $request->attributes->get('device');
-        $configuration = $this->resolveDeviceConfiguration($device->id);
-
-        if (! $configuration->template_id) {
-            return response()->json([
-                'status' => 'ok',
-                'videos' => [],
-                'imagens' => [],
-                'banners' => [],
-            ]);
-        }
-
-        $items = TemplateItem::query()
-            ->where('template_id', $configuration->template_id)
-            ->whereIn('tipo', ['video', 'imagem', 'banner'])
-            ->orderBy('ordem')
-            ->get();
-
-        $map = static fn ($item) => [
-            'id' => $item->id,
-            'ordem' => $item->ordem,
-            'conteudo' => $item->conteudo,
-            'config_json' => $item->config_json,
-        ];
-
         return response()->json([
             'status' => 'ok',
-            'videos' => $items->where('tipo', 'video')->map($map)->values(),
-            'imagens' => $items->where('tipo', 'imagem')->map($map)->values(),
-            'banners' => $items->where('tipo', 'banner')->map($map)->values(),
+            'videos' => [],
+            'imagens' => [],
+            'banners' => [],
         ]);
     }
 
@@ -587,15 +527,8 @@ class TvController extends Controller
             ], 401);
         }
 
-        $config = Configuracao::query()->firstOrCreate([
-            'empresa_id' => $device->empresa_id,
-        ], []);
-
         $deviceConfiguration = $this->resolveDeviceConfiguration((int) $device->id);
-        $templatePayload = $this->resolveWebTemplatePayloadForDevice($device, $deviceConfiguration);
-        if (!empty($templatePayload)) {
-            $config = $this->applyWebTemplatePayloadToConfig($config, $templatePayload);
-        }
+        $config = $this->resolveEffectiveScreenConfig($device, $deviceConfiguration);
 
         $empresa = Empresa::query()->find($device->empresa_id);
         $configuredRightSidebarLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->rightSidebarLogoUrl ?? ''));
@@ -1018,51 +951,32 @@ class TvController extends Controller
                 'volume' => 50,
                 'orientacao' => 'landscape',
             ]
-        )->load('template');
+        );
     }
 
-    private function resolveWebTemplatePayloadForDevice(Device $device, DeviceConfiguration $configuration): array
+    private function resolveEffectiveScreenConfig(Device $device, ?DeviceConfiguration $configuration = null): Configuracao
     {
-        if ($this->isTemplateDevModeEnabled((int) $device->empresa_id)) {
-            return [];
+        $companyConfig = Configuracao::query()->firstOrCreate([
+            'empresa_id' => $device->empresa_id,
+        ], []);
+
+        $configuration ??= $this->resolveDeviceConfiguration((int) $device->id);
+        $payload = $configuration->web_config_payload;
+
+        if (! is_array($payload) || empty($payload)) {
+            return $companyConfig;
         }
 
-        $template = $configuration->template;
+        $config = $companyConfig->replicate();
+        $config->empresa_id = $companyConfig->empresa_id;
+        $this->applyConfigPayloadToConfig($config, $payload);
 
-        if ($template && is_array($template->web_config_payload) && !empty($template->web_config_payload)) {
-            return $template->web_config_payload;
-        }
-
-        $defaultTemplate = Template::query()
-            ->where('empresa_id', $device->empresa_id)
-            ->where('is_default_web', true)
-            ->latest('id')
-            ->first();
-
-        if ($defaultTemplate && is_array($defaultTemplate->web_config_payload) && !empty($defaultTemplate->web_config_payload)) {
-            return $defaultTemplate->web_config_payload;
-        }
-
-        return [];
+        return $config;
     }
 
-    private function applyWebTemplatePayloadToConfig(Configuracao $config, array $payload): Configuracao
+    private function applyConfigPayloadToConfig(Configuracao $config, array $payload): Configuracao
     {
         $fillable = array_flip((new Configuracao())->getFillable());
-        $blockedKeys = array_flip([
-            'rightSidebarMediaType',
-            'rightSidebarGlobalGalleryCode',
-            'rightSidebarImageUrls',
-            'rightSidebarImageSchedules',
-            'rightSidebarImageInterval',
-            'rightSidebarImageFit',
-            'rightSidebarImageHeight',
-            'rightSidebarImageWidth',
-            'rightSidebarAndroidHeight',
-            'rightSidebarAndroidWidth',
-            'rightSidebarAndroidVerticalOffset',
-            'rightSidebarPlaybackSequence',
-        ]);
 
         foreach ($payload as $key => $value) {
             if (!is_string($key) || !isset($fillable[$key])) {
@@ -1073,19 +987,10 @@ class TvController extends Controller
                 continue;
             }
 
-            if (isset($blockedKeys[$key])) {
-                continue;
-            }
-
             $config->setAttribute($key, $value);
         }
 
         return $config;
-    }
-
-    private function isTemplateDevModeEnabled(int $empresaId): bool
-    {
-        return (bool) Cache::get(self::TEMPLATE_DEV_MODE_CACHE_PREFIX.$empresaId, false);
     }
 
     private function isResponsiveModeEnabled(int $empresaId): bool

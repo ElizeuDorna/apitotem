@@ -27,8 +27,11 @@ class DeviceActivationController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        $empresaVinculada = $user->empresa;
+        $isRevenda = $empresaVinculada?->isRevenda() ?? false;
         $empresaIdAtiva = EmpresaContext::resolveEmpresaIdForUser($user);
-        $showAllDevices = $user->isDefaultAdmin() && $this->requestWantsAllDevices();
+        $canShowAllDevices = $user->isDefaultAdmin() || $isRevenda;
+        $showAllDevices = $canShowAllDevices && $this->requestWantsAllDevices();
 
         $empresaAtiva = $empresaIdAtiva
             ? Empresa::query()->find($empresaIdAtiva, ['id', 'NOME', 'nome', 'CNPJ_CPF', 'cnpj_cpf'])
@@ -46,6 +49,14 @@ class DeviceActivationController extends Controller
             } else {
                 $devicesQuery->whereRaw('1 = 0');
             }
+        } elseif ($isRevenda) {
+            if ($showAllDevices && $empresaVinculada) {
+                $devicesQuery->whereHas('empresa', function ($query) use ($empresaVinculada) {
+                    $query->where('revenda_id', $empresaVinculada->id);
+                });
+            } else {
+                $devicesQuery->where('empresa_id', EmpresaContext::requireEmpresaId($user));
+            }
         } else {
             $devicesQuery->where('empresa_id', EmpresaContext::requireEmpresaId($user));
         }
@@ -56,10 +67,12 @@ class DeviceActivationController extends Controller
 
         return view('admin.activate-tv', [
             'isDefaultAdmin' => $user->isDefaultAdmin(),
+            'canShowAllDevices' => $canShowAllDevices,
+            'isRevenda' => $isRevenda,
             'adminSemEmpresaAtiva' => $user->isDefaultAdmin() && ! $empresaIdAtiva,
             'showAllDevices' => $showAllDevices,
             'empresaAtiva' => $empresaAtiva,
-            'empresaVinculada' => $user->empresa,
+            'empresaVinculada' => $empresaVinculada,
             'activatedToken' => session('activated_token'),
             'devices' => $devices,
         ]);
@@ -89,16 +102,11 @@ class DeviceActivationController extends Controller
 
         $validated = $request->validate([
             'code' => ['required', 'alpha_num', 'size:10'],
-            'empresa_id' => [
-                'nullable',
-                'integer',
-                'exists:empresa,id',
-            ],
             'nome_tv' => ['required', 'string', 'max:120'],
             'local' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $empresa = $this->resolveEmpresa($validated['empresa_id'] ?? null, $user);
+        $empresa = $this->resolveEmpresa($user);
         $activationCode = strtoupper((string) $validated['code']);
 
         $activation = DeviceActivation::query()
@@ -154,11 +162,6 @@ class DeviceActivationController extends Controller
             'nome' => ['required', 'string', 'max:120'],
             'local' => ['nullable', 'string', 'max:120'],
             'ativo' => ['nullable', 'boolean'],
-            'empresa_id' => [
-                'nullable',
-                'integer',
-                'exists:empresa,id',
-            ],
         ]);
 
         $empresaId = EmpresaContext::requireEmpresaId($user);
@@ -186,7 +189,7 @@ class DeviceActivationController extends Controller
             ->with('success', 'TV removida com sucesso.');
     }
 
-    private function resolveEmpresa(?int $empresaId, $user): Empresa
+    private function resolveEmpresa($user): Empresa
     {
         if ($user->isDefaultAdmin()) {
             return Empresa::findOrFail(EmpresaContext::requireEmpresaId($user));

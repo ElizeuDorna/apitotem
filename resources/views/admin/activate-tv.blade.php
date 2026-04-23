@@ -84,6 +84,8 @@
                             <p class="mt-1 text-sm text-gray-600">
                                 @if ($isDefaultAdmin && ($showAllDevices ?? false))
                                     Exibindo dispositivos de todas as empresas.
+                                @elseif (($isRevenda ?? false) && ($showAllDevices ?? false))
+                                    Exibindo dispositivos de todas as empresas vinculadas a esta revenda.
                                 @elseif ($isDefaultAdmin)
                                     Exibindo apenas os dispositivos da empresa ativa.
                                 @else
@@ -92,7 +94,7 @@
                             </p>
                         </div>
 
-                        @if ($isDefaultAdmin)
+                        @if ($canShowAllDevices ?? false)
                             <form method="GET" action="{{ route('admin.activate-tv.index') }}" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                                     <input
@@ -110,7 +112,13 @@
                                     >
                                     <span>Ver lista de todas as empresas</span>
                                 </label>
-                                <p class="mt-1 text-xs text-slate-500">Disponível somente para admin principal. O padrão é desmarcado.</p>
+                                <p class="mt-1 text-xs text-slate-500">
+                                    @if ($isDefaultAdmin)
+                                        Disponivel para admin principal. O padrao e desmarcado.
+                                    @else
+                                        Disponivel para revenda. Quando marcado, lista apenas as empresas vinculadas a esta revenda.
+                                    @endif
+                                </p>
                             </form>
                         @endif
                     </div>
@@ -154,29 +162,16 @@
                                             <input type="text" value="{{ $device->token }}" class="w-full rounded-md border-gray-200 bg-gray-50 font-mono text-xs text-gray-700" readonly>
                                         </td>
                                         <td class="px-3 py-2">
-                                            @if (! $isDefaultAdmin)
-                                                @php
-                                                    $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
-                                                    $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
-                                                @endphp
-                                                <span>
-                                                    {{ $empresaNome ?? 'Empresa nao vinculada' }}
-                                                    @if ($empresaCnpj)
-                                                        - {{ $empresaCnpj }}
-                                                    @endif
-                                                </span>
-                                            @else
-                                                @php
-                                                    $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
-                                                    $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
-                                                @endphp
-                                                <span>
-                                                    {{ $empresaNome ?? 'Empresa nao vinculada' }}
-                                                    @if ($empresaCnpj)
-                                                        - {{ $empresaCnpj }}
-                                                    @endif
-                                                </span>
-                                            @endif
+                                            @php
+                                                $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
+                                                $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
+                                            @endphp
+                                            <span>
+                                                {{ $empresaNome ?? 'Empresa nao vinculada' }}
+                                                @if ($empresaCnpj)
+                                                    - {{ $empresaCnpj }}
+                                                @endif
+                                            </span>
                                         </td>
                                         <td class="px-3 py-2">
                                             <label class="inline-flex items-center gap-2">

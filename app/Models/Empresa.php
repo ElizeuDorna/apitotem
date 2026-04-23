@@ -135,11 +135,6 @@ class Empresa extends Model
         return (int) $this->nivel_acesso === self::NIVEL_CLIENTE_FINAL;
     }
 
-    public function templates(): HasMany
-    {
-        return $this->hasMany(Template::class);
-    }
-
     public function publicPage(): HasOne
     {
         return $this->hasOne(EmpresaPublicPage::class);

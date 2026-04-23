@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\DeviceConfiguration;
-use App\Models\Template;
 use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +18,7 @@ class DeviceManagementController extends Controller
         $user = Auth::user();
         $empresaIdAtiva = EmpresaContext::resolveEmpresaIdForUser($user);
 
-        $query = Device::query()->with(['empresa', 'configuration.template'])->orderByDesc('id');
+        $query = Device::query()->with(['empresa', 'configuration'])->orderByDesc('id');
 
         if ($user->isDefaultAdmin()) {
             if ($empresaIdAtiva) {
@@ -52,15 +51,9 @@ class DeviceManagementController extends Controller
             ]
         );
 
-        $templates = Template::query()
-            ->where('empresa_id', $device->empresa_id)
-            ->orderBy('nome')
-            ->get();
-
         return view('admin.devices.edit', [
             'device' => $device,
             'configuration' => $configuration,
-            'templates' => $templates,
         ]);
     }
 
@@ -72,7 +65,6 @@ class DeviceManagementController extends Controller
             'nome' => ['required', 'string', 'max:120'],
             'local' => ['nullable', 'string', 'max:120'],
             'ativo' => ['nullable', 'boolean'],
-            'template_id' => ['nullable', 'integer'],
             'atualizar_produtos_segundos' => ['required', 'integer', 'min:5', 'max:3600'],
             'volume' => ['required', 'integer', 'min:0', 'max:100'],
             'orientacao' => ['required', 'in:landscape,portrait'],
@@ -84,24 +76,9 @@ class DeviceManagementController extends Controller
             'ativo' => (bool) ($validated['ativo'] ?? false),
         ]);
 
-        $templateId = $validated['template_id'] ?? null;
-        if ($templateId) {
-            $templateExists = Template::query()
-                ->where('id', $templateId)
-                ->where('empresa_id', $device->empresa_id)
-                ->exists();
-
-            if (! $templateExists) {
-                return redirect()->back()->withInput()->withErrors([
-                    'template_id' => 'Template inválido para a empresa da TV.',
-                ]);
-            }
-        }
-
         DeviceConfiguration::query()->updateOrCreate(
             ['device_id' => $device->id],
             [
-                'template_id' => $templateId,
                 'atualizar_produtos_segundos' => $validated['atualizar_produtos_segundos'],
                 'volume' => $validated['volume'],
                 'orientacao' => $validated['orientacao'],

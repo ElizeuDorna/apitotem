@@ -46,12 +46,6 @@
                     <span>{{ __('Dashboard') }}</span>
                 </a>
 
-                @if (Auth::user()->hasMenuAccess('editor_template'))
-                    <a href="{{ route('admin.templates.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/templates*') ? $desktopNavActive : '' }}">
-                        <span>{{ __('Template') }}</span>
-                    </a>
-                @endif
-
                 @if (Auth::user()->hasMenuAccess('cadastro_publico'))
                     <a href="{{ route('register') }}" class="{{ $desktopNavBase }} {{ (request()->routeIs('register') || request()->routeIs('register.users.*')) ? $desktopNavActive : '' }}">
                         <span>{{ __('Cadastro Usuarios') }}</span>

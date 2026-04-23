@@ -3172,25 +3172,8 @@ function ensureOfflineIndicator() {
 
     const indicator = document.createElement('div');
     indicator.id = 'tvOfflineIndicator';
-    indicator.textContent = '!';
-    indicator.style.position = 'fixed';
-    indicator.style.left = '8px';
-    indicator.style.top = '50%';
-    indicator.style.transform = 'translateY(-50%)';
-    indicator.style.zIndex = '95';
-    indicator.style.width = '22px';
-    indicator.style.height = '22px';
-    indicator.style.borderRadius = '999px';
+    indicator.hidden = true;
     indicator.style.display = 'none';
-    indicator.style.alignItems = 'center';
-    indicator.style.justifyContent = 'center';
-    indicator.style.fontWeight = '900';
-    indicator.style.fontSize = '15px';
-    indicator.style.lineHeight = '1';
-    indicator.style.color = '#fee2e2';
-    indicator.style.background = '#dc2626';
-    indicator.style.border = '1px solid #7f1d1d';
-    indicator.style.boxShadow = '0 0 0 2px rgba(127, 29, 29, 0.25)';
     indicator.style.pointerEvents = 'none';
     indicator.setAttribute('aria-hidden', 'true');
     document.body.appendChild(indicator);
@@ -3200,7 +3183,12 @@ function ensureOfflineIndicator() {
 
 function setOfflineIndicatorVisible(visible) {
     const indicator = ensureOfflineIndicator();
-    indicator.style.display = visible ? 'flex' : 'none';
+    indicator.hidden = true;
+    indicator.style.display = 'none';
+
+    if (visible) {
+        updateWarningStatus('Aviso: conexao instavel. Mantendo ultimo conteudo exibido.');
+    }
 }
 
 function readCachedVisualConfig() {
@@ -3809,7 +3797,13 @@ function applyRightSidebarPanelVisibility() {
     if (!toBoolean(visualConfig.showRightSidebarPanel, true)) {
         stopImageSlideMode();
         stopVideoPlaybackForImageMode();
+        tvVideoPanel.hidden = true;
+        tvVideoPanel.setAttribute('aria-hidden', 'true');
         tvVideoPanel.style.display = 'none';
+        tvVideoPanel.style.width = '0';
+        tvVideoPanel.style.maxWidth = '0';
+        tvVideoPanel.style.minHeight = '0';
+        tvVideoPanel.style.height = '0';
         tvMain.style.gridTemplateColumns = 'minmax(0, 1fr)';
         tvMain.style.gridTemplateRows = '1fr';
         if (tvProductsPanel) {
@@ -3820,6 +3814,8 @@ function applyRightSidebarPanelVisibility() {
         return;
     }
 
+    tvVideoPanel.hidden = false;
+    tvVideoPanel.removeAttribute('aria-hidden');
     tvVideoPanel.style.display = '';
     tvMain.style.gridTemplateColumns = '';
     tvMain.style.gridTemplateRows = '';

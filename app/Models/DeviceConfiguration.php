@@ -12,19 +12,18 @@ class DeviceConfiguration extends Model
 
     protected $fillable = [
         'device_id',
-        'template_id',
+        'web_config_payload',
         'atualizar_produtos_segundos',
         'volume',
         'orientacao',
     ];
 
+    protected $casts = [
+        'web_config_payload' => 'array',
+    ];
+
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
-    }
-
-    public function template(): BelongsTo
-    {
-        return $this->belongsTo(Template::class);
     }
 }

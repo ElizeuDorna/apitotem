@@ -185,22 +185,6 @@ Route::middleware('auth')->group(function () {
             ->name('admin.devices.update')
             ->middleware('menu.access:gestao_tvs');
 
-        Route::resource('templates', \App\Http\Controllers\Admin\TemplateController::class, ['as' => 'admin'])
-            ->middleware('menu.access:editor_template')
-            ->except(['show']);
-        Route::post('templates/{template}/items', [\App\Http\Controllers\Admin\TemplateController::class, 'addItem'])
-            ->name('admin.templates.items.store')
-            ->middleware('menu.access:editor_template');
-        Route::delete('templates/{template}/items/{item}', [\App\Http\Controllers\Admin\TemplateController::class, 'deleteItem'])
-            ->name('admin.templates.items.destroy')
-            ->middleware('menu.access:editor_template');
-        Route::post('templates/{template}/apply-device', [\App\Http\Controllers\Admin\TemplateController::class, 'applyToDevice'])
-            ->name('admin.templates.apply-device')
-            ->middleware('menu.access:editor_template');
-        Route::post('templates/{template}/set-default-web', [\App\Http\Controllers\Admin\TemplateController::class, 'setDefaultWeb'])
-            ->name('admin.templates.set-default-web')
-            ->middleware('menu.access:editor_template');
-
         Route::get('ativar-tv', [\App\Http\Controllers\Admin\DeviceActivationController::class, 'index'])
             ->name('admin.activate-tv.index')
             ->middleware('menu.access:ativar_tv');

@@ -13,6 +13,15 @@
                         <div class="rounded-md bg-green-50 p-3 text-sm text-green-800 mb-4">{{ session('success') }}</div>
                     @endif
 
+                    @if ($errors->any())
+                        <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 mb-4 space-y-1">
+                            <p class="font-semibold">Nao foi possivel salvar a configuracao.</p>
+                            @foreach ($errors->all() as $errorMessage)
+                                <p>{{ $errorMessage }}</p>
+                            @endforeach
+                        </div>
+                    @endif
+
                     @if (session('embedWarnings'))
                         <div class="rounded-md bg-amber-50 p-3 text-sm text-amber-900 mb-4 border border-amber-200">
                             <p class="font-semibold mb-1">Aviso de incorporação de vídeo (YouTube)</p>
@@ -27,6 +36,8 @@
 
                     @php
                         $embedStatuses = session('embedStatuses', []);
+                        $hasSelectedModel = !empty($selectedModelId);
+                        $configMenusLocked = !$hasSelectedModel;
 
                         $savedPlaylist = collect($config->videoPlaylist ?? []);
                         if ($savedPlaylist->isEmpty()) {
@@ -59,6 +70,9 @@
                     <form id="webConfigForm" method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
                         <input type="hidden" id="saveSection" name="saveSection" value="">
+                        <input type="hidden" id="selectedDeviceId" name="selected_device_id" value="{{ old('selected_device_id', $selectedDeviceId ?? '') }}">
+                        <input type="hidden" id="selectedModelId" name="selected_model_id" value="{{ old('selected_model_id', $selectedModelId ?? '') }}">
+                        <input type="hidden" id="modelAction" name="model_action" value="">
                         <input type="hidden" id="suggestedSlideSelectionSubmitted" name="suggestedSlideSelectionSubmitted" value="0">
                         <input type="hidden" id="openCompanyGalleryTarget" name="openCompanyGalleryTarget" value="">
                         <input type="hidden" id="openRightSidebarImageScheduleUrl" name="openRightSidebarImageScheduleUrl" value="">
@@ -66,43 +80,99 @@
 
                         <div class="grid grid-cols-1 gap-4 items-start">
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="generalConfigSection">Configuração geral</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="colorConfigSection">Configuração de Cores</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="rightSidebarConfigSection">Configuração Tela Lateral Direita</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="videoConfigSection">Configuração de Vídeos lateral direita</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="companyGalleryConfigSection">Configuraçao de Slide</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="imageSizeConfigSection">Configuracao da lista produto</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="modelsSection">Modelos</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="generalConfigSection" @disabled($configMenusLocked)>Configuração geral</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="colorConfigSection" @disabled($configMenusLocked)>Configuração de Cores</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="rightSidebarConfigSection" @disabled($configMenusLocked)>Configuração Tela Lateral Direita</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="videoConfigSection" @disabled($configMenusLocked)>Configuração de Vídeos lateral direita</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="companyGalleryConfigSection" @disabled($configMenusLocked)>Configuraçao de Slide</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="imageSizeConfigSection" @disabled($configMenusLocked)>Configuracao da lista produto</button>
                             </aside>
 
                             <div id="configPanelsStorage" class="space-y-4 hidden">
+                        <div id="modelsSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Modelos</h3>
+                                @if ($selectedModel)
+                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Modelo ativo: {{ $selectedModel->nome }}</span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Seleção obrigatória</span>
+                                @endif
+                            </div>
+
+                            <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 space-y-3">
+                                <p class="text-sm font-semibold text-indigo-900">O modelo guarda o snapshot completo da configuração salva.</p>
+                                <p class="text-xs text-indigo-800">Você precisa escolher um modelo existente ou criar um novo antes de editar qualquer outro menu.</p>
+                                @if ($selectedDevice)
+                                    <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração atual do dispositivo {{ $selectedDevice->nome }}{{ $selectedDevice->local ? ' - ' . $selectedDevice->local : '' }}.</p>
+                                @else
+                                    <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração geral atual da empresa.</p>
+                                @endif
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="selectedModelConfigSelect">Editar modelo existente</label>
+                                    <select id="selectedModelConfigSelect" class="w-full border rounded px-3 py-2 bg-white" data-config-url="{{ route('admin.web-screen-config.edit') }}">
+                                        <option value="">Selecione um modelo</option>
+                                        @foreach($availableModels as $availableModel)
+                                            <option value="{{ $availableModel->id }}" @selected((string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id)>
+                                                {{ $availableModel->nome }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">A lista acima mostra somente os modelos da empresa selecionada.</p>
+                                    @error('selected_model_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="newModelName">Criar novo modelo</label>
+                                        <input type="text" id="newModelName" name="new_model_name" maxlength="120" value="{{ old('new_model_name') }}" class="w-full border rounded px-3 py-2" placeholder="Ex.: Modelo promocional manha">
+                                    </div>
+                                    <button type="button" id="createModelButton" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Criar modelo</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="generalConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Configuração geral</h3>
                                 <button type="button" data-save-section="generalConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
                             </div>
 
-                            <div class="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+                            <div class="rounded-md border border-sky-200 bg-sky-50 p-4 space-y-3">
                                 <div class="flex items-center justify-between gap-2">
-                                    <p class="text-sm font-semibold text-amber-900">Modo desenvolvimento (Templates TV)</p>
-                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $templateDevModeEnabled ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800' }}">
-                                        {{ $templateDevModeEnabled ? 'Templates desativados' : 'Templates ativos' }}
+                                    <p class="text-sm font-semibold text-sky-900">Dispositivo alvo da configuração</p>
+                                    <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                                        {{ $selectedDevice ? 'Configuracao por dispositivo' : 'Configuracao geral da empresa' }}
                                     </span>
                                 </div>
-                                <p class="text-xs text-amber-800">Quando ativado, a TV ignora templates e usa somente a configuração da empresa. Vale para todos os devices desta empresa.</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <button
-                                        type="submit"
-                                        name="toggleTemplateDevMode"
-                                        value="enable"
-                                        class="rounded-md border border-amber-600 bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
-                                    >Desativar templates (DEV)</button>
-                                    <button
-                                        type="submit"
-                                        name="toggleTemplateDevMode"
-                                        value="disable"
-                                        class="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-                                    >Reativar templates</button>
+                                <div>
+                                    <label class="block text-sm font-medium text-sky-900 mb-1" for="selectedDeviceConfigSelect">Escolha a TV desta empresa</label>
+                                    <select id="selectedDeviceConfigSelect" class="w-full border rounded px-3 py-2 bg-white" data-config-url="{{ route('admin.web-screen-config.edit') }}">
+                                        <option value="">Usar configuracao geral da empresa</option>
+                                        @foreach($availableDevices as $deviceOption)
+                                            <option value="{{ $deviceOption->id }}" @selected((string) old('selected_device_id', $selectedDeviceId ?? '') === (string) $deviceOption->id)>
+                                                {{ $deviceOption->nome }}{{ $deviceOption->local ? ' - ' . $deviceOption->local : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-1 text-xs text-sky-800">Ao selecionar uma TV, todos os menus desta página passam a carregar e salvar a configuração daquele dispositivo.</p>
+                                    @error('selected_device_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
+
+                                @if ($selectedDevice)
+                                    <div class="rounded-md border border-sky-200 bg-white p-3 space-y-1">
+                                        <p class="text-sm font-semibold text-sky-900">Configurando agora: {{ $selectedDevice->nome }}{{ $selectedDevice->local ? ' - ' . $selectedDevice->local : '' }}</p>
+                                        <p class="text-xs text-sky-800">As alteracoes feitas aqui serao aplicadas somente a este dispositivo.</p>
+                                    </div>
+                                @else
+                                    <div class="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1">
+                                        <p class="text-sm font-semibold text-amber-900">Nenhuma TV selecionada.</p>
+                                        <p class="text-xs text-amber-800">Neste caso, a tela continua editando a configuracao geral da empresa, usada como base para os dispositivos sem configuracao propria.</p>
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
@@ -119,20 +189,6 @@
                                     >
                                     <p class="text-xs text-gray-500 mt-1">Define de quanto em quanto tempo a tela consulta a API novamente.</p>
                                     @error('apiRefreshInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="default_web_template_id">Template padrão da Totem Web</label>
-                                    <select id="default_web_template_id" name="default_web_template_id" class="w-full border rounded px-3 py-2 bg-white">
-                                        <option value="">Nao usar template padrao</option>
-                                        @foreach($availableTemplates as $templateOption)
-                                            <option value="{{ $templateOption->id }}" @selected((string) old('default_web_template_id', $defaultWebTemplateId ?? '') === (string) $templateOption->id)>
-                                                {{ $templateOption->nome }} - {{ $templateOption->tipo_layout }}{{ !empty($templateOption->web_config_payload) ? ' - snapshot OK' : ' - sem snapshot' }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <p class="text-xs text-gray-500 mt-1">Ao salvar Configuração geral, este template passa a ser o padrão da empresa na tela web. O menu Templates refletirá a mesma seleção.</p>
-                                    @error('default_web_template_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
                                 <h4 class="text-sm font-semibold text-gray-800">Borda geral</h4>
@@ -584,13 +640,13 @@
                             <div id="gradientFields" class="rounded-md border border-gray-200 bg-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor inicial do degradê</label>
-                                    <input type="color" name="gradientStartColor" value="{{ old('gradientStartColor', $config->gradientStartColor ?? '#111827') }}" class="w-full h-10 border rounded">
+                                    <input type="color" name="gradientStartColor" value="{{ old('gradientStartColor') ?: ($config->gradientStartColor ?: '#111827') }}" class="w-full h-10 border rounded">
                                     @error('gradientStartColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cor final do degradê</label>
-                                    <input type="color" name="gradientEndColor" value="{{ old('gradientEndColor', $config->gradientEndColor ?? '#1f2937') }}" class="w-full h-10 border rounded">
+                                    <input type="color" name="gradientEndColor" value="{{ old('gradientEndColor') ?: ($config->gradientEndColor ?: '#1f2937') }}" class="w-full h-10 border rounded">
                                     @error('gradientEndColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
                             </div>
@@ -703,6 +759,11 @@
                                         <option value="mixed_with_images" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_images')>Misturar produtos + imagens</option>
                                         <option value="mixed_with_media" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_media')>Misturar produtos + imagens + videos</option>
                                     </select>
+                                    @if ($selectedDevice)
+                                        <p class="mt-1 text-xs text-sky-700">Configuracao por dispositivo ativa: ao salvar este menu, o efeito sera aplicado a {{ $selectedDevice->nome }}{{ $selectedDevice->local ? ' - ' . $selectedDevice->local : '' }}.</p>
+                                    @else
+                                        <p class="mt-1 text-xs text-amber-700">Nenhuma TV selecionada: este efeito sera salvo na configuracao geral da empresa e servira de base para dispositivos sem configuracao propria.</p>
+                                    @endif
                                     @error('rightSidebarProductTransitionMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
@@ -1071,6 +1132,7 @@
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Tipo de lista</h4>
+                                <input type="hidden" id="productListTypeHiddenSync" name="productListType" value="{{ old('productListType', $config->productListType ?? '1') }}">
                                 <label class="inline-flex items-center gap-2 mr-6">
                                     <input type="radio" id="productListType1" name="productListType" value="1" class="text-indigo-600 border-gray-300" @checked(old('productListType', $config->productListType ?? '1') === '1')>
                                     <span class="text-sm text-gray-700">1 lista</span>
@@ -1361,6 +1423,7 @@
         const configPanels = Array.from(document.querySelectorAll('.config-panel'));
         const productListType1 = document.getElementById('productListType1');
         const productListType2 = document.getElementById('productListType2');
+        const productListTypeHiddenSync = document.getElementById('productListTypeHiddenSync');
         const productListType2Label = document.getElementById('productListType2Label');
         const productListTypeWarning = document.getElementById('productListTypeWarning');
         const productListGroupAssignment = document.getElementById('productListGroupAssignment');
@@ -1368,6 +1431,12 @@
         const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
         const webConfigForm = document.getElementById('webConfigForm');
         const saveSectionInput = document.getElementById('saveSection');
+        const selectedDeviceIdInput = document.getElementById('selectedDeviceId');
+        const selectedModelIdInput = document.getElementById('selectedModelId');
+        const selectedDeviceConfigSelect = document.getElementById('selectedDeviceConfigSelect');
+        const selectedModelConfigSelect = document.getElementById('selectedModelConfigSelect');
+        const modelActionInput = document.getElementById('modelAction');
+        const createModelButton = document.getElementById('createModelButton');
         const suggestedSlideSelectionSubmittedInput = document.getElementById('suggestedSlideSelectionSubmitted');
         const openCompanyGalleryTargetInput = document.getElementById('openCompanyGalleryTarget');
         const openRightSidebarImageScheduleUrlInput = document.getElementById('openRightSidebarImageScheduleUrl');
@@ -1729,6 +1798,16 @@
             [...productListGroupLeftInputs, ...productListGroupRightInputs].forEach((input) => {
                 input.disabled = !canUseTwoLists;
             });
+
+            syncProductListSectionState();
+        }
+
+        function syncProductListSectionState() {
+            if (productListTypeHiddenSync instanceof HTMLInputElement) {
+                const selectedType = productListType2 instanceof HTMLInputElement && productListType2.checked ? '2' : '1';
+                productListTypeHiddenSync.value = selectedType;
+            }
+
         }
 
         function notifyProductListTypeBlocked() {
@@ -1737,6 +1816,20 @@
             }
 
             window.alert('Para usar 2 lista, desative antes "Ativar lateral direita completa" em Configuração Tela Lateral Direita.');
+        }
+
+        function applyTwoListMode() {
+            if (!(productListType2 instanceof HTMLInputElement)) {
+                return;
+            }
+
+            productListType2.checked = true;
+
+            if (showRightSidebarPanel instanceof HTMLInputElement) {
+                showRightSidebarPanel.checked = false;
+            }
+
+            updateProductListTypeAvailability();
         }
 
         function notifyRightSidebarBlockedByTwoList() {
@@ -1786,6 +1879,10 @@
             showRightSidebarPanel.addEventListener('change', updateProductListTypeAvailability);
         }
 
+        if (productListType1) {
+            productListType1.addEventListener('change', syncProductListSectionState);
+        }
+
         if (productListType2) {
             productListType2.addEventListener('change', updateProductListTypeAvailability);
 
@@ -1796,10 +1893,7 @@
                 }
 
                 event.preventDefault();
-                if (productListType1) {
-                    productListType1.checked = true;
-                }
-                notifyProductListTypeBlocked();
+                applyTwoListMode();
             });
         }
 
@@ -1811,14 +1905,12 @@
                 }
 
                 event.preventDefault();
-                if (productListType1) {
-                    productListType1.checked = true;
-                }
-                notifyProductListTypeBlocked();
+                applyTwoListMode();
             });
         }
 
         updateProductListTypeAvailability();
+        syncProductListSectionState();
 
         function updateRightSidebarMediaConfigState() {
             if (!rightSidebarImageConfig) return;
@@ -3749,6 +3841,11 @@
                 return;
             }
 
+            if (selectedModelIdInput instanceof HTMLInputElement && String(selectedModelIdInput.value || '').trim() === '') {
+                openConfigPanel('modelsSection');
+                return;
+            }
+
             const sectionPanel = document.getElementById(sectionId);
             if (!sectionPanel) {
                 return;
@@ -3761,11 +3858,14 @@
             formControls.forEach((control) => {
                 const isToken = control instanceof HTMLInputElement && control.name === '_token';
                 const isSaveSection = control === saveSectionInput;
+                const isSelectedDeviceId = control === selectedDeviceIdInput;
+                const isSelectedModelId = control === selectedModelIdInput;
+                const isModelAction = control === modelActionInput;
                 const isSuggestedSlideSelectionSubmitted = control === suggestedSlideSelectionSubmittedInput;
                 const isOpenCompanyGalleryTarget = control === openCompanyGalleryTargetInput;
                 const isOpenRightSidebarImageScheduleUrl = control === openRightSidebarImageScheduleUrlInput;
                 const isForceClearRightSidebarSlides = control === forceClearRightSidebarSlidesInput;
-                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
+                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSelectedDeviceId || isSelectedModelId || isModelAction || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
 
                 controlsState.push({ control, disabled: control.disabled });
                 if (!shouldKeep) {
@@ -3774,6 +3874,9 @@
             });
 
             saveSectionInput.value = sectionId;
+            if (modelActionInput instanceof HTMLInputElement) {
+                modelActionInput.value = '';
+            }
 
             if (openCompanyGalleryTargetInput) {
                 if (sectionId === 'companyGalleryConfigSection' || sectionId === 'fullScreenSlideConfig') {
@@ -3821,7 +3924,8 @@
 
         const requestedInitialPanel = @json(session('openConfigSection'));
         const requestedCompanyGalleryTarget = @json(session('openCompanyGalleryTarget'));
-        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null);
+        const hasSelectedModel = @json($hasSelectedModel);
+        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null) || (!hasSelectedModel ? 'modelsSection' : null);
         const initialTopLevelTarget = initialTarget === 'fullScreenSlideConfig'
             ? 'companyGalleryConfigSection'
             : initialTarget;
@@ -3844,6 +3948,65 @@
                     renderRightSidebarImageScheduleEditor();
                 }
             }
+        }
+
+        if (selectedDeviceConfigSelect instanceof HTMLSelectElement) {
+            selectedDeviceConfigSelect.addEventListener('change', () => {
+                const nextDeviceId = String(selectedDeviceConfigSelect.value || '').trim();
+                if (selectedDeviceIdInput instanceof HTMLInputElement) {
+                    selectedDeviceIdInput.value = nextDeviceId;
+                }
+
+                const baseUrl = String(selectedDeviceConfigSelect.getAttribute('data-config-url') || window.location.pathname);
+                const nextUrl = new URL(baseUrl, window.location.origin);
+                if (nextDeviceId !== '') {
+                    nextUrl.searchParams.set('device_id', nextDeviceId);
+                }
+
+                if (selectedModelIdInput instanceof HTMLInputElement) {
+                    const nextModelId = String(selectedModelIdInput.value || '').trim();
+                    if (nextModelId !== '') {
+                        nextUrl.searchParams.set('model_id', nextModelId);
+                    }
+                }
+
+                window.location.href = nextUrl.toString();
+            });
+        }
+
+        if (selectedModelConfigSelect instanceof HTMLSelectElement) {
+            selectedModelConfigSelect.addEventListener('change', () => {
+                const nextModelId = String(selectedModelConfigSelect.value || '').trim();
+                if (selectedModelIdInput instanceof HTMLInputElement) {
+                    selectedModelIdInput.value = nextModelId;
+                }
+
+                const baseUrl = String(selectedModelConfigSelect.getAttribute('data-config-url') || window.location.pathname);
+                const nextUrl = new URL(baseUrl, window.location.origin);
+                const nextDeviceId = selectedDeviceIdInput instanceof HTMLInputElement ? String(selectedDeviceIdInput.value || '').trim() : '';
+                if (nextDeviceId !== '') {
+                    nextUrl.searchParams.set('device_id', nextDeviceId);
+                }
+                if (nextModelId !== '') {
+                    nextUrl.searchParams.set('model_id', nextModelId);
+                }
+
+                window.location.href = nextUrl.toString();
+            });
+        }
+
+        if (createModelButton instanceof HTMLButtonElement && webConfigForm instanceof HTMLFormElement) {
+            createModelButton.addEventListener('click', () => {
+                if (saveSectionInput instanceof HTMLInputElement) {
+                    saveSectionInput.value = '';
+                }
+
+                if (modelActionInput instanceof HTMLInputElement) {
+                    modelActionInput.value = 'create';
+                }
+
+                webConfigForm.requestSubmit();
+            });
         }
     </script>
 </x-app-layout>

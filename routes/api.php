@@ -33,9 +33,9 @@ Route::get('/', function () {
             'POST /api/tv/activation-code' => 'Gerar código de ativação para TV',
             'POST /api/tv/check-activation' => 'Consultar status de ativação da TV',
             'POST /api/tv/heartbeat' => 'Atualizar atividade do dispositivo',
-            'GET /api/tv/bootstrap' => 'Carregar configuração/template da TV',
+            'GET /api/tv/bootstrap' => 'Carregar bootstrap e configuração efetiva da TV',
             'GET /api/tv/produtos' => 'Listar produtos por token de dispositivo',
-            'GET /api/tv/midias' => 'Listar mídias do template da TV',
+            'GET /api/tv/midias' => 'Listar mídias auxiliares da TV',
             'GET /api/tv/ofertas' => 'Listar ofertas por token de dispositivo',
         ]
     ]);
