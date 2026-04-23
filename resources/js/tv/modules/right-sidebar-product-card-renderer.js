@@ -12,6 +12,8 @@ export function createRightSidebarProductCardRendererModule(deps) {
         const showImage = deps.toBoolean(deps.visualConfig.rightSidebarProductShowImage, true);
         const namePosition = String(deps.visualConfig.rightSidebarProductNamePosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
         const pricePosition = String(deps.visualConfig.rightSidebarProductPricePosition || 'bottom').toLowerCase() === 'top' ? 'top' : 'bottom';
+        const configuredImageWidth = Math.max(0, Math.min(1000, Number(deps.visualConfig.rightSidebarProductImageWidth || 0) || 0));
+        const configuredImageHeight = Math.max(0, Math.min(1000, Number(deps.visualConfig.rightSidebarProductImageHeight || 0) || 0));
 
         const nome = String(item?.nome || 'Produto').trim() || 'Produto';
         const precoNormal = Number(item?.preco || 0);
@@ -42,9 +44,18 @@ export function createRightSidebarProductCardRendererModule(deps) {
         const imagemFallbackCandidates = deps.buildImageFallbackCandidates(imagem, imagemSrc);
         const imagemFallbackPrimary = String(imagemFallbackCandidates[0] || '');
         const imagemFallbackSecondary = String(imagemFallbackCandidates[1] || '');
+        const imageStyle = [
+            'object-fit:contain',
+            'border-radius:8px',
+            configuredImageWidth > 0 ? `width:${configuredImageWidth}px` : 'width:auto',
+            configuredImageHeight > 0 ? `height:${configuredImageHeight}px` : 'height:auto',
+            configuredImageWidth > 0 ? `max-width:${configuredImageWidth}px` : 'max-width:100%',
+            configuredImageHeight > 0 ? `max-height:${configuredImageHeight}px` : 'max-height:100%',
+        ].join(';');
+        const imageWrapMinHeight = configuredImageHeight > 0 ? Math.max(96, configuredImageHeight) : 96;
 
         const imageBlock = showImage && imagem !== ''
-            ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:96px;"><img src="${deps.escapeHtmlAttribute(imagemSrc || imagem)}" data-fallback-src="${deps.escapeHtmlAttribute(imagemFallbackPrimary)}" data-fallback-src-2="${deps.escapeHtmlAttribute(imagemFallbackSecondary)}" alt="${deps.escapeHtmlAttribute(nome)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" loading="lazy" onerror="if(this.dataset.fallbackSrc&&this.dataset.fallbackTried!=='1'){this.dataset.fallbackTried='1';this.src=this.dataset.fallbackSrc;return;}if(this.dataset.fallbackSrc2&&this.dataset.fallbackTried2!=='1'){this.dataset.fallbackTried2='1';this.src=this.dataset.fallbackSrc2;return;}this.style.display='none'"/></div>`
+            ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:${imageWrapMinHeight}px;"><img src="${deps.escapeHtmlAttribute(imagemSrc || imagem)}" data-fallback-src="${deps.escapeHtmlAttribute(imagemFallbackPrimary)}" data-fallback-src-2="${deps.escapeHtmlAttribute(imagemFallbackSecondary)}" alt="${deps.escapeHtmlAttribute(nome)}" style="${imageStyle}" loading="lazy" onerror="if(this.dataset.fallbackSrc&&this.dataset.fallbackTried!=='1'){this.dataset.fallbackTried='1';this.src=this.dataset.fallbackSrc;return;}if(this.dataset.fallbackSrc2&&this.dataset.fallbackTried2!=='1'){this.dataset.fallbackTried2='1';this.src=this.dataset.fallbackSrc2;return;}this.style.display='none'"/></div>`
             : '<div style="flex:1"></div>';
 
         const topBlock = namePosition === 'top' ? nameBlock : (pricePosition === 'top' ? priceBlock : '');

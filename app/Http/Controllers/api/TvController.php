@@ -655,6 +655,8 @@ class TvController extends Controller
                 'rightSidebarPlaybackSequence' => (string) ($config->rightSidebarPlaybackSequence ?? 'products,image,video'),
                 'rightSidebarProductInterval' => (int) ($config->rightSidebarProductInterval ?? 8),
                 'rightSidebarProductShowImage' => (bool) ($config->rightSidebarProductShowImage ?? true),
+                'rightSidebarProductImageWidth' => (int) ($config->rightSidebarProductImageWidth ?? 0),
+                'rightSidebarProductImageHeight' => (int) ($config->rightSidebarProductImageHeight ?? 0),
                 'rightSidebarProductShowName' => (bool) ($config->rightSidebarProductShowName ?? true),
                 'rightSidebarProductShowPrice' => (bool) ($config->rightSidebarProductShowPrice ?? true),
                 'rightSidebarProductNamePosition' => (string) ($config->rightSidebarProductNamePosition ?? 'top'),
@@ -706,6 +708,16 @@ class TvController extends Controller
                 'groupLabelColor' => (string) ($config->groupLabelColor ?? '#cbd5e1'),
                 'showGroupLabelBadge' => (bool) ($config->showGroupLabelBadge ?? false),
                 'groupLabelBadgeColor' => (string) ($config->groupLabelBadgeColor ?? '#0f172a'),
+                'offerSlideEnabled' => (bool) ($config->offerSlideEnabled ?? false),
+                'offerSlideIntervalSeconds' => (int) ($config->offerSlideIntervalSeconds ?? 300),
+                'offerSlideDescriptionFontFamily' => (string) ($config->offerSlideDescriptionFontFamily ?? 'arial'),
+                'offerSlideDescriptionFontSize' => (int) ($config->offerSlideDescriptionFontSize ?? 42),
+                'offerSlideDescriptionColor' => (string) ($config->offerSlideDescriptionColor ?? '#FFFFFF'),
+                'offerSlideDescriptionPosition' => (string) ($config->offerSlideDescriptionPosition ?? 'top'),
+                'offerSlidePriceFontFamily' => (string) ($config->offerSlidePriceFontFamily ?? 'arial'),
+                'offerSlidePriceFontSize' => (int) ($config->offerSlidePriceFontSize ?? 72),
+                'offerSlidePriceColor' => (string) ($config->offerSlidePriceColor ?? '#FDE68A'),
+                'offerSlidePricePosition' => (string) ($config->offerSlidePricePosition ?? 'bottom'),
                 'isPaginationEnabled' => (bool) $config->isPaginationEnabled,
                 'pageSize' => (int) ($config->pageSize ?? 10),
                 'paginationInterval' => (int) ($config->paginationInterval ?? 5),
@@ -961,7 +973,11 @@ class TvController extends Controller
         ], []);
 
         $configuration ??= $this->resolveDeviceConfiguration((int) $device->id);
-        $payload = $configuration->web_config_payload;
+        $payload = $configuration->webScreenModel?->config_payload;
+
+        if (! is_array($payload) || empty($payload)) {
+            $payload = $configuration->web_config_payload;
+        }
 
         if (! is_array($payload) || empty($payload)) {
             return $companyConfig;

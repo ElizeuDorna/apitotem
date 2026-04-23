@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\DeviceActivation;
+use App\Models\DeviceConfiguration;
 use App\Models\Empresa;
+use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use OpenApi\Attributes as OA;
 
@@ -38,7 +41,7 @@ class DeviceActivationController extends Controller
             : null;
 
         $devicesQuery = Device::query()
-            ->with('empresa')
+            ->with(['empresa', 'configuration'])
             ->orderByDesc('id');
 
         if ($user->isDefaultAdmin()) {
@@ -65,6 +68,24 @@ class DeviceActivationController extends Controller
             ->paginate(15, ['*'], 'devices_page')
             ->appends(['show_all_devices' => $showAllDevices ? '1' : '0']);
 
+        $visibleEmpresaIds = $devices->getCollection()
+            ->pluck('empresa_id')
+            ->filter()
+            ->map(fn ($empresaId) => (int) $empresaId)
+            ->unique()
+            ->values()
+            ->all();
+
+        $modelsByEmpresa = WebScreenModel::query()
+            ->whereIn('empresa_id', $visibleEmpresaIds)
+            ->orderBy('nome')
+            ->get(['id', 'empresa_id', 'nome'])
+            ->groupBy('empresa_id');
+
+        $activationEmpresa = (! $user->isDefaultAdmin() || $empresaIdAtiva)
+            ? $this->resolveEmpresa($user)
+            : null;
+
         return view('admin.activate-tv', [
             'isDefaultAdmin' => $user->isDefaultAdmin(),
             'canShowAllDevices' => $canShowAllDevices,
@@ -74,6 +95,13 @@ class DeviceActivationController extends Controller
             'empresaAtiva' => $empresaAtiva,
             'empresaVinculada' => $empresaVinculada,
             'activatedToken' => session('activated_token'),
+            'activationModels' => $activationEmpresa
+                ? WebScreenModel::query()
+                    ->where('empresa_id', $activationEmpresa->id)
+                    ->orderBy('nome')
+                    ->get(['id', 'nome'])
+                : collect(),
+            'modelsByEmpresa' => $modelsByEmpresa,
             'devices' => $devices,
         ]);
     }
@@ -104,9 +132,11 @@ class DeviceActivationController extends Controller
             'code' => ['required', 'alpha_num', 'size:10'],
             'nome_tv' => ['required', 'string', 'max:120'],
             'local' => ['nullable', 'string', 'max:120'],
+            'web_screen_model_id' => ['nullable', 'integer'],
         ]);
 
         $empresa = $this->resolveEmpresa($user);
+        $webScreenModelId = $this->resolveModelIdForEmpresa((int) $empresa->id, $validated['web_screen_model_id'] ?? null);
         $activationCode = strtoupper((string) $validated['code']);
 
         $activation = DeviceActivation::query()
@@ -141,6 +171,19 @@ class DeviceActivationController extends Controller
         $device->last_seen_at = now();
         $device->save();
 
+        $existingConfiguration = $device->configuration;
+
+        DeviceConfiguration::query()->updateOrCreate(
+            ['device_id' => $device->id],
+            [
+                'web_screen_model_id' => $webScreenModelId,
+                'web_config_payload' => $existingConfiguration?->web_config_payload,
+                'atualizar_produtos_segundos' => $existingConfiguration?->atualizar_produtos_segundos ?? 30,
+                'volume' => $existingConfiguration?->volume ?? 50,
+                'orientacao' => $existingConfiguration?->orientacao ?? 'landscape',
+            ]
+        );
+
         $activation->activated = true;
         $activation->device_id = $device->id;
         $activation->save();
@@ -162,9 +205,11 @@ class DeviceActivationController extends Controller
             'nome' => ['required', 'string', 'max:120'],
             'local' => ['nullable', 'string', 'max:120'],
             'ativo' => ['nullable', 'boolean'],
+            'web_screen_model_id' => ['nullable', 'integer'],
         ]);
 
         $empresaId = EmpresaContext::requireEmpresaId($user);
+        $webScreenModelId = $this->resolveModelIdForEmpresa((int) $device->empresa_id, $validated['web_screen_model_id'] ?? null);
 
         $device->update([
             'nome' => $validated['nome'],
@@ -172,6 +217,19 @@ class DeviceActivationController extends Controller
             'ativo' => (bool) ($validated['ativo'] ?? false),
             'empresa_id' => $empresaId,
         ]);
+
+        $existingConfiguration = $device->configuration;
+
+        DeviceConfiguration::query()->updateOrCreate(
+            ['device_id' => $device->id],
+            [
+                'web_screen_model_id' => $webScreenModelId,
+                'web_config_payload' => $existingConfiguration?->web_config_payload,
+                'atualizar_produtos_segundos' => $existingConfiguration?->atualizar_produtos_segundos ?? 30,
+                'volume' => $existingConfiguration?->volume ?? 50,
+                'orientacao' => $existingConfiguration?->orientacao ?? 'landscape',
+            ]
+        );
 
         return redirect()
             ->route('admin.activate-tv.index', ['devices_page' => $request->input('devices_page')])
@@ -269,5 +327,26 @@ class DeviceActivationController extends Controller
         }
 
         return 'Código inválido, expirado ou já utilizado.';
+    }
+
+    private function resolveModelIdForEmpresa(int $empresaId, mixed $modelId): ?int
+    {
+        $normalizedModelId = (int) $modelId;
+        if ($normalizedModelId <= 0) {
+            return null;
+        }
+
+        $exists = WebScreenModel::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id', $normalizedModelId)
+            ->exists();
+
+        if (! $exists) {
+            throw ValidationException::withMessages([
+                'web_screen_model_id' => 'Modelo inválido para a empresa selecionada.',
+            ]);
+        }
+
+        return $normalizedModelId;
     }
 }

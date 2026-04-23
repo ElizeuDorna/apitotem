@@ -38,6 +38,7 @@
                         $embedStatuses = session('embedStatuses', []);
                         $hasSelectedModel = !empty($selectedModelId);
                         $configMenusLocked = !$hasSelectedModel;
+                        $selectedModelHasSavedConfig = $selectedModel && is_array($selectedModel->config_payload ?? null) && !empty($selectedModel->config_payload ?? []);
 
                         $savedPlaylist = collect($config->videoPlaylist ?? []);
                         if ($savedPlaylist->isEmpty()) {
@@ -70,7 +71,6 @@
                     <form id="webConfigForm" method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
                         <input type="hidden" id="saveSection" name="saveSection" value="">
-                        <input type="hidden" id="selectedDeviceId" name="selected_device_id" value="{{ old('selected_device_id', $selectedDeviceId ?? '') }}">
                         <input type="hidden" id="selectedModelId" name="selected_model_id" value="{{ old('selected_model_id', $selectedModelId ?? '') }}">
                         <input type="hidden" id="modelAction" name="model_action" value="">
                         <input type="hidden" id="suggestedSlideSelectionSubmitted" name="suggestedSlideSelectionSubmitted" value="0">
@@ -87,6 +87,7 @@
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="videoConfigSection" @disabled($configMenusLocked)>Configuração de Vídeos lateral direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="companyGalleryConfigSection" @disabled($configMenusLocked)>Configuraçao de Slide</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="imageSizeConfigSection" @disabled($configMenusLocked)>Configuracao da lista produto</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="offerSlideConfigSection" @disabled($configMenusLocked)>Slide de oferta</button>
                             </aside>
 
                             <div id="configPanelsStorage" class="space-y-4 hidden">
@@ -103,10 +104,16 @@
                             <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 space-y-3">
                                 <p class="text-sm font-semibold text-indigo-900">O modelo guarda o snapshot completo da configuração salva.</p>
                                 <p class="text-xs text-indigo-800">Você precisa escolher um modelo existente ou criar um novo antes de editar qualquer outro menu.</p>
-                                @if ($selectedDevice)
-                                    <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração atual do dispositivo {{ $selectedDevice->nome }}{{ $selectedDevice->local ? ' - ' . $selectedDevice->local : '' }}.</p>
-                                @else
-                                    <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração geral atual da empresa.</p>
+                                <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração atual da empresa.</p>
+                                @if ($selectedModel)
+                                    <div class="rounded-md border {{ $selectedModelHasSavedConfig ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-3 space-y-1">
+                                        <p class="text-sm font-semibold {{ $selectedModelHasSavedConfig ? 'text-emerald-900' : 'text-amber-900' }}">
+                                            {{ $selectedModelHasSavedConfig ? 'Configuracoes do modelo carregadas na tela.' : 'Este modelo ainda nao tem configuracoes salvas.' }}
+                                        </p>
+                                        <p class="text-xs {{ $selectedModelHasSavedConfig ? 'text-emerald-800' : 'text-amber-800' }}">
+                                            {{ $selectedModelHasSavedConfig ? 'Os menus abaixo ja estao preenchidos com o que foi salvo neste modelo.' : 'Ao salvar os menus, este modelo passara a guardar a configuracao editada.' }}
+                                        </p>
+                                    </div>
                                 @endif
                             </div>
 
@@ -143,36 +150,12 @@
 
                             <div class="rounded-md border border-sky-200 bg-sky-50 p-4 space-y-3">
                                 <div class="flex items-center justify-between gap-2">
-                                    <p class="text-sm font-semibold text-sky-900">Dispositivo alvo da configuração</p>
-                                    <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
-                                        {{ $selectedDevice ? 'Configuracao por dispositivo' : 'Configuracao geral da empresa' }}
-                                    </span>
+                                    <p class="text-sm font-semibold text-sky-900">Como aplicar em dispositivos</p>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-sky-900 mb-1" for="selectedDeviceConfigSelect">Escolha a TV desta empresa</label>
-                                    <select id="selectedDeviceConfigSelect" class="w-full border rounded px-3 py-2 bg-white" data-config-url="{{ route('admin.web-screen-config.edit') }}">
-                                        <option value="">Usar configuracao geral da empresa</option>
-                                        @foreach($availableDevices as $deviceOption)
-                                            <option value="{{ $deviceOption->id }}" @selected((string) old('selected_device_id', $selectedDeviceId ?? '') === (string) $deviceOption->id)>
-                                                {{ $deviceOption->nome }}{{ $deviceOption->local ? ' - ' . $deviceOption->local : '' }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <p class="mt-1 text-xs text-sky-800">Ao selecionar uma TV, todos os menus desta página passam a carregar e salvar a configuração daquele dispositivo.</p>
-                                    @error('selected_device_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <div class="rounded-md border border-sky-200 bg-white p-3 space-y-1">
+                                    <p class="text-sm font-semibold text-sky-900">A seleção do modelo por dispositivo agora fica em Ativar TV.</p>
+                                    <p class="text-xs text-sky-800">Nesta tela você edita o modelo. Depois, em Ativar TV, escolha qual modelo cada dispositivo vai usar.</p>
                                 </div>
-
-                                @if ($selectedDevice)
-                                    <div class="rounded-md border border-sky-200 bg-white p-3 space-y-1">
-                                        <p class="text-sm font-semibold text-sky-900">Configurando agora: {{ $selectedDevice->nome }}{{ $selectedDevice->local ? ' - ' . $selectedDevice->local : '' }}</p>
-                                        <p class="text-xs text-sky-800">As alteracoes feitas aqui serao aplicadas somente a este dispositivo.</p>
-                                    </div>
-                                @else
-                                    <div class="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1">
-                                        <p class="text-sm font-semibold text-amber-900">Nenhuma TV selecionada.</p>
-                                        <p class="text-xs text-amber-800">Neste caso, a tela continua editando a configuracao geral da empresa, usada como base para os dispositivos sem configuracao propria.</p>
-                                    </div>
-                                @endif
                             </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
@@ -733,7 +716,10 @@
                                     <input type="checkbox" id="rightSidebarProductCarouselEnabled" name="rightSidebarProductCarouselEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductCarouselEnabled', $config->rightSidebarProductCarouselEnabled ?? false))>
                                     <span class="text-sm text-gray-700">Ativar carrossel de produtos na lateral direita</span>
                                 </label>
+                                <p class="mt-1 text-xs text-amber-700">Quando o carrossel estiver ativo em <strong>Somente produtos</strong>, o slide de imagens da lateral nao aparece e os campos de altura/largura da imagem nao terao efeito visual.</p>
+                                <p id="rightSidebarProductCarouselVisualHint" class="hidden mt-1 text-xs text-slate-500">Bloco visualmente reduzido enquanto o carrossel estiver desligado.</p>
 
+                                <div id="rightSidebarProductCarouselVisualBlock" class="space-y-4">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Quais produtos mostrar</label>
@@ -759,11 +745,7 @@
                                         <option value="mixed_with_images" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_images')>Misturar produtos + imagens</option>
                                         <option value="mixed_with_media" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_media')>Misturar produtos + imagens + videos</option>
                                     </select>
-                                    @if ($selectedDevice)
-                                        <p class="mt-1 text-xs text-sky-700">Configuracao por dispositivo ativa: ao salvar este menu, o efeito sera aplicado a {{ $selectedDevice->nome }}{{ $selectedDevice->local ? ' - ' . $selectedDevice->local : '' }}.</p>
-                                    @else
-                                        <p class="mt-1 text-xs text-amber-700">Nenhuma TV selecionada: este efeito sera salvo na configuracao geral da empresa e servira de base para dispositivos sem configuracao propria.</p>
-                                    @endif
+                                    <p class="mt-1 text-xs text-sky-700">Salve este menu no modelo atual e vincule o dispositivo desejado em Ativar TV.</p>
                                     @error('rightSidebarProductTransitionMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
@@ -797,6 +779,20 @@
                                         <input type="checkbox" name="rightSidebarProductShowPrice" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductShowPrice', $config->rightSidebarProductShowPrice ?? true))>
                                         <span class="text-sm text-gray-700">Mostrar preço</span>
                                     </label>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem do produto (px)</label>
+                                        <input type="number" name="rightSidebarProductImageWidth" min="0" max="1000" value="{{ old('rightSidebarProductImageWidth', $config->rightSidebarProductImageWidth ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarProductImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Altura da imagem do produto (px)</label>
+                                        <input type="number" name="rightSidebarProductImageHeight" min="0" max="1000" value="{{ old('rightSidebarProductImageHeight', $config->rightSidebarProductImageHeight ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                        @error('rightSidebarProductImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <p class="text-xs text-gray-500 mt-1">Use 0 para automatico. Se preencher so um campo, a outra medida fica automatica para preservar a proporcao.</p>
+                                    </div>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -851,6 +847,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -868,7 +865,8 @@
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da imagem do slide (TV)</label>
-                                        <p class="text-xs text-gray-600">Define o redimensionamento da imagem exibida no retangulo lateral direito da tela <code>/tv/totemweb</code>.</p>
+                                        <p class="text-xs text-gray-600">Define o redimensionamento da imagem exibida no retangulo lateral direito da tela <code>/tv/totemweb</code>. Se informar apenas altura ou apenas largura, a outra medida fica automatica para preservar a proporcao.</p>
+                                        <p class="text-xs text-amber-700 mt-1">Este ajuste so aparece quando a lateral estiver mostrando <strong>slide de imagens</strong>. Se o carrossel estiver em <strong>Somente produtos</strong>, a imagem nao sera exibida.</p>
 
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                             <div>
@@ -880,7 +878,7 @@
                                                 <label class="block text-sm font-medium text-gray-700 mb-1">Largura (px)</label>
                                                 <input type="number" id="rightSidebarImageWidth" name="rightSidebarImageWidth" min="0" max="1000" value="{{ old('rightSidebarImageWidth', $config->rightSidebarImageWidth ?? 0) }}" class="w-full border rounded px-3 py-2">
                                                 @error('rightSidebarImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                                <p class="text-xs text-gray-500 mt-1">Use 0 para altura/largura automatica.</p>
+                                                <p class="text-xs text-gray-500 mt-1">Use 0 para altura/largura automatica. Para preencher mais a area, ajuste tambem o campo de encaixe da imagem logo abaixo.</p>
                                             </div>
                                         </div>
 
@@ -1352,6 +1350,109 @@
                                 </div>
                             </div>
                         </div>
+                        <div id="offerSlideConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Slide de oferta</h3>
+                                <button type="button" data-save-section="offerSlideConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
+
+                            <div class="rounded-md border border-gray-200 bg-white p-4 space-y-4">
+                                <p class="text-sm text-gray-600">Tela cheia independente dos outros slides. Mostra apenas produtos com valor maior que zero no campo de oferta.</p>
+
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="hidden" name="offerSlideEnabled" value="0">
+                                    <input type="checkbox" name="offerSlideEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideEnabled', $config->offerSlideEnabled ?? false))>
+                                    <span class="text-sm text-gray-700">Ativar slide de oferta</span>
+                                </label>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Entrar a cada quantos segundos</label>
+                                    <input type="number" name="offerSlideIntervalSeconds" min="30" max="86400" value="{{ old('offerSlideIntervalSeconds', $config->offerSlideIntervalSeconds ?? 300) }}" class="w-full border rounded px-3 py-2">
+                                    <p class="text-xs text-gray-500 mt-1">Define o intervalo do slide de oferta. Ele roda separado dos outros slides e usa somente os produtos com oferta ativa.</p>
+                                    @error('offerSlideIntervalSeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-800">Descrição</h4>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Fonte da descrição</label>
+                                        <select name="offerSlideDescriptionFontFamily" class="w-full border rounded px-3 py-2">
+                                            <option value="arial" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                            <option value="verdana" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                            <option value="tahoma" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                            <option value="trebuchet" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                            <option value="georgia" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                            <option value="courier" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                            <option value="system" @selected(old('offerSlideDescriptionFontFamily', $config->offerSlideDescriptionFontFamily ?? 'arial') === 'system')>System UI</option>
+                                        </select>
+                                        @error('offerSlideDescriptionFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da descrição (px)</label>
+                                        <input type="number" name="offerSlideDescriptionFontSize" min="10" max="160" value="{{ old('offerSlideDescriptionFontSize', $config->offerSlideDescriptionFontSize ?? 42) }}" class="w-full border rounded px-3 py-2">
+                                        @error('offerSlideDescriptionFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cor da descrição</label>
+                                        <input type="color" name="offerSlideDescriptionColor" value="{{ old('offerSlideDescriptionColor', $config->offerSlideDescriptionColor ?? '#FFFFFF') }}" class="w-full h-10 border rounded">
+                                        @error('offerSlideDescriptionColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Posição da descrição</label>
+                                        <select name="offerSlideDescriptionPosition" class="w-full border rounded px-3 py-2">
+                                            <option value="top" @selected(old('offerSlideDescriptionPosition', $config->offerSlideDescriptionPosition ?? 'top') === 'top')>Acima</option>
+                                            <option value="bottom" @selected(old('offerSlideDescriptionPosition', $config->offerSlideDescriptionPosition ?? 'top') === 'bottom')>Abaixo</option>
+                                        </select>
+                                        @error('offerSlideDescriptionPosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-800">Valor da oferta</h4>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Fonte do valor</label>
+                                        <select name="offerSlidePriceFontFamily" class="w-full border rounded px-3 py-2">
+                                            <option value="arial" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                            <option value="verdana" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                            <option value="tahoma" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                            <option value="trebuchet" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                            <option value="georgia" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                            <option value="courier" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                            <option value="system" @selected(old('offerSlidePriceFontFamily', $config->offerSlidePriceFontFamily ?? 'arial') === 'system')>System UI</option>
+                                        </select>
+                                        @error('offerSlidePriceFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho do valor (px)</label>
+                                        <input type="number" name="offerSlidePriceFontSize" min="10" max="200" value="{{ old('offerSlidePriceFontSize', $config->offerSlidePriceFontSize ?? 72) }}" class="w-full border rounded px-3 py-2">
+                                        @error('offerSlidePriceFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cor do valor</label>
+                                        <input type="color" name="offerSlidePriceColor" value="{{ old('offerSlidePriceColor', $config->offerSlidePriceColor ?? '#FDE68A') }}" class="w-full h-10 border rounded">
+                                        @error('offerSlidePriceColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Posição do valor</label>
+                                        <select name="offerSlidePricePosition" class="w-full border rounded px-3 py-2">
+                                            <option value="bottom" @selected(old('offerSlidePricePosition', $config->offerSlidePricePosition ?? 'bottom') === 'bottom')>Abaixo</option>
+                                            <option value="top" @selected(old('offerSlidePricePosition', $config->offerSlidePricePosition ?? 'bottom') === 'top')>Acima</option>
+                                        </select>
+                                        @error('offerSlidePricePosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                             </div>
                         </div>
 
@@ -1408,6 +1509,8 @@
         const rightSidebarMediaTypeGroup = document.getElementById('rightSidebarMediaTypeGroup');
         const rightSidebarMediaTypeDisabledHint = document.getElementById('rightSidebarMediaTypeDisabledHint');
         const rightSidebarProductCarouselEnabled = document.getElementById('rightSidebarProductCarouselEnabled');
+        const rightSidebarProductCarouselVisualBlock = document.getElementById('rightSidebarProductCarouselVisualBlock');
+        const rightSidebarProductCarouselVisualHint = document.getElementById('rightSidebarProductCarouselVisualHint');
         const rightSidebarHybridConfig = document.getElementById('rightSidebarHybridConfig');
         const rightSidebarImageConfig = document.getElementById('rightSidebarImageConfig');
         const rightSidebarImageUrls = document.getElementById('rightSidebarImageUrls');
@@ -1431,9 +1534,7 @@
         const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
         const webConfigForm = document.getElementById('webConfigForm');
         const saveSectionInput = document.getElementById('saveSection');
-        const selectedDeviceIdInput = document.getElementById('selectedDeviceId');
         const selectedModelIdInput = document.getElementById('selectedModelId');
-        const selectedDeviceConfigSelect = document.getElementById('selectedDeviceConfigSelect');
         const selectedModelConfigSelect = document.getElementById('selectedModelConfigSelect');
         const modelActionInput = document.getElementById('modelAction');
         const createModelButton = document.getElementById('createModelButton');
@@ -1940,6 +2041,14 @@
 
             if (rightSidebarMediaTypeDisabledHint) {
                 rightSidebarMediaTypeDisabledHint.classList.toggle('hidden', !carouselEnabled);
+            }
+
+            if (rightSidebarProductCarouselVisualBlock) {
+                rightSidebarProductCarouselVisualBlock.style.opacity = carouselEnabled ? '1' : '0.5';
+            }
+
+            if (rightSidebarProductCarouselVisualHint) {
+                rightSidebarProductCarouselVisualHint.classList.toggle('hidden', carouselEnabled);
             }
         }
 
@@ -3858,14 +3967,13 @@
             formControls.forEach((control) => {
                 const isToken = control instanceof HTMLInputElement && control.name === '_token';
                 const isSaveSection = control === saveSectionInput;
-                const isSelectedDeviceId = control === selectedDeviceIdInput;
                 const isSelectedModelId = control === selectedModelIdInput;
                 const isModelAction = control === modelActionInput;
                 const isSuggestedSlideSelectionSubmitted = control === suggestedSlideSelectionSubmittedInput;
                 const isOpenCompanyGalleryTarget = control === openCompanyGalleryTargetInput;
                 const isOpenRightSidebarImageScheduleUrl = control === openRightSidebarImageScheduleUrlInput;
                 const isForceClearRightSidebarSlides = control === forceClearRightSidebarSlidesInput;
-                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSelectedDeviceId || isSelectedModelId || isModelAction || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
+                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSelectedModelId || isModelAction || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
 
                 controlsState.push({ control, disabled: control.disabled });
                 if (!shouldKeep) {
@@ -3925,7 +4033,7 @@
         const requestedInitialPanel = @json(session('openConfigSection'));
         const requestedCompanyGalleryTarget = @json(session('openCompanyGalleryTarget'));
         const hasSelectedModel = @json($hasSelectedModel);
-        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null) || (!hasSelectedModel ? 'modelsSection' : null);
+        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null) || (hasSelectedModel ? 'generalConfigSection' : 'modelsSection');
         const initialTopLevelTarget = initialTarget === 'fullScreenSlideConfig'
             ? 'companyGalleryConfigSection'
             : initialTarget;
@@ -3950,30 +4058,6 @@
             }
         }
 
-        if (selectedDeviceConfigSelect instanceof HTMLSelectElement) {
-            selectedDeviceConfigSelect.addEventListener('change', () => {
-                const nextDeviceId = String(selectedDeviceConfigSelect.value || '').trim();
-                if (selectedDeviceIdInput instanceof HTMLInputElement) {
-                    selectedDeviceIdInput.value = nextDeviceId;
-                }
-
-                const baseUrl = String(selectedDeviceConfigSelect.getAttribute('data-config-url') || window.location.pathname);
-                const nextUrl = new URL(baseUrl, window.location.origin);
-                if (nextDeviceId !== '') {
-                    nextUrl.searchParams.set('device_id', nextDeviceId);
-                }
-
-                if (selectedModelIdInput instanceof HTMLInputElement) {
-                    const nextModelId = String(selectedModelIdInput.value || '').trim();
-                    if (nextModelId !== '') {
-                        nextUrl.searchParams.set('model_id', nextModelId);
-                    }
-                }
-
-                window.location.href = nextUrl.toString();
-            });
-        }
-
         if (selectedModelConfigSelect instanceof HTMLSelectElement) {
             selectedModelConfigSelect.addEventListener('change', () => {
                 const nextModelId = String(selectedModelConfigSelect.value || '').trim();
@@ -3983,10 +4067,6 @@
 
                 const baseUrl = String(selectedModelConfigSelect.getAttribute('data-config-url') || window.location.pathname);
                 const nextUrl = new URL(baseUrl, window.location.origin);
-                const nextDeviceId = selectedDeviceIdInput instanceof HTMLInputElement ? String(selectedDeviceIdInput.value || '').trim() : '';
-                if (nextDeviceId !== '') {
-                    nextUrl.searchParams.set('device_id', nextDeviceId);
-                }
                 if (nextModelId !== '') {
                     nextUrl.searchParams.set('model_id', nextModelId);
                 }

@@ -491,6 +491,113 @@
             display: none;
         }
 
+        #offerSlideOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            display: none;
+            padding: clamp(18px, 2vw, 34px);
+            background:
+                radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.99));
+            box-sizing: border-box;
+        }
+
+        #offerSlideOverlay.is-active {
+            display: block;
+        }
+
+        #offerSlideInner {
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 24px;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+            padding: clamp(20px, 2.2vw, 40px);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(16px, 2vw, 28px);
+        }
+
+        #offerSlideHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        #offerSlideBadge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            border-radius: 9999px;
+            background: rgba(251, 191, 36, 0.16);
+            color: #fde68a;
+            font-size: clamp(18px, 1.6vw, 28px);
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #offerSlideHeaderNote {
+            color: rgba(226, 232, 240, 0.82);
+            font-size: clamp(13px, 1vw, 18px);
+        }
+
+        #offerSlideGrid {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+            gap: clamp(14px, 1.6vw, 24px);
+            align-content: start;
+        }
+
+        .offer-slide-card {
+            min-height: 0;
+            border-radius: 22px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
+            padding: clamp(18px, 1.8vw, 30px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 18px;
+            overflow: hidden;
+        }
+
+        .offer-slide-card-row {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .offer-slide-description,
+        .offer-slide-price {
+            display: block;
+            line-height: 1.08;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .offer-slide-price {
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        #offerSlideFooter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            color: rgba(226, 232, 240, 0.78);
+            font-size: clamp(12px, 0.95vw, 16px);
+        }
+
         .tv-fullscreen-test-btn {
             position: fixed;
             left: 10px;
@@ -704,6 +811,20 @@
                 <h1 id="tvFooterTitle" class="tv-title-text text-2xl md:text-3xl font-semibold tracking-tight">Lista de Produtos (TV)</h1>
             </div>
         </footer>
+    </div>
+
+    <div id="offerSlideOverlay" aria-hidden="true">
+        <div id="offerSlideInner">
+            <div id="offerSlideHeader">
+                <div id="offerSlideBadge">Slide de oferta</div>
+                <div id="offerSlideHeaderNote">Somente produtos com oferta ativa</div>
+            </div>
+            <div id="offerSlideGrid"></div>
+            <div id="offerSlideFooter">
+                <span id="offerSlideCounter">0 ofertas</span>
+                <span id="offerSlidePageIndicator"></span>
+            </div>
+        </div>
     </div>
 
     <p id="statusMessage" class="tv-status-floating">Pronto para teste de tela cheia.</p>

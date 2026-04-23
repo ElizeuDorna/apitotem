@@ -211,6 +211,10 @@ export function createDedicatedFullScreenSlideModule(deps) {
     };
 
     api.startDedicatedFullScreenSlideMode = function startDedicatedFullScreenSlideMode() {
+        if (typeof deps.canStartDedicatedFullScreen === 'function' && !deps.canStartDedicatedFullScreen()) {
+            return false;
+        }
+
         if (!deps.tvImageSlide) {
             return false;
         }

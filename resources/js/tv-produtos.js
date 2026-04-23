@@ -24,6 +24,10 @@ const tvVideoPanel = document.getElementById('tvVideoPanel');
 const tvRightSidebarMediaWrap = document.getElementById('tvRightSidebarMediaWrap');
 const tvRightSidebarLogoSlot = document.getElementById('tvRightSidebarLogoSlot');
 const tvRightSidebarLogo = document.getElementById('tvRightSidebarLogo');
+const offerSlideOverlay = document.getElementById('offerSlideOverlay');
+const offerSlideGrid = document.getElementById('offerSlideGrid');
+const offerSlideCounter = document.getElementById('offerSlideCounter');
+const offerSlidePageIndicator = document.getElementById('offerSlidePageIndicator');
 const tvLeftVerticalLogoSlot = document.getElementById('tvLeftVerticalLogoSlot');
 const tvLeftVerticalLogo = document.getElementById('tvLeftVerticalLogo');
 const tvMain = document.getElementById('tvMain');
@@ -245,6 +249,8 @@ const visualConfig = {
     rightSidebarPlaybackSequence: 'products,image,video',
     rightSidebarProductInterval: 8,
     rightSidebarProductShowImage: true,
+    rightSidebarProductImageWidth: 0,
+    rightSidebarProductImageHeight: 0,
     rightSidebarProductShowName: true,
     rightSidebarProductShowPrice: true,
     rightSidebarProductNamePosition: 'top',
@@ -295,6 +301,16 @@ const visualConfig = {
     groupLabelColor: '#cbd5e1',
     showGroupLabelBadge: false,
     groupLabelBadgeColor: '#0f172a',
+    offerSlideEnabled: false,
+    offerSlideIntervalSeconds: 300,
+    offerSlideDescriptionFontFamily: 'arial',
+    offerSlideDescriptionFontSize: 42,
+    offerSlideDescriptionColor: '#FFFFFF',
+    offerSlideDescriptionPosition: 'top',
+    offerSlidePriceFontFamily: 'arial',
+    offerSlidePriceFontSize: 72,
+    offerSlidePriceColor: '#FDE68A',
+    offerSlidePricePosition: 'bottom',
     isPaginationEnabled: false,
     pageSize: 10,
     paginationInterval: 5,
@@ -372,6 +388,11 @@ let dedicatedFullScreenSlideMaxExpectedMs = 0;
 let productsRefreshTimer = null;
 let latestProductsForPagination = [];
 let dedicatedFullScreenExternalTimersPaused = false;
+let offerSlideEntryTimer = null;
+let offerSlidePageTimer = null;
+let offerSlideActive = false;
+let offerSlidePages = [];
+let offerSlidePageIndex = 0;
 
 const dedicatedFullScreenSlideState = {
     get fullScreenSlideTimer() { return fullScreenSlideTimer; },
@@ -435,6 +456,7 @@ const dedicatedFullScreenSlideModule = createDedicatedFullScreenSlideModule({
     getReliableDeviceToken,
     getSidebarProductItems: () => sidebarProductItems,
     getLatestProductsForPagination: () => latestProductsForPagination,
+    canStartDedicatedFullScreen: () => !offerSlideActive,
     applyRightSidebarMediaMode,
 });
 
@@ -1150,6 +1172,10 @@ function hasStaleDedicatedFullScreenSlideSession() {
 }
 
 function startDedicatedFullScreenSlideMode() {
+    if (offerSlideActive) {
+        return false;
+    }
+
     return dedicatedFullScreenSlideModule.startDedicatedFullScreenSlideMode();
 }
 
@@ -1884,6 +1910,8 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     }
     tvImageSlide.style.maxWidth = '100%';
     tvImageSlide.style.maxHeight = '100%';
+    tvImageSlide.style.minWidth = '0';
+    tvImageSlide.style.minHeight = '0';
     tvImageSlide.style.alignSelf = 'center';
 
     const parsedHeight = Number(visualConfig.rightSidebarImageHeight);
@@ -1970,10 +1998,10 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
             return;
         }
 
-        tvImageSlide.style.width = imgWidth > 0 ? `${Math.max(80, imgWidth)}px` : '100%';
-        tvImageSlide.style.height = imgHeight > 0 ? `${Math.max(80, imgHeight)}px` : '100%';
-        tvImageSlide.style.maxWidth = imgWidth > 0 ? 'none' : `${compactMaxWidth}px`;
-        tvImageSlide.style.maxHeight = imgHeight > 0 ? 'none' : `${compactMaxHeight}px`;
+        tvImageSlide.style.width = imgWidth > 0 ? `${Math.max(80, imgWidth)}px` : 'auto';
+        tvImageSlide.style.height = imgHeight > 0 ? `${Math.max(80, imgHeight)}px` : 'auto';
+        tvImageSlide.style.maxWidth = imgWidth > 0 ? `${Math.max(80, imgWidth)}px` : `${compactMaxWidth}px`;
+        tvImageSlide.style.maxHeight = imgHeight > 0 ? `${Math.max(80, imgHeight)}px` : `${compactMaxHeight}px`;
         tvImageSlide.style.objectFit = fit;
         return;
     }
@@ -1994,17 +2022,17 @@ function applyConfiguredSlideImageLayout(currentSlideUrl = '') {
     if (imgHeight > 0) {
         tvImageSlide.style.height = imgHeight + 'px';
     } else {
-        tvImageSlide.style.height = '';
+        tvImageSlide.style.height = 'auto';
     }
 
     if (imgWidth > 0) {
         tvImageSlide.style.width = imgWidth + 'px';
     } else {
-        tvImageSlide.style.width = '';
+        tvImageSlide.style.width = 'auto';
     }
 
-    tvImageSlide.style.maxWidth = imgWidth > 0 ? 'none' : '100%';
-    tvImageSlide.style.maxHeight = imgHeight > 0 ? 'none' : '100%';
+    tvImageSlide.style.maxWidth = imgWidth > 0 ? `${imgWidth}px` : '100%';
+    tvImageSlide.style.maxHeight = imgHeight > 0 ? `${imgHeight}px` : '100%';
 }
 
 function startImageSlideMode() {
@@ -2440,6 +2468,11 @@ function bindYouTubeEndedEvent() {
                         if (typeof youTubePlayer.getCurrentTime === 'function' && typeof youTubePlayer.getDuration === 'function') {
                             const current = Number(youTubePlayer.getCurrentTime() || 0);
                             const duration = Number(youTubePlayer.getDuration() || 0);
+
+                            if (duration > 0 && current >= Math.max(0, duration - 0.5) && currentVideoItemShouldLoop()) {
+                                replayCurrentVideoInPlaylist();
+                                return;
+                            }
 
                             if (duration > 0 && current >= Math.max(0, duration - 0.5) && videoPlaylistItems.length > 1) {
                                 playNextVideoInPlaylist();
@@ -3122,6 +3155,237 @@ function formatPrice(value) {
         style: 'currency',
         currency: 'BRL',
     }).format(value);
+}
+
+function clearOfferSlideEntryTimer() {
+    if (offerSlideEntryTimer) {
+        clearTimeout(offerSlideEntryTimer);
+        offerSlideEntryTimer = null;
+    }
+}
+
+function clearOfferSlidePageTimer() {
+    if (offerSlidePageTimer) {
+        clearTimeout(offerSlidePageTimer);
+        offerSlidePageTimer = null;
+    }
+}
+
+function escapeHtmlText(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function getOfferSlideItems() {
+    return Array.isArray(latestProductsForPagination)
+        ? latestProductsForPagination.filter((item) => Number(item?.oferta || 0) > 0)
+        : [];
+}
+
+function getOfferSlideItemsPerPage() {
+    if (window.innerWidth >= 1600) {
+        return 12;
+    }
+
+    if (window.innerWidth >= 1024) {
+        return 8;
+    }
+
+    return 6;
+}
+
+function buildOfferSlidePages(items) {
+    const pageSize = Math.max(1, getOfferSlideItemsPerPage());
+    const pages = [];
+
+    for (let index = 0; index < items.length; index += pageSize) {
+        pages.push(items.slice(index, index + pageSize));
+    }
+
+    return pages;
+}
+
+function getOfferSlidePageStepMs() {
+    return offerSlidePages.length > 1 ? 4000 : 6000;
+}
+
+function canStartOfferSlide() {
+    if (!offerSlideOverlay || !offerSlideGrid) {
+        return false;
+    }
+
+    if (!toBoolean(visualConfig.offerSlideEnabled, false)) {
+        return false;
+    }
+
+    if (offerSlideActive || forceFullScreenSlideModeActive || isVideoFullscreenModeActive()) {
+        return false;
+    }
+
+    return getOfferSlideItems().length > 0;
+}
+
+function renderOfferSlidePage(index) {
+    if (!offerSlideGrid || offerSlidePages.length === 0) {
+        return;
+    }
+
+    offerSlidePageIndex = Math.max(0, Math.min(index, offerSlidePages.length - 1));
+    const items = offerSlidePages[offerSlidePageIndex] || [];
+    const descriptionPosition = String(visualConfig.offerSlideDescriptionPosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
+    const pricePosition = String(visualConfig.offerSlidePricePosition || 'bottom').toLowerCase() === 'top' ? 'top' : 'bottom';
+    const descriptionFontFamily = resolveTitleFontFamily(String(visualConfig.offerSlideDescriptionFontFamily || 'arial'));
+    const priceFontFamily = resolveTitleFontFamily(String(visualConfig.offerSlidePriceFontFamily || 'arial'));
+    const descriptionFontSize = Math.min(160, Math.max(10, Number(visualConfig.offerSlideDescriptionFontSize || 42)));
+    const priceFontSize = Math.min(200, Math.max(10, Number(visualConfig.offerSlidePriceFontSize || 72)));
+    const descriptionColor = String(visualConfig.offerSlideDescriptionColor || '#FFFFFF').trim() || '#FFFFFF';
+    const priceColor = String(visualConfig.offerSlidePriceColor || '#FDE68A').trim() || '#FDE68A';
+
+    offerSlideGrid.innerHTML = items.map((item) => {
+        const descriptionHtml = `<span class="offer-slide-description" style="font-family:${escapeHtmlAttribute(descriptionFontFamily)};font-size:${descriptionFontSize}px;color:${escapeHtmlAttribute(descriptionColor)};font-weight:700;">${escapeHtmlText(item?.nome || 'Sem descrição')}</span>`;
+        const priceHtml = `<span class="offer-slide-price" style="font-family:${escapeHtmlAttribute(priceFontFamily)};font-size:${priceFontSize}px;color:${escapeHtmlAttribute(priceColor)};">${escapeHtmlText(formatPrice(Number(item?.oferta || 0)))}</span>`;
+        const topContent = [];
+        const bottomContent = [];
+
+        if (descriptionPosition === 'top') {
+            topContent.push(descriptionHtml);
+        } else {
+            bottomContent.push(descriptionHtml);
+        }
+
+        if (pricePosition === 'top') {
+            topContent.push(priceHtml);
+        } else {
+            bottomContent.push(priceHtml);
+        }
+
+        return `<article class="offer-slide-card"><div class="offer-slide-card-row">${topContent.join('')}${bottomContent.join('')}</div></article>`;
+    }).join('');
+
+    if (offerSlideCounter) {
+        const totalOffers = getOfferSlideItems().length;
+        offerSlideCounter.textContent = `${totalOffers} oferta${totalOffers === 1 ? '' : 's'}`;
+    }
+
+    if (offerSlidePageIndicator) {
+        offerSlidePageIndicator.textContent = offerSlidePages.length > 1
+            ? `Página ${offerSlidePageIndex + 1} de ${offerSlidePages.length}`
+            : 'Página única';
+    }
+}
+
+function scheduleOfferSlidePageAdvance() {
+    clearOfferSlidePageTimer();
+
+    if (!offerSlideActive || offerSlidePages.length === 0) {
+        return;
+    }
+
+    offerSlidePageTimer = setTimeout(() => {
+        if (!offerSlideActive) {
+            return;
+        }
+
+        if (offerSlidePageIndex < offerSlidePages.length - 1) {
+            renderOfferSlidePage(offerSlidePageIndex + 1);
+            scheduleOfferSlidePageAdvance();
+            return;
+        }
+
+        hideOfferSlide(true);
+    }, getOfferSlidePageStepMs());
+}
+
+function scheduleOfferSlideEntry(delayMs = null) {
+    clearOfferSlideEntryTimer();
+
+    if (offerSlideActive || !toBoolean(visualConfig.offerSlideEnabled, false) || getOfferSlideItems().length === 0) {
+        return;
+    }
+
+    const delay = delayMs === null
+        ? Math.max(30000, Math.min(86400000, Number(visualConfig.offerSlideIntervalSeconds || 300) * 1000))
+        : Math.max(1000, Number(delayMs || 0));
+
+    offerSlideEntryTimer = setTimeout(() => {
+        if (canStartOfferSlide()) {
+            startOfferSlide();
+            return;
+        }
+
+        scheduleOfferSlideEntry(5000);
+    }, delay);
+}
+
+function hideOfferSlide(scheduleNext = true) {
+    clearOfferSlidePageTimer();
+    offerSlideActive = false;
+    offerSlidePages = [];
+    offerSlidePageIndex = 0;
+
+    if (offerSlideOverlay) {
+        offerSlideOverlay.classList.remove('is-active');
+        offerSlideOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    if (scheduleNext) {
+        scheduleOfferSlideEntry();
+    }
+}
+
+function startOfferSlide() {
+    if (!canStartOfferSlide()) {
+        scheduleOfferSlideEntry(5000);
+        return false;
+    }
+
+    offerSlidePages = buildOfferSlidePages(getOfferSlideItems());
+    if (offerSlidePages.length === 0) {
+        scheduleOfferSlideEntry();
+        return false;
+    }
+
+    clearOfferSlideEntryTimer();
+    offerSlideActive = true;
+
+    if (offerSlideOverlay) {
+        offerSlideOverlay.classList.add('is-active');
+        offerSlideOverlay.setAttribute('aria-hidden', 'false');
+    }
+
+    renderOfferSlidePage(0);
+    scheduleOfferSlidePageAdvance();
+    return true;
+}
+
+function syncOfferSlideSchedule() {
+    const enabled = toBoolean(visualConfig.offerSlideEnabled, false);
+    const hasOffers = getOfferSlideItems().length > 0;
+
+    if (!enabled || !hasOffers) {
+        clearOfferSlideEntryTimer();
+
+        if (offerSlideActive) {
+            hideOfferSlide(false);
+        }
+
+        return;
+    }
+
+    if (offerSlideActive) {
+        offerSlidePages = buildOfferSlidePages(getOfferSlideItems());
+        if (offerSlidePages.length === 0) {
+            hideOfferSlide(false);
+            return;
+        }
+
+        renderOfferSlidePage(Math.min(offerSlidePageIndex, offerSlidePages.length - 1));
+        return;
+    }
+
+    scheduleOfferSlideEntry();
 }
 
 function updateStatus(message, isError = false) {
@@ -4399,6 +4663,7 @@ function renderProductsWithPagination(produtos) {
 
     const list = Array.isArray(produtos) ? produtos : [];
     latestProductsForPagination = list.slice();
+    syncOfferSlideSchedule();
     const rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));
     const isTwoListMode = isTwoListLayoutEnabled();
 
@@ -4722,6 +4987,16 @@ async function loadVisualConfig(token) {
         visualConfig.groupLabelFontFamily = String(visualConfig.groupLabelFontFamily || 'arial').toLowerCase();
         visualConfig.showGroupLabelBadge = toBoolean(visualConfig.showGroupLabelBadge, false);
         visualConfig.groupLabelBadgeColor = String(visualConfig.groupLabelBadgeColor || '#0f172a');
+        visualConfig.offerSlideEnabled = toBoolean(visualConfig.offerSlideEnabled, false);
+        visualConfig.offerSlideIntervalSeconds = Math.max(30, Math.min(86400, Number(visualConfig.offerSlideIntervalSeconds || 300)));
+        visualConfig.offerSlideDescriptionFontFamily = String(visualConfig.offerSlideDescriptionFontFamily || 'arial').toLowerCase();
+        visualConfig.offerSlideDescriptionFontSize = Math.max(10, Math.min(160, Number(visualConfig.offerSlideDescriptionFontSize || 42)));
+        visualConfig.offerSlideDescriptionColor = String(visualConfig.offerSlideDescriptionColor || '#FFFFFF');
+        visualConfig.offerSlideDescriptionPosition = String(visualConfig.offerSlideDescriptionPosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
+        visualConfig.offerSlidePriceFontFamily = String(visualConfig.offerSlidePriceFontFamily || 'arial').toLowerCase();
+        visualConfig.offerSlidePriceFontSize = Math.max(10, Math.min(200, Number(visualConfig.offerSlidePriceFontSize || 72)));
+        visualConfig.offerSlidePriceColor = String(visualConfig.offerSlidePriceColor || '#FDE68A');
+        visualConfig.offerSlidePricePosition = String(visualConfig.offerSlidePricePosition || 'bottom').toLowerCase() === 'top' ? 'top' : 'bottom';
         const normalizedRightSidebarFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
         visualConfig.rightSidebarImageFit = normalizedRightSidebarFit === 'cover'
             ? 'cover'
@@ -4754,6 +5029,7 @@ async function loadVisualConfig(token) {
         await applyAutoFullscreenPreference();
         applyProductsRefreshInterval(visualConfig.apiRefreshInterval);
         saveCachedVisualConfig(visualConfig);
+        syncOfferSlideSchedule();
         setOfflineIndicatorVisible(false);
         return true;
     } catch (_error) {

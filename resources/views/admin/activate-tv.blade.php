@@ -65,6 +65,18 @@
                             <x-input-error :messages="$errors->get('local')" class="mt-2" />
                         </div>
 
+                        <div>
+                            <label for="web_screen_model_id" class="block text-sm font-medium text-gray-700">Qual modelo esta TV vai usar</label>
+                            <select id="web_screen_model_id" name="web_screen_model_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Usar configuracao geral da empresa</option>
+                                @foreach ($activationModels as $model)
+                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id') === (string) $model->id)>{{ $model->nome }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">O dispositivo vai carregar o modelo escolhido aqui.</p>
+                            <x-input-error :messages="$errors->get('web_screen_model_id')" class="mt-2" />
+                        </div>
+
                         @if (!($isDefaultAdmin && ($adminSemEmpresaAtiva ?? false)))
                             <div class="flex justify-end">
                                 <x-primary-button>
@@ -132,6 +144,7 @@
                                     <th class="px-3 py-2 text-left">Identificacao do Dispositivo</th>
                                     <th class="px-3 py-2 text-left">Token</th>
                                     <th class="px-3 py-2 text-left">Empresa</th>
+                                    <th class="px-3 py-2 text-left">Modelo em uso</th>
                                     <th class="px-3 py-2 text-left">Status</th>
                                     <th class="px-3 py-2 text-left">Última comunicação</th>
                                     <th class="px-3 py-2 text-right">Ações</th>
@@ -165,6 +178,7 @@
                                             @php
                                                 $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
                                                 $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
+                                                $deviceModels = $modelsByEmpresa->get((int) $device->empresa_id, collect());
                                             @endphp
                                             <span>
                                                 {{ $empresaNome ?? 'Empresa nao vinculada' }}
@@ -172,6 +186,14 @@
                                                     - {{ $empresaCnpj }}
                                                 @endif
                                             </span>
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            <select form="update-device-{{ $device->id }}" name="web_screen_model_id" class="w-full rounded-md border-gray-300 shadow-sm">
+                                                <option value="">Usar configuracao geral da empresa</option>
+                                                @foreach ($deviceModels as $model)
+                                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id', $device->configuration?->web_screen_model_id) === (string) $model->id)>{{ $model->nome }}</option>
+                                                @endforeach
+                                            </select>
                                         </td>
                                         <td class="px-3 py-2">
                                             <label class="inline-flex items-center gap-2">
@@ -201,7 +223,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
+                                        <td colspan="9" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
