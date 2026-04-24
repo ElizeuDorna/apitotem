@@ -25,6 +25,10 @@ const tvRightSidebarMediaWrap = document.getElementById('tvRightSidebarMediaWrap
 const tvRightSidebarLogoSlot = document.getElementById('tvRightSidebarLogoSlot');
 const tvRightSidebarLogo = document.getElementById('tvRightSidebarLogo');
 const offerSlideOverlay = document.getElementById('offerSlideOverlay');
+const offerSlideInner = document.getElementById('offerSlideInner');
+const offerSlideHeader = document.getElementById('offerSlideHeader');
+const offerSlideBadge = document.getElementById('offerSlideBadge');
+const offerSlideHeaderNote = document.getElementById('offerSlideHeaderNote');
 const offerSlideGrid = document.getElementById('offerSlideGrid');
 const offerSlideCounter = document.getElementById('offerSlideCounter');
 const offerSlidePageIndicator = document.getElementById('offerSlidePageIndicator');
@@ -307,6 +311,22 @@ const visualConfig = {
     offerSlideDescriptionFontSize: 42,
     offerSlideDescriptionColor: '#FFFFFF',
     offerSlideDescriptionPosition: 'top',
+    offerSlideBackgroundColorStart: '#0F172A',
+    offerSlideBackgroundColorEnd: '#020617',
+    offerSlideBackgroundTransparent: false,
+    offerSlideBackgroundImageUrl: '',
+    offerSlideTitleText: 'Slide de oferta',
+    offerSlideTitleColor: '#FDE68A',
+    offerSlideTitleFontSize: 48,
+    offerSlideTitleFontFamily: 'arial',
+    offerSlideTitleAlignment: 'left',
+    offerSlideLayoutMode: 'double_list',
+    offerSlideCardBorderEnabled: true,
+    offerSlideCardBorderColor: '#94a3b8',
+    offerSlideCardBorderWidth: 1,
+    offerSlideScreenBorderEnabled: true,
+    offerSlideScreenBorderColor: '#94a3b8',
+    offerSlideScreenBorderWidth: 1,
     offerSlidePriceFontFamily: 'arial',
     offerSlidePriceFontSize: 72,
     offerSlidePriceColor: '#FDE68A',
@@ -3185,15 +3205,41 @@ function getOfferSlideItems() {
 }
 
 function getOfferSlideItemsPerPage() {
+    const layoutMode = getOfferSlideLayoutMode();
+
+    if (layoutMode === 'single_item') {
+        return 1;
+    }
+
+    const rowsPerPage = getOfferSlideRowsPerPage();
+
+    if (layoutMode === 'single_list') {
+        return rowsPerPage;
+    }
+
+    return rowsPerPage * 2;
+}
+
+function getOfferSlideLayoutMode() {
+    const layoutMode = String(visualConfig.offerSlideLayoutMode || 'double_list').trim().toLowerCase();
+
+    if (layoutMode === 'single_item' || layoutMode === 'single_list') {
+        return layoutMode;
+    }
+
+    return 'double_list';
+}
+
+function getOfferSlideRowsPerPage() {
     if (window.innerWidth >= 1600) {
-        return 12;
+        return 6;
     }
 
     if (window.innerWidth >= 1024) {
-        return 8;
+        return 4;
     }
 
-    return 6;
+    return 3;
 }
 
 function buildOfferSlidePages(items) {
@@ -3208,6 +3254,10 @@ function buildOfferSlidePages(items) {
 }
 
 function getOfferSlidePageStepMs() {
+    if (getOfferSlideLayoutMode() === 'single_item') {
+        return 6000;
+    }
+
     return offerSlidePages.length > 1 ? 4000 : 6000;
 }
 
@@ -3227,6 +3277,123 @@ function canStartOfferSlide() {
     return getOfferSlideItems().length > 0;
 }
 
+function applyOfferSlideTheme() {
+    if (!offerSlideOverlay) {
+        return;
+    }
+
+    const backgroundColorStart = String(visualConfig.offerSlideBackgroundColorStart || '#0F172A').trim() || '#0F172A';
+    const backgroundColorEnd = String(visualConfig.offerSlideBackgroundColorEnd || '#020617').trim() || '#020617';
+    const isOfferSlideBackgroundTransparent = toBoolean(visualConfig.offerSlideBackgroundTransparent, false);
+    const offerSlideBackgroundImageUrl = String(visualConfig.offerSlideBackgroundImageUrl || '').trim();
+    const panelColorStart = isOfferSlideBackgroundTransparent
+        ? 'rgba(15, 23, 42, 0.01)'
+        : toRgbaColor(backgroundColorStart, 0.12, 'rgba(15, 23, 42, 0.12)');
+    const panelColorEnd = isOfferSlideBackgroundTransparent
+        ? 'rgba(2, 6, 23, 0.01)'
+        : toRgbaColor(backgroundColorEnd, 0.18, 'rgba(2, 6, 23, 0.18)');
+    const overlayGradientStart = toRgbaColor(backgroundColorStart, 0.78, 'rgba(15, 23, 42, 0.78)');
+    const overlayGradientEnd = toRgbaColor(backgroundColorEnd, 0.88, 'rgba(2, 6, 23, 0.88)');
+    const titleText = String(visualConfig.offerSlideTitleText || 'Slide de oferta').trim() || 'Slide de oferta';
+    const titleColor = String(visualConfig.offerSlideTitleColor || '#FDE68A').trim() || '#FDE68A';
+    const titleFontSize = Math.max(10, Math.min(160, Number(visualConfig.offerSlideTitleFontSize || 48) || 48));
+    const titleFontFamily = resolveTitleFontFamily(String(visualConfig.offerSlideTitleFontFamily || 'arial'));
+    const titleAlignment = String(visualConfig.offerSlideTitleAlignment || 'left').trim().toLowerCase();
+    const screenBorderEnabled = toBoolean(visualConfig.offerSlideScreenBorderEnabled, true);
+    const screenBorderColor = String(visualConfig.offerSlideScreenBorderColor || '#94a3b8').trim() || '#94a3b8';
+    const screenBorderWidth = Math.max(0, Math.min(24, Number(visualConfig.offerSlideScreenBorderWidth ?? 1)));
+    const cardBorderEnabled = toBoolean(visualConfig.offerSlideCardBorderEnabled, true);
+    const cardBorderColor = String(visualConfig.offerSlideCardBorderColor || '#94a3b8').trim() || '#94a3b8';
+    const cardBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideCardBorderWidth ?? 1)));
+
+    offerSlideOverlay.style.setProperty('--offer-slide-bg-start', backgroundColorStart);
+    offerSlideOverlay.style.setProperty('--offer-slide-bg-end', backgroundColorEnd);
+    offerSlideOverlay.style.setProperty('--offer-slide-panel-bg-start', panelColorStart);
+    offerSlideOverlay.style.setProperty('--offer-slide-panel-bg-end', panelColorEnd);
+    offerSlideOverlay.style.setProperty('--offer-slide-screen-border-color', screenBorderEnabled ? screenBorderColor : 'transparent');
+    offerSlideOverlay.style.setProperty('--offer-slide-screen-border-width', `${screenBorderEnabled ? screenBorderWidth : 0}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-card-border-color', cardBorderEnabled ? cardBorderColor : 'transparent');
+    offerSlideOverlay.style.setProperty('--offer-slide-card-border-width', `${cardBorderEnabled ? cardBorderWidth : 0}px`);
+
+    if (isOfferSlideBackgroundTransparent) {
+        offerSlideOverlay.style.backgroundImage = offerSlideBackgroundImageUrl ? `url("${offerSlideBackgroundImageUrl}")` : 'none';
+        offerSlideOverlay.style.backgroundColor = 'transparent';
+        offerSlideOverlay.style.backgroundSize = 'cover';
+        offerSlideOverlay.style.backgroundPosition = 'center';
+        offerSlideOverlay.style.backgroundRepeat = 'no-repeat';
+    } else if (offerSlideBackgroundImageUrl) {
+        offerSlideOverlay.style.backgroundImage = `radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%), linear-gradient(180deg, ${overlayGradientStart}, ${overlayGradientEnd}), url("${offerSlideBackgroundImageUrl}")`;
+        offerSlideOverlay.style.backgroundColor = backgroundColorEnd;
+        offerSlideOverlay.style.backgroundSize = 'auto, auto, cover';
+        offerSlideOverlay.style.backgroundPosition = 'top right, center, center';
+        offerSlideOverlay.style.backgroundRepeat = 'no-repeat, no-repeat, no-repeat';
+    } else {
+        offerSlideOverlay.style.backgroundImage = `radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%), linear-gradient(180deg, ${backgroundColorStart}, ${backgroundColorEnd})`;
+        offerSlideOverlay.style.backgroundColor = backgroundColorEnd;
+        offerSlideOverlay.style.backgroundSize = 'auto, auto';
+        offerSlideOverlay.style.backgroundPosition = 'top right, center';
+        offerSlideOverlay.style.backgroundRepeat = 'no-repeat, no-repeat';
+    }
+
+    if (offerSlideInner) {
+        offerSlideInner.style.backdropFilter = isOfferSlideBackgroundTransparent ? 'none' : 'blur(10px)';
+        offerSlideInner.style.boxShadow = isOfferSlideBackgroundTransparent ? 'none' : '0 22px 60px rgba(0, 0, 0, 0.35)';
+    }
+
+    if (offerSlideBadge) {
+        offerSlideBadge.textContent = titleText;
+        offerSlideBadge.style.color = titleColor;
+        offerSlideBadge.style.fontSize = `${titleFontSize}px`;
+        offerSlideBadge.style.fontFamily = titleFontFamily;
+    }
+
+    if (offerSlideHeader) {
+        const alignItems = titleAlignment === 'right' ? 'flex-end' : (titleAlignment === 'center' ? 'center' : 'flex-start');
+        offerSlideHeader.style.alignItems = alignItems;
+    }
+
+    if (offerSlideHeaderNote) {
+        offerSlideHeaderNote.style.textAlign = titleAlignment === 'right' ? 'right' : (titleAlignment === 'center' ? 'center' : 'left');
+    }
+}
+
+function toRgbaColor(color, alpha, fallback) {
+    const normalized = String(color || '').trim();
+    const normalizedAlpha = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
+
+    if (/^rgba?\(/i.test(normalized)) {
+        const channels = normalized.match(/\d+(?:\.\d+)?/g);
+
+        if (!channels || channels.length < 3) {
+            return fallback;
+        }
+
+        const [red, green, blue] = channels;
+
+        return `rgba(${red}, ${green}, ${blue}, ${normalizedAlpha})`;
+    }
+
+    let hex = normalized.replace('#', '');
+
+    if (hex.length === 3 || hex.length === 4) {
+        hex = hex.split('').map((character) => character + character).join('');
+    }
+
+    if (hex.length < 6) {
+        return fallback;
+    }
+
+    const red = parseInt(hex.slice(0, 2), 16);
+    const green = parseInt(hex.slice(2, 4), 16);
+    const blue = parseInt(hex.slice(4, 6), 16);
+
+    if ([red, green, blue].some((channel) => Number.isNaN(channel))) {
+        return fallback;
+    }
+
+    return `rgba(${red}, ${green}, ${blue}, ${normalizedAlpha})`;
+}
+
 function renderOfferSlidePage(index) {
     if (!offerSlideGrid || offerSlidePages.length === 0) {
         return;
@@ -3242,6 +3409,9 @@ function renderOfferSlidePage(index) {
     const priceFontSize = Math.min(200, Math.max(10, Number(visualConfig.offerSlidePriceFontSize || 72)));
     const descriptionColor = String(visualConfig.offerSlideDescriptionColor || '#FFFFFF').trim() || '#FFFFFF';
     const priceColor = String(visualConfig.offerSlidePriceColor || '#FDE68A').trim() || '#FDE68A';
+    const layoutMode = getOfferSlideLayoutMode();
+
+    offerSlideGrid.dataset.layoutMode = layoutMode;
 
     offerSlideGrid.innerHTML = items.map((item) => {
         const descriptionHtml = `<span class="offer-slide-description" style="font-family:${escapeHtmlAttribute(descriptionFontFamily)};font-size:${descriptionFontSize}px;color:${escapeHtmlAttribute(descriptionColor)};font-weight:700;">${escapeHtmlText(item?.nome || 'Sem descrição')}</span>`;
@@ -3340,6 +3510,8 @@ function startOfferSlide() {
         scheduleOfferSlideEntry(5000);
         return false;
     }
+
+    applyOfferSlideTheme();
 
     offerSlidePages = buildOfferSlidePages(getOfferSlideItems());
     if (offerSlidePages.length === 0) {
@@ -4993,6 +5165,24 @@ async function loadVisualConfig(token) {
         visualConfig.offerSlideDescriptionFontSize = Math.max(10, Math.min(160, Number(visualConfig.offerSlideDescriptionFontSize || 42)));
         visualConfig.offerSlideDescriptionColor = String(visualConfig.offerSlideDescriptionColor || '#FFFFFF');
         visualConfig.offerSlideDescriptionPosition = String(visualConfig.offerSlideDescriptionPosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
+        visualConfig.offerSlideBackgroundColorStart = String(visualConfig.offerSlideBackgroundColorStart || '#0F172A');
+        visualConfig.offerSlideBackgroundColorEnd = String(visualConfig.offerSlideBackgroundColorEnd || '#020617');
+        visualConfig.offerSlideBackgroundTransparent = toBoolean(visualConfig.offerSlideBackgroundTransparent, false);
+        visualConfig.offerSlideBackgroundImageUrl = String(visualConfig.offerSlideBackgroundImageUrl || '').trim();
+        visualConfig.offerSlideTitleText = String(visualConfig.offerSlideTitleText || 'Slide de oferta');
+        visualConfig.offerSlideTitleColor = String(visualConfig.offerSlideTitleColor || '#FDE68A');
+        visualConfig.offerSlideTitleFontSize = Math.max(10, Math.min(160, Number(visualConfig.offerSlideTitleFontSize || 48) || 48));
+        visualConfig.offerSlideTitleFontFamily = String(visualConfig.offerSlideTitleFontFamily || 'arial').toLowerCase();
+        visualConfig.offerSlideTitleAlignment = String(visualConfig.offerSlideTitleAlignment || 'left').toLowerCase() === 'right'
+            ? 'right'
+            : (String(visualConfig.offerSlideTitleAlignment || 'left').toLowerCase() === 'center' ? 'center' : 'left');
+        visualConfig.offerSlideLayoutMode = getOfferSlideLayoutMode();
+        visualConfig.offerSlideCardBorderEnabled = toBoolean(visualConfig.offerSlideCardBorderEnabled, true);
+        visualConfig.offerSlideCardBorderColor = String(visualConfig.offerSlideCardBorderColor || '#94a3b8');
+        visualConfig.offerSlideCardBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideCardBorderWidth ?? 1)));
+        visualConfig.offerSlideScreenBorderEnabled = toBoolean(visualConfig.offerSlideScreenBorderEnabled, true);
+        visualConfig.offerSlideScreenBorderColor = String(visualConfig.offerSlideScreenBorderColor || '#94a3b8');
+        visualConfig.offerSlideScreenBorderWidth = Math.max(0, Math.min(24, Number(visualConfig.offerSlideScreenBorderWidth ?? 1)));
         visualConfig.offerSlidePriceFontFamily = String(visualConfig.offerSlidePriceFontFamily || 'arial').toLowerCase();
         visualConfig.offerSlidePriceFontSize = Math.max(10, Math.min(200, Number(visualConfig.offerSlidePriceFontSize || 72)));
         visualConfig.offerSlidePriceColor = String(visualConfig.offerSlidePriceColor || '#FDE68A');
@@ -5029,6 +5219,7 @@ async function loadVisualConfig(token) {
         await applyAutoFullscreenPreference();
         applyProductsRefreshInterval(visualConfig.apiRefreshInterval);
         saveCachedVisualConfig(visualConfig);
+        applyOfferSlideTheme();
         syncOfferSlideSchedule();
         setOfflineIndicatorVisible(false);
         return true;

@@ -1371,11 +1371,180 @@
                                     <p class="text-xs text-gray-500 mt-1">Define o intervalo do slide de oferta. Ele roda separado dos outros slides e usa somente os produtos com oferta ativa.</p>
                                     @error('offerSlideIntervalSeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Modo de exibição</label>
+                                    <select name="offerSlideLayoutMode" class="w-full border rounded px-3 py-2">
+                                        <option value="single_item" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'single_item')>1 item por vez</option>
+                                        <option value="single_list" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'single_list')>1 lista</option>
+                                        <option value="double_list" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'double_list')>2 listas</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">Escolhe se o slide mostra um card isolado, uma coluna única ou duas colunas de ofertas por página.</p>
+                                    @error('offerSlideLayoutMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="rounded-md border border-indigo-200 bg-indigo-50/70 p-3 space-y-3">
+                                    <h5 class="border-l-4 border-indigo-400 pl-3 text-sm font-semibold text-indigo-900">Tela Geral</h5>
+
+                                    <div id="offerSlideGeneralPreview" class="rounded-md border border-indigo-200 bg-white/90 px-4 py-3 shadow-sm">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">Exemplo do fundo</p>
+                                        <div id="offerSlideGeneralPreviewFrame" class="mt-2 flex min-h-28 items-end rounded-md border border-indigo-100 bg-slate-900 px-3 py-3">
+                                            <p class="text-sm font-semibold text-white/90">Fundo da tela inteira do slide de oferta</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor de fundo inicial</label>
+                                            <input type="color" name="offerSlideBackgroundColorStart" value="{{ old('offerSlideBackgroundColorStart', $config->offerSlideBackgroundColorStart ?? '#0F172A') }}" class="w-full h-10 border rounded">
+                                            @error('offerSlideBackgroundColorStart')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor de fundo final</label>
+                                            <input type="color" name="offerSlideBackgroundColorEnd" value="{{ old('offerSlideBackgroundColorEnd', $config->offerSlideBackgroundColorEnd ?? '#020617') }}" class="w-full h-10 border rounded">
+                                            <p class="text-xs text-gray-500 mt-1">Essas duas cores pintam o fundo da tela inteira do slide de oferta.</p>
+                                            @error('offerSlideBackgroundColorEnd')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideBackgroundTransparent" value="0">
+                                        <input type="checkbox" name="offerSlideBackgroundTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideBackgroundTransparent', $config->offerSlideBackgroundTransparent ?? false))>
+                                        <span class="text-sm text-gray-700">Ativar transparência na tela inteira</span>
+                                    </label>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Link da imagem na tela inteira</label>
+                                        <input type="text" name="offerSlideBackgroundImageUrl" value="{{ old('offerSlideBackgroundImageUrl', $config->offerSlideBackgroundImageUrl ?? '') }}" class="w-full border rounded px-3 py-2" placeholder="https://site.com/imagem.jpg ou /storage/...">
+                                        <p class="text-xs text-gray-500 mt-1">Aceita link externo ou caminho salvo pelo upload.</p>
+                                        @error('offerSlideBackgroundImageUrl')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="offerSlideBackgroundImageUpload">Upload da imagem na tela inteira</label>
+                                        <input id="offerSlideBackgroundImageUpload" name="offerSlideBackgroundImageUpload" type="file" accept="image/png,image/jpeg,image/webp" class="w-full border rounded px-3 py-2 text-sm bg-white">
+                                        @error('offerSlideBackgroundImageUpload')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    @php($offerSlideBackgroundPreviewUrl = old('offerSlideBackgroundImageUrl', $config->offerSlideBackgroundImageUrl ?? ''))
+                                    @if(!empty($offerSlideBackgroundPreviewUrl))
+                                        <div class="rounded-md border border-indigo-200 bg-white p-3 space-y-2">
+                                            <p class="text-xs font-medium uppercase tracking-[0.12em] text-indigo-700">Imagem atual</p>
+                                            <img src="{{ $offerSlideBackgroundPreviewUrl }}" alt="Preview do fundo do slide de oferta" class="h-28 w-full rounded object-cover border border-indigo-100">
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="rounded-md border border-amber-200 bg-amber-50/70 p-3 space-y-3">
+                                    <h5 class="border-l-4 border-amber-400 pl-3 text-sm font-semibold text-amber-900">Título</h5>
+
+                                    <div id="offerSlideTitlePreview" class="rounded-md border border-amber-200 bg-white/90 px-4 py-3 shadow-sm">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">Exemplo</p>
+                                        <p id="offerSlideTitlePreviewText" class="mt-2 text-2xl font-bold text-amber-200">Slide de oferta</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Texto do título</label>
+                                        <input type="text" name="offerSlideTitleText" maxlength="120" value="{{ old('offerSlideTitleText', $config->offerSlideTitleText ?? 'Slide de oferta') }}" class="w-full border rounded px-3 py-2">
+                                        @error('offerSlideTitleText')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor do título</label>
+                                            <input type="color" name="offerSlideTitleColor" value="{{ old('offerSlideTitleColor', $config->offerSlideTitleColor ?? '#FDE68A') }}" class="w-full h-10 border rounded">
+                                            @error('offerSlideTitleColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do título (px)</label>
+                                            <input type="number" name="offerSlideTitleFontSize" min="10" max="160" value="{{ old('offerSlideTitleFontSize', $config->offerSlideTitleFontSize ?? 48) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideTitleFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Alinhamento do título</label>
+                                            <select name="offerSlideTitleAlignment" class="w-full border rounded px-3 py-2">
+                                                <option value="left" @selected(old('offerSlideTitleAlignment', $config->offerSlideTitleAlignment ?? 'left') === 'left')>Esquerda</option>
+                                                <option value="center" @selected(old('offerSlideTitleAlignment', $config->offerSlideTitleAlignment ?? 'left') === 'center')>Centralizado</option>
+                                                <option value="right" @selected(old('offerSlideTitleAlignment', $config->offerSlideTitleAlignment ?? 'left') === 'right')>Direita</option>
+                                            </select>
+                                            @error('offerSlideTitleAlignment')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Fonte do título</label>
+                                        <select name="offerSlideTitleFontFamily" class="w-full border rounded px-3 py-2">
+                                            <option value="arial" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                            <option value="verdana" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                            <option value="tahoma" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                            <option value="trebuchet" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                            <option value="georgia" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                            <option value="courier" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                            <option value="system" @selected(old('offerSlideTitleFontFamily', $config->offerSlideTitleFontFamily ?? 'arial') === 'system')>System UI</option>
+                                        </select>
+                                        @error('offerSlideTitleFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md border border-slate-200 bg-slate-50/80 p-3 space-y-3">
+                                    <h5 class="border-l-4 border-slate-400 pl-3 text-sm font-semibold text-slate-900">Linha geral da tela</h5>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideScreenBorderEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideScreenBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideScreenBorderEnabled', $config->offerSlideScreenBorderEnabled ?? true))>
+                                        <span class="text-sm text-gray-700">Habilitar borda da tela inteira</span>
+                                    </label>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da tela</label>
+                                            <input type="color" name="offerSlideScreenBorderColor" value="{{ old('offerSlideScreenBorderColor', $config->offerSlideScreenBorderColor ?? '#94a3b8') }}" class="w-full h-10 border rounded">
+                                            @error('offerSlideScreenBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da tela (px)</label>
+                                            <input type="number" name="offerSlideScreenBorderWidth" min="0" max="24" value="{{ old('offerSlideScreenBorderWidth', $config->offerSlideScreenBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideScreenBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-md border border-cyan-200 bg-cyan-50/70 p-3 space-y-3">
+                                    <h5 class="border-l-4 border-cyan-400 pl-3 text-sm font-semibold text-cyan-900">Linha da oferta</h5>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideCardBorderEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideCardBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideCardBorderEnabled', $config->offerSlideCardBorderEnabled ?? true))>
+                                        <span class="text-sm text-gray-700">Habilitar borda da linha</span>
+                                    </label>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da linha</label>
+                                            <input type="color" name="offerSlideCardBorderColor" value="{{ old('offerSlideCardBorderColor', $config->offerSlideCardBorderColor ?? '#94a3b8') }}" class="w-full h-10 border rounded">
+                                            @error('offerSlideCardBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da linha (px)</label>
+                                            <input type="number" name="offerSlideCardBorderWidth" min="0" max="20" value="{{ old('offerSlideCardBorderWidth', $config->offerSlideCardBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideCardBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
-                                    <h4 class="text-sm font-semibold text-gray-800">Descrição</h4>
+                                <div class="rounded-md border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+                                    <h4 class="border-l-4 border-emerald-400 pl-3 text-sm font-semibold text-emerald-900">Descrição</h4>
+
+                                    <div id="offerSlideDescriptionPreview" class="rounded-md border border-emerald-200 bg-white/90 px-4 py-3 shadow-sm">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Exemplo</p>
+                                        <p id="offerSlideDescriptionPreviewText" class="mt-2 text-2xl font-semibold text-slate-900">Picanha bovina premium</p>
+                                    </div>
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Fonte da descrição</label>
@@ -1411,10 +1580,16 @@
                                         </select>
                                         @error('offerSlideDescriptionPosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
+
                                 </div>
 
-                                <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
-                                    <h4 class="text-sm font-semibold text-gray-800">Valor da oferta</h4>
+                                <div class="rounded-md border border-rose-200 bg-rose-50/70 p-4 space-y-3">
+                                    <h4 class="border-l-4 border-rose-400 pl-3 text-sm font-semibold text-rose-900">Valor da oferta</h4>
+
+                                    <div id="offerSlidePricePreview" class="rounded-md border border-rose-200 bg-white/90 px-4 py-3 shadow-sm">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700">Exemplo</p>
+                                        <p id="offerSlidePricePreviewText" class="mt-2 text-3xl font-bold text-rose-700">R$ 39,90</p>
+                                    </div>
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Fonte do valor</label>
@@ -1518,6 +1693,28 @@
         const fullScreenSlideImageUrls = document.getElementById('fullScreenSlideImageUrls');
         const fullScreenSlideAddFromGalleryBtn = document.getElementById('fullScreenSlideAddFromGalleryBtn');
         const addSlideImageFromGalleryBtn = document.getElementById('addSlideImageFromGalleryBtn');
+        const offerSlideTitleTextInput = document.querySelector('input[name="offerSlideTitleText"]');
+        const offerSlideTitleColorInput = document.querySelector('input[name="offerSlideTitleColor"]');
+        const offerSlideTitleFontSizeInput = document.querySelector('input[name="offerSlideTitleFontSize"]');
+        const offerSlideTitleAlignmentInput = document.querySelector('select[name="offerSlideTitleAlignment"]');
+        const offerSlideTitleFontFamilyInput = document.querySelector('select[name="offerSlideTitleFontFamily"]');
+        const offerSlideTitlePreview = document.getElementById('offerSlideTitlePreview');
+        const offerSlideTitlePreviewText = document.getElementById('offerSlideTitlePreviewText');
+        const offerSlideDescriptionColorInput = document.querySelector('input[name="offerSlideDescriptionColor"]');
+        const offerSlideDescriptionFontSizeInput = document.querySelector('input[name="offerSlideDescriptionFontSize"]');
+        const offerSlideDescriptionFontFamilyInput = document.querySelector('select[name="offerSlideDescriptionFontFamily"]');
+        const offerSlideDescriptionPreview = document.getElementById('offerSlideDescriptionPreview');
+        const offerSlideDescriptionPreviewText = document.getElementById('offerSlideDescriptionPreviewText');
+        const offerSlidePriceColorInput = document.querySelector('input[name="offerSlidePriceColor"]');
+        const offerSlidePriceFontSizeInput = document.querySelector('input[name="offerSlidePriceFontSize"]');
+        const offerSlidePriceFontFamilyInput = document.querySelector('select[name="offerSlidePriceFontFamily"]');
+        const offerSlidePricePreview = document.getElementById('offerSlidePricePreview');
+        const offerSlidePricePreviewText = document.getElementById('offerSlidePricePreviewText');
+        const offerSlideBackgroundTransparentInput = document.querySelector('input[name="offerSlideBackgroundTransparent"]:not([type="hidden"])');
+        const offerSlideBackgroundImageUrlInput = document.querySelector('input[name="offerSlideBackgroundImageUrl"]');
+        const offerSlideGeneralPreviewFrame = document.getElementById('offerSlideGeneralPreviewFrame');
+        const offerSlideBackgroundColorStartInput = document.querySelector('input[name="offerSlideBackgroundColorStart"]');
+        const offerSlideBackgroundColorEndInput = document.querySelector('input[name="offerSlideBackgroundColorEnd"]');
         const rightSidebarImageScheduleEditor = document.getElementById('rightSidebarImageScheduleEditor');
         const rightSidebarImageScheduleHint = document.getElementById('rightSidebarImageScheduleHint');
         const configAccordionMenu = document.getElementById('configAccordionMenu');
@@ -1555,6 +1752,106 @@
         let openRightSidebarImageScheduleUrl = null;
         let pendingScheduleRowHighlightUrl = normalizeSlideUrlForCompare(requestedOpenRightSidebarImageScheduleUrl || '');
         let onGaleriaNovaSlideSelect = null;
+
+        function resolveAdminPreviewFontFamily(fontKey) {
+            switch (String(fontKey || 'arial').trim().toLowerCase()) {
+                case 'verdana':
+                    return 'Verdana, Geneva, sans-serif';
+                case 'tahoma':
+                    return 'Tahoma, Geneva, sans-serif';
+                case 'trebuchet':
+                    return 'Trebuchet MS, Tahoma, sans-serif';
+                case 'georgia':
+                    return 'Georgia, Times New Roman, serif';
+                case 'courier':
+                    return 'Courier New, Courier, monospace';
+                case 'system':
+                    return 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+                case 'arial':
+                default:
+                    return 'Arial, Helvetica, sans-serif';
+            }
+        }
+
+        function applyOfferSlideFieldPreviews() {
+            const gradientStart = String(offerSlideBackgroundColorStartInput?.value || '#0F172A');
+            const gradientEnd = String(offerSlideBackgroundColorEndInput?.value || '#020617');
+            const offerSlideBackgroundImageUrl = String(offerSlideBackgroundImageUrlInput?.value || '').trim();
+            const isOfferSlideTransparent = !!offerSlideBackgroundTransparentInput?.checked;
+
+            if (offerSlideGeneralPreviewFrame) {
+                if (isOfferSlideTransparent) {
+                    offerSlideGeneralPreviewFrame.style.backgroundImage = offerSlideBackgroundImageUrl ? `url("${offerSlideBackgroundImageUrl}")` : 'none';
+                    offerSlideGeneralPreviewFrame.style.backgroundColor = 'transparent';
+                    offerSlideGeneralPreviewFrame.style.backgroundSize = 'cover';
+                } else if (offerSlideBackgroundImageUrl) {
+                    offerSlideGeneralPreviewFrame.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.84)), url("${offerSlideBackgroundImageUrl}")`;
+                    offerSlideGeneralPreviewFrame.style.backgroundColor = gradientEnd;
+                    offerSlideGeneralPreviewFrame.style.backgroundSize = 'cover, cover';
+                } else {
+                    offerSlideGeneralPreviewFrame.style.backgroundImage = `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`;
+                    offerSlideGeneralPreviewFrame.style.backgroundColor = gradientEnd;
+                    offerSlideGeneralPreviewFrame.style.backgroundSize = 'cover';
+                }
+
+                offerSlideGeneralPreviewFrame.style.backgroundPosition = 'center';
+                offerSlideGeneralPreviewFrame.style.backgroundRepeat = 'no-repeat';
+            }
+
+            if (offerSlideTitlePreview && offerSlideTitlePreviewText) {
+                const titleText = String(offerSlideTitleTextInput?.value || '').trim() || 'Slide de oferta';
+                const titleColor = String(offerSlideTitleColorInput?.value || '#FDE68A');
+                const titleFontSize = Math.max(10, Math.min(160, Number(offerSlideTitleFontSizeInput?.value || 48) || 48));
+                const titleFontFamily = resolveAdminPreviewFontFamily(offerSlideTitleFontFamilyInput?.value || 'arial');
+                const titleAlignment = String(offerSlideTitleAlignmentInput?.value || 'left').toLowerCase();
+
+                offerSlideTitlePreview.style.background = `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`;
+                offerSlideTitlePreviewText.textContent = titleText;
+                offerSlideTitlePreviewText.style.color = titleColor;
+                offerSlideTitlePreviewText.style.fontSize = `${titleFontSize}px`;
+                offerSlideTitlePreviewText.style.fontFamily = titleFontFamily;
+                offerSlideTitlePreviewText.style.textAlign = ['left', 'center', 'right'].includes(titleAlignment) ? titleAlignment : 'left';
+            }
+
+            if (offerSlideDescriptionPreview && offerSlideDescriptionPreviewText) {
+                offerSlideDescriptionPreviewText.style.color = String(offerSlideDescriptionColorInput?.value || '#FFFFFF');
+                offerSlideDescriptionPreviewText.style.fontFamily = resolveAdminPreviewFontFamily(offerSlideDescriptionFontFamilyInput?.value || 'arial');
+                offerSlideDescriptionPreviewText.style.fontSize = `${Math.max(10, Math.min(160, Number(offerSlideDescriptionFontSizeInput?.value || 42) || 42))}px`;
+            }
+
+            if (offerSlidePricePreview && offerSlidePricePreviewText) {
+                offerSlidePricePreviewText.style.color = String(offerSlidePriceColorInput?.value || '#FDE68A');
+                offerSlidePricePreviewText.style.fontFamily = resolveAdminPreviewFontFamily(offerSlidePriceFontFamilyInput?.value || 'arial');
+                offerSlidePricePreviewText.style.fontSize = `${Math.max(10, Math.min(200, Number(offerSlidePriceFontSizeInput?.value || 72) || 72))}px`;
+            }
+        }
+
+        [
+            offerSlideTitleTextInput,
+            offerSlideTitleColorInput,
+            offerSlideTitleFontSizeInput,
+            offerSlideTitleAlignmentInput,
+            offerSlideTitleFontFamilyInput,
+            offerSlideDescriptionColorInput,
+            offerSlideDescriptionFontSizeInput,
+            offerSlideDescriptionFontFamilyInput,
+            offerSlidePriceColorInput,
+            offerSlidePriceFontSizeInput,
+            offerSlidePriceFontFamilyInput,
+            offerSlideBackgroundTransparentInput,
+            offerSlideBackgroundImageUrlInput,
+            offerSlideBackgroundColorStartInput,
+            offerSlideBackgroundColorEndInput,
+        ].forEach((element) => {
+            if (!element) {
+                return;
+            }
+
+            element.addEventListener('input', applyOfferSlideFieldPreviews);
+            element.addEventListener('change', applyOfferSlideFieldPreviews);
+        });
+
+        applyOfferSlideFieldPreviews();
 
         function getNormalizedScheduleStateFromInitialData() {
             const map = {};
@@ -4033,7 +4330,7 @@
         const requestedInitialPanel = @json(session('openConfigSection'));
         const requestedCompanyGalleryTarget = @json(session('openCompanyGalleryTarget'));
         const hasSelectedModel = @json($hasSelectedModel);
-        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null) || (hasSelectedModel ? 'generalConfigSection' : 'modelsSection');
+        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null) || 'modelsSection';
         const initialTopLevelTarget = initialTarget === 'fullScreenSlideConfig'
             ? 'companyGalleryConfigSection'
             : initialTarget;

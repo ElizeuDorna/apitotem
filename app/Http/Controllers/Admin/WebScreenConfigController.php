@@ -426,6 +426,23 @@ class WebScreenConfigController extends Controller
             'offerSlideDescriptionFontSize' => ['nullable', 'integer', 'min:10', 'max:160'],
             'offerSlideDescriptionColor' => ['nullable', 'string', 'max:9'],
             'offerSlideDescriptionPosition' => ['nullable', 'in:top,bottom'],
+            'offerSlideBackgroundColorStart' => ['nullable', 'string', 'max:9'],
+            'offerSlideBackgroundColorEnd' => ['nullable', 'string', 'max:9'],
+            'offerSlideBackgroundTransparent' => ['nullable', 'boolean'],
+            'offerSlideBackgroundImageUrl' => ['nullable', 'string', 'max:1000'],
+            'offerSlideBackgroundImageUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'offerSlideTitleText' => ['nullable', 'string', 'max:120'],
+            'offerSlideTitleColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideTitleFontSize' => ['nullable', 'integer', 'min:10', 'max:160'],
+            'offerSlideTitleFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
+            'offerSlideTitleAlignment' => ['nullable', 'in:left,center,right'],
+            'offerSlideLayoutMode' => ['nullable', 'in:single_item,single_list,double_list'],
+            'offerSlideCardBorderEnabled' => ['nullable', 'boolean'],
+            'offerSlideCardBorderColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideCardBorderWidth' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'offerSlideScreenBorderEnabled' => ['nullable', 'boolean'],
+            'offerSlideScreenBorderColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideScreenBorderWidth' => ['nullable', 'integer', 'min:0', 'max:24'],
             'offerSlidePriceFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
             'offerSlidePriceFontSize' => ['nullable', 'integer', 'min:10', 'max:200'],
             'offerSlidePriceColor' => ['nullable', 'string', 'max:9'],
@@ -701,6 +718,22 @@ class WebScreenConfigController extends Controller
         $validated['paginationInterval'] = (int) ($validated['paginationInterval'] ?? 5);
         $validated['showGroupLabelBadge'] = (bool) ($validated['showGroupLabelBadge'] ?? false);
         $validated['groupLabelBadgeColor'] = (string) ($validated['groupLabelBadgeColor'] ?? '#0f172a');
+        $validated['offerSlideBackgroundColorStart'] = $this->normalizeHexColor((string) ($validated['offerSlideBackgroundColorStart'] ?? '#0f172a'), '#0f172a');
+        $validated['offerSlideBackgroundColorEnd'] = $this->normalizeHexColor((string) ($validated['offerSlideBackgroundColorEnd'] ?? '#020617'), '#020617');
+        $validated['offerSlideBackgroundTransparent'] = (bool) ($validated['offerSlideBackgroundTransparent'] ?? false);
+        $validated['offerSlideBackgroundImageUrl'] = trim((string) ($validated['offerSlideBackgroundImageUrl'] ?? ''));
+        $validated['offerSlideTitleText'] = trim((string) ($validated['offerSlideTitleText'] ?? ''));
+        $validated['offerSlideTitleColor'] = $this->normalizeHexColor((string) ($validated['offerSlideTitleColor'] ?? '#fde68a'), '#fde68a');
+        $validated['offerSlideTitleFontSize'] = (int) ($validated['offerSlideTitleFontSize'] ?? 48);
+        $validated['offerSlideTitleFontFamily'] = (string) ($validated['offerSlideTitleFontFamily'] ?? 'arial');
+        $validated['offerSlideTitleAlignment'] = (string) ($validated['offerSlideTitleAlignment'] ?? 'left');
+        $validated['offerSlideLayoutMode'] = (string) ($validated['offerSlideLayoutMode'] ?? 'double_list');
+        $validated['offerSlideCardBorderEnabled'] = (bool) ($validated['offerSlideCardBorderEnabled'] ?? true);
+        $validated['offerSlideCardBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBorderColor'] ?? '#94a3b8'), '#94a3b8');
+        $validated['offerSlideCardBorderWidth'] = (int) ($validated['offerSlideCardBorderWidth'] ?? 1);
+        $validated['offerSlideScreenBorderEnabled'] = (bool) ($validated['offerSlideScreenBorderEnabled'] ?? true);
+        $validated['offerSlideScreenBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideScreenBorderColor'] ?? '#94a3b8'), '#94a3b8');
+        $validated['offerSlideScreenBorderWidth'] = (int) ($validated['offerSlideScreenBorderWidth'] ?? 1);
         $validated['gradientStartColor'] = $this->normalizeHexColor(
             $validated['gradientStartColor'] ?? null,
             (string) ($validated['rowBackgroundColor'] ?? '#0b1220')
@@ -712,6 +745,14 @@ class WebScreenConfigController extends Controller
 
         if ($validated['titleText'] === '') {
             $validated['titleText'] = 'Lista de Produtos (TV)';
+        }
+
+        if ($validated['offerSlideTitleText'] === '') {
+            $validated['offerSlideTitleText'] = 'Slide de oferta';
+        }
+
+        if ($validated['offerSlideBackgroundImageUrl'] === '') {
+            $validated['offerSlideBackgroundImageUrl'] = null;
         }
 
         unset($validated['video_urls']);
@@ -823,6 +864,14 @@ class WebScreenConfigController extends Controller
             unset($validated['isRightSidebarLogoBackgroundTransparent']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundTransparent')) {
+            unset($validated['offerSlideBackgroundTransparent']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageUrl')) {
+            unset($validated['offerSlideBackgroundImageUrl']);
+        }
+
         if ($shouldProcessGeneralConfig && $request->hasFile('rightSidebarLogoUpload') && Schema::hasColumn('configuracoes', 'rightSidebarLogoUrl')) {
             $currentLogoPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->rightSidebarLogoUrl ?? ''));
             if ($currentLogoPath !== '' && Storage::disk('public')->exists($currentLogoPath)) {
@@ -841,6 +890,18 @@ class WebScreenConfigController extends Controller
 
             $leftLogoPath = $this->storeLeftVerticalLogo($request);
             $validated['leftVerticalLogoUrl'] = $this->publicStorageUrl($leftLogoPath);
+        }
+
+        if (in_array($saveSection, ['', 'offerSlideConfigSection'], true)
+            && $request->hasFile('offerSlideBackgroundImageUpload')
+            && Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageUrl')) {
+            $currentOfferSlideBackgroundPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->offerSlideBackgroundImageUrl ?? ''));
+            if ($currentOfferSlideBackgroundPath !== '' && Storage::disk('public')->exists($currentOfferSlideBackgroundPath)) {
+                Storage::disk('public')->delete($currentOfferSlideBackgroundPath);
+            }
+
+            $offerSlideBackgroundPath = $this->storeOfferSlideBackgroundImage($request);
+            $validated['offerSlideBackgroundImageUrl'] = $this->publicStorageUrl($offerSlideBackgroundPath);
         }
 
 
@@ -1103,7 +1164,7 @@ class WebScreenConfigController extends Controller
             $validated['rightSidebarImageUrls'] = null;
         }
 
-        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['companyGalleryDirectUrl'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload'], $validated['forceClearRightSidebarSlides']);
+        unset($validated['suggestedSlideImageSources'], $validated['suggestedSlideSelectionSubmitted'], $validated['companyGalleryUpload'], $validated['companyGalleryDirectUrl'], $validated['rightSidebarLogoUpload'], $validated['leftVerticalLogoUpload'], $validated['offerSlideBackgroundImageUpload'], $validated['forceClearRightSidebarSlides']);
 
         $embedStatuses = [];
         $embedWarnings = [];
@@ -1398,6 +1459,22 @@ class WebScreenConfigController extends Controller
             'offerSlideDescriptionFontSize',
             'offerSlideDescriptionColor',
             'offerSlideDescriptionPosition',
+            'offerSlideBackgroundColorStart',
+            'offerSlideBackgroundColorEnd',
+            'offerSlideBackgroundTransparent',
+            'offerSlideBackgroundImageUrl',
+            'offerSlideTitleText',
+            'offerSlideTitleColor',
+            'offerSlideTitleFontSize',
+            'offerSlideTitleFontFamily',
+            'offerSlideTitleAlignment',
+            'offerSlideLayoutMode',
+            'offerSlideCardBorderEnabled',
+            'offerSlideCardBorderColor',
+            'offerSlideCardBorderWidth',
+            'offerSlideScreenBorderEnabled',
+            'offerSlideScreenBorderColor',
+            'offerSlideScreenBorderWidth',
             'offerSlidePriceFontFamily',
             'offerSlidePriceFontSize',
             'offerSlidePriceColor',
@@ -1490,6 +1567,16 @@ class WebScreenConfigController extends Controller
         $upload = $request->file('leftVerticalLogoUpload');
         $extension = strtolower((string) $upload->getClientOriginalExtension());
         $fileName = 'tv_left_logo_'.time().($extension ? '.'.$extension : '');
+
+        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
+    }
+
+    private function storeOfferSlideBackgroundImage(Request $request): string
+    {
+        $document = $this->resolveCompanyStorageDocument();
+        $upload = $request->file('offerSlideBackgroundImageUpload');
+        $extension = strtolower((string) $upload->getClientOriginalExtension());
+        $fileName = 'offer_slide_bg_'.time().($extension ? '.'.$extension : '');
 
         return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
     }

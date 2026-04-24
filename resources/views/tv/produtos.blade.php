@@ -12,7 +12,7 @@
     <script>
         (function () {
             const cacheVersionKey = 'tv_client_cache_version';
-            const expectedCacheVersion = '2026-04-23-1';
+            const expectedCacheVersion = '2026-04-24-1';
 
             try {
                 if (localStorage.getItem(cacheVersionKey) === expectedCacheVersion) {
@@ -497,9 +497,15 @@
             z-index: 90;
             display: none;
             padding: clamp(18px, 2vw, 34px);
+            --offer-slide-bg-start: #0F172A;
+            --offer-slide-bg-end: #020617;
+            --offer-slide-screen-border-color: rgba(148, 163, 184, 0.18);
+            --offer-slide-screen-border-width: 1px;
+            --offer-slide-card-border-color: rgba(148, 163, 184, 0.18);
+            --offer-slide-card-border-width: 1px;
             background:
                 radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%),
-                linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.99));
+                linear-gradient(180deg, var(--offer-slide-bg-start), var(--offer-slide-bg-end));
             box-sizing: border-box;
         }
 
@@ -510,9 +516,11 @@
         #offerSlideInner {
             width: 100%;
             height: 100%;
-            border: 1px solid rgba(148, 163, 184, 0.18);
+            border: var(--offer-slide-screen-border-width) solid var(--offer-slide-screen-border-color);
             border-radius: 24px;
-            background: rgba(15, 23, 42, 0.72);
+            --offer-slide-panel-bg-start: rgba(15, 23, 42, 0.12);
+            --offer-slide-panel-bg-end: rgba(2, 6, 23, 0.18);
+            background: linear-gradient(180deg, var(--offer-slide-panel-bg-start), var(--offer-slide-panel-bg-end));
             backdrop-filter: blur(10px);
             box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
             padding: clamp(20px, 2.2vw, 40px);
@@ -523,8 +531,9 @@
 
         #offerSlideHeader {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
             gap: 16px;
         }
 
@@ -545,6 +554,7 @@
         #offerSlideHeaderNote {
             color: rgba(226, 232, 240, 0.82);
             font-size: clamp(13px, 1vw, 18px);
+            text-align: inherit;
         }
 
         #offerSlideGrid {
@@ -556,11 +566,31 @@
             align-content: start;
         }
 
+        #offerSlideGrid[data-layout-mode="single_item"] {
+            grid-template-columns: minmax(0, 1fr);
+            max-width: min(960px, 100%);
+            margin: 0 auto;
+            align-content: center;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card {
+            min-height: min(54vh, 560px);
+            justify-content: center;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_list"] {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        #offerSlideGrid[data-layout-mode="double_list"] {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .offer-slide-card {
             min-height: 0;
             border-radius: 22px;
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
+            border: var(--offer-slide-card-border-width) solid var(--offer-slide-card-border-color);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.46), rgba(2, 6, 23, 0.62));
             padding: clamp(18px, 1.8vw, 30px);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
             display: flex;
