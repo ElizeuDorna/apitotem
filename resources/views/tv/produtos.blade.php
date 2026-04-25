@@ -12,7 +12,7 @@
     <script>
         (function () {
             const cacheVersionKey = 'tv_client_cache_version';
-            const expectedCacheVersion = '2026-04-24-1';
+            const expectedCacheVersion = '2026-04-24-2';
 
             try {
                 if (localStorage.getItem(cacheVersionKey) === expectedCacheVersion) {
@@ -495,7 +495,7 @@
             position: fixed;
             inset: 0;
             z-index: 90;
-            display: none;
+            overflow: hidden;
             padding: clamp(18px, 2vw, 34px);
             --offer-slide-bg-start: #0F172A;
             --offer-slide-bg-end: #020617;
@@ -507,13 +507,44 @@
                 radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%),
                 linear-gradient(180deg, var(--offer-slide-bg-start), var(--offer-slide-bg-end));
             box-sizing: border-box;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 280ms ease, visibility 280ms ease;
         }
 
         #offerSlideOverlay.is-active {
-            display: block;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        #offerSlideOverlay.no-transition {
+            transition: none;
+        }
+
+        #offerSlideBackgroundMedia,
+        #offerSlideBackgroundTint {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        #offerSlideBackgroundMedia {
+            inset: 0;
+            z-index: 0;
+            display: none;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        #offerSlideBackgroundTint {
+            inset: 0;
+            z-index: 1;
         }
 
         #offerSlideInner {
+            position: relative;
+            z-index: 2;
             width: 100%;
             height: 100%;
             border: var(--offer-slide-screen-border-width) solid var(--offer-slide-screen-border-color);
@@ -576,6 +607,25 @@
         #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card {
             min-height: min(54vh, 560px);
             justify-content: center;
+            position: relative;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card.has-single-item-product-image .offer-slide-card-row {
+            padding-right: var(--offer-slide-single-item-product-image-padding-right, calc(var(--offer-slide-single-item-product-image-width, 320px) + var(--offer-slide-single-item-product-image-right, 3px) + 32px));
+            padding-left: var(--offer-slide-single-item-product-image-padding-left, 0px);
+        }
+
+        .offer-slide-single-item-product-image {
+            position: absolute;
+            top: var(--offer-slide-single-item-product-image-top, 32px);
+            left: var(--offer-slide-single-item-product-image-left, auto);
+            right: var(--offer-slide-single-item-product-image-right, 3px);
+            width: var(--offer-slide-single-item-product-image-width, 320px);
+            height: var(--offer-slide-single-item-product-image-height, 320px);
+            object-fit: contain;
+            object-position: center;
+            pointer-events: none;
+            filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.32));
         }
 
         #offerSlideGrid[data-layout-mode="single_list"] {
@@ -590,7 +640,7 @@
             min-height: 0;
             border-radius: 22px;
             border: var(--offer-slide-card-border-width) solid var(--offer-slide-card-border-color);
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.46), rgba(2, 6, 23, 0.62));
+            background: var(--offer-slide-card-bg, rgba(15, 23, 42, 0.46));
             padding: clamp(18px, 1.8vw, 30px);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
             display: flex;
@@ -603,6 +653,7 @@
         .offer-slide-card-row {
             display: flex;
             flex-direction: column;
+            flex: 1;
             gap: 14px;
         }
 
@@ -844,6 +895,8 @@
     </div>
 
     <div id="offerSlideOverlay" aria-hidden="true">
+        <div id="offerSlideBackgroundMedia" aria-hidden="true"></div>
+        <div id="offerSlideBackgroundTint" aria-hidden="true"></div>
         <div id="offerSlideInner">
             <div id="offerSlideHeader">
                 <div id="offerSlideBadge">Slide de oferta</div>

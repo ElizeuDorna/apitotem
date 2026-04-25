@@ -78,6 +78,7 @@ class DeviceActivationController extends Controller
 
         $modelsByEmpresa = WebScreenModel::query()
             ->whereIn('empresa_id', $visibleEmpresaIds)
+            ->where('is_admin_default', false)
             ->orderBy('nome')
             ->get(['id', 'empresa_id', 'nome'])
             ->groupBy('empresa_id');
@@ -98,6 +99,7 @@ class DeviceActivationController extends Controller
             'activationModels' => $activationEmpresa
                 ? WebScreenModel::query()
                     ->where('empresa_id', $activationEmpresa->id)
+                    ->where('is_admin_default', false)
                     ->orderBy('nome')
                     ->get(['id', 'nome'])
                 : collect(),

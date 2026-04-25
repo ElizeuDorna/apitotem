@@ -36,7 +36,7 @@ class EmpresaContext
         $empresaVinculada = $user->empresa;
 
         if (! $empresaVinculada) {
-            return null;
+            return self::resolveEmpresaIdByUserDocument($user);
         }
 
         if (! $empresaVinculada->isRevenda()) {
@@ -55,6 +55,24 @@ class EmpresaContext
             ->exists();
 
         return $isPermitida ? $empresaAtivaId : null;
+    }
+
+    private static function resolveEmpresaIdByUserDocument(User $user): ?int
+    {
+        $documento = $user->documento();
+
+        if ($documento === '') {
+            return null;
+        }
+
+        $empresaId = Empresa::query()
+            ->whereRaw(
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(cnpj_cpf, '.', ''), '/', ''), '-', ''), '(', ''), ')', '') = ?",
+                [$documento]
+            )
+            ->value('id');
+
+        return $empresaId ? (int) $empresaId : null;
     }
 
     public static function requireEmpresaId(User $user): int

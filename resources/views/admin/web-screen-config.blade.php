@@ -39,6 +39,7 @@
                         $hasSelectedModel = !empty($selectedModelId);
                         $configMenusLocked = !$hasSelectedModel;
                         $selectedModelHasSavedConfig = $selectedModel && is_array($selectedModel->config_payload ?? null) && !empty($selectedModel->config_payload ?? []);
+                        $selectedModelIsClone = $selectedModel && !empty($selectedModel->source_model_id ?? null);
 
                         $savedPlaylist = collect($config->videoPlaylist ?? []);
                         if ($savedPlaylist->isEmpty()) {
@@ -95,7 +96,14 @@
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-base font-semibold text-gray-800">Modelos</h3>
                                 @if ($selectedModel)
-                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Modelo ativo: {{ $selectedModel->nome }}</span>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Modelo ativo: {{ $selectedModel->nome }}</span>
+                                        @if ($selectedModelIsAdminDefault)
+                                            <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-800">Padrao do admin</span>
+                                        @elseif ($selectedModelIsClone)
+                                            <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">Clone editavel</span>
+                                        @endif
+                                    </div>
                                 @else
                                     <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Seleção obrigatória</span>
                                 @endif
@@ -105,6 +113,12 @@
                                 <p class="text-sm font-semibold text-indigo-900">O modelo guarda o snapshot completo da configuração salva.</p>
                                 <p class="text-xs text-indigo-800">Você precisa escolher um modelo existente ou criar um novo antes de editar qualquer outro menu.</p>
                                 <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração atual da empresa.</p>
+                                @if ($selectedModelIsAdminDefault && ! $selectedModelCanEdit)
+                                    <div class="rounded-md border border-indigo-200 bg-white p-3 space-y-1">
+                                        <p class="text-sm font-semibold text-indigo-900">Este modelo e um padrao do admin.</p>
+                                        <p class="text-xs text-indigo-800">Voce pode visualizar e clonar esse modelo, mas nao pode editar o original. Depois do clone, a copia fica editavel para usar nos seus dispositivos.</p>
+                                    </div>
+                                @endif
                                 @if ($selectedModel)
                                     <div class="rounded-md border {{ $selectedModelHasSavedConfig ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-3 space-y-1">
                                         <p class="text-sm font-semibold {{ $selectedModelHasSavedConfig ? 'text-emerald-900' : 'text-amber-900' }}">
@@ -122,22 +136,54 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1" for="selectedModelConfigSelect">Editar modelo existente</label>
                                     <select id="selectedModelConfigSelect" class="w-full border rounded px-3 py-2 bg-white" data-config-url="{{ route('admin.web-screen-config.edit') }}">
                                         <option value="">Selecione um modelo</option>
-                                        @foreach($availableModels as $availableModel)
-                                            <option value="{{ $availableModel->id }}" @selected((string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id)>
-                                                {{ $availableModel->nome }}
-                                            </option>
-                                        @endforeach
+                                        @if(($ownedModels ?? collect())->isNotEmpty())
+                                            <optgroup label="Modelos da empresa">
+                                                @foreach($ownedModels as $availableModel)
+                                                    <option value="{{ $availableModel->id }}" @selected((string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id)>
+                                                        {{ $availableModel->nome }}@if(!empty($availableModel->source_model_id)) - clone @endif
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
+                                        @if(($sharedDefaultModels ?? collect())->isNotEmpty())
+                                            <optgroup label="Padroes do admin">
+                                                @foreach($sharedDefaultModels as $availableModel)
+                                                    <option value="{{ $availableModel->id }}" @selected((string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id)>
+                                                        {{ $availableModel->nome }} - padrao do admin
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
                                     </select>
-                                    <p class="mt-1 text-xs text-gray-500">A lista acima mostra somente os modelos da empresa selecionada.</p>
+                                    <p class="mt-1 text-xs text-gray-500">A lista acima mostra os modelos da empresa e os padroes do admin disponiveis para clonagem.</p>
                                     @error('selected_model_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
+                                @if ($selectedModel && $canManageDefaultModels)
+                                    <div class="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-3">
+                                        <label class="inline-flex items-center gap-2">
+                                            <input type="hidden" id="adminDefaultValue" name="admin_default_value" value="{{ $selectedModelIsAdminDefault ? '1' : '0' }}">
+                                            <input type="checkbox" id="isAdminDefaultCheckbox" class="rounded border-gray-300 text-indigo-600" @checked($selectedModelIsAdminDefault)>
+                                            <span class="text-sm text-gray-700">Disponibilizar este modelo como padrao do admin</span>
+                                        </label>
+                                        <button type="button" id="toggleDefaultModelButton" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">Salvar status de padrao</button>
+                                    </div>
+                                @endif
+
                                 <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="newModelName">Criar novo modelo</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1" for="newModelName">{{ $selectedModelIsAdminDefault && ! $selectedModelCanEdit ? 'Nome da copia do modelo' : 'Criar novo modelo' }}</label>
                                         <input type="text" id="newModelName" name="new_model_name" maxlength="120" value="{{ old('new_model_name') }}" class="w-full border rounded px-3 py-2" placeholder="Ex.: Modelo promocional manha">
                                     </div>
-                                    <button type="button" id="createModelButton" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Criar modelo</button>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        @if ($selectedModelIsAdminDefault && ! $selectedModelCanEdit)
+                                            <button type="button" id="cloneModelButton" class="rounded-md border border-sky-600 bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700">Clonar modelo</button>
+                                        @endif
+                                        <button type="button" id="createModelButton" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Criar modelo</button>
+                                        @if ($selectedModel && ($canManageDefaultModels || $selectedModelCanEdit))
+                                            <button type="button" id="deleteModelButton" class="rounded-md border border-red-600 bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">Excluir modelo</button>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1359,39 +1405,67 @@
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-4">
                                 <p class="text-sm text-gray-600">Tela cheia independente dos outros slides. Mostra apenas produtos com valor maior que zero no campo de oferta.</p>
 
-                                <label class="inline-flex items-center gap-2">
-                                    <input type="hidden" name="offerSlideEnabled" value="0">
-                                    <input type="checkbox" name="offerSlideEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideEnabled', $config->offerSlideEnabled ?? false))>
-                                    <span class="text-sm text-gray-700">Ativar slide de oferta</span>
-                                </label>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Entrar a cada quantos segundos</label>
-                                    <input type="number" name="offerSlideIntervalSeconds" min="30" max="86400" value="{{ old('offerSlideIntervalSeconds', $config->offerSlideIntervalSeconds ?? 300) }}" class="w-full border rounded px-3 py-2">
-                                    <p class="text-xs text-gray-500 mt-1">Define o intervalo do slide de oferta. Ele roda separado dos outros slides e usa somente os produtos com oferta ativa.</p>
-                                    @error('offerSlideIntervalSeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-700">Submenu do Slide de oferta</p>
+                                    <div id="offerSlideSubmenuList" class="space-y-2"></div>
                                 </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Modo de exibição</label>
-                                    <select name="offerSlideLayoutMode" class="w-full border rounded px-3 py-2">
-                                        <option value="single_item" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'single_item')>1 item por vez</option>
-                                        <option value="single_list" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'single_list')>1 lista</option>
-                                        <option value="double_list" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'double_list')>2 listas</option>
-                                    </select>
-                                    <p class="text-xs text-gray-500 mt-1">Escolhe se o slide mostra um card isolado, uma coluna única ou duas colunas de ofertas por página.</p>
-                                    @error('offerSlideLayoutMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div class="rounded-md border border-indigo-200 bg-indigo-50/70 p-3 space-y-3">
+                                <div id="offerSlideGeneralBlock" data-offer-slide-name="Tela Geral" class="hidden rounded-md border border-indigo-200 bg-indigo-50/70 p-3 space-y-3">
                                     <h5 class="border-l-4 border-indigo-400 pl-3 text-sm font-semibold text-indigo-900">Tela Geral</h5>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideEnabled', $config->offerSlideEnabled ?? false))>
+                                        <span class="text-sm text-gray-700">Ativar slide de oferta</span>
+                                    </label>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Entrar a cada quantos segundos</label>
+                                        <input type="number" name="offerSlideIntervalSeconds" min="30" max="86400" value="{{ old('offerSlideIntervalSeconds', $config->offerSlideIntervalSeconds ?? 300) }}" class="w-full border rounded px-3 py-2">
+                                        <p class="text-xs text-gray-500 mt-1">Define o intervalo do slide de oferta. Ele roda separado dos outros slides e usa somente os produtos com oferta ativa.</p>
+                                        @error('offerSlideIntervalSeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Modo de exibição</label>
+                                        <select name="offerSlideLayoutMode" class="w-full border rounded px-3 py-2">
+                                            <option value="single_item" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'single_item')>1 item por vez</option>
+                                            <option value="single_list" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'single_list')>1 lista</option>
+                                            <option value="double_list" @selected(old('offerSlideLayoutMode', $config->offerSlideLayoutMode ?? 'double_list') === 'double_list')>2 listas</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500 mt-1">Escolhe se o slide mostra um card isolado, uma coluna única ou duas colunas de ofertas por página.</p>
+                                        @error('offerSlideLayoutMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideSmoothTransitionEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideSmoothTransitionEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideSmoothTransitionEnabled', $config->offerSlideSmoothTransitionEnabled ?? false))>
+                                        <span class="text-sm text-gray-700">Ativar transição suave na entrada e saída</span>
+                                    </label>
+                                </div>
+
+                                <div id="offerSlideBackgroundBlock" data-offer-slide-name="Imagem de fundo" class="hidden rounded-md border border-sky-200 bg-sky-50/70 p-3 space-y-3">
+                                    <h5 class="border-l-4 border-sky-400 pl-3 text-sm font-semibold text-sky-900">Imagem de fundo</h5>
 
                                     <div id="offerSlideGeneralPreview" class="rounded-md border border-indigo-200 bg-white/90 px-4 py-3 shadow-sm">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">Exemplo do fundo</p>
-                                        <div id="offerSlideGeneralPreviewFrame" class="mt-2 flex min-h-28 items-end rounded-md border border-indigo-100 bg-slate-900 px-3 py-3">
-                                            <p class="text-sm font-semibold text-white/90">Fundo da tela inteira do slide de oferta</p>
+                                        <div id="offerSlideGeneralPreviewFrame" class="relative mt-2 flex min-h-28 items-end overflow-hidden rounded-md border border-indigo-100 bg-slate-900 px-3 py-3">
+                                            <div id="offerSlideGeneralPreviewMedia" class="pointer-events-none absolute inset-0 hidden bg-center bg-no-repeat"></div>
+                                            <p class="relative z-10 text-sm font-semibold text-white/90">Fundo da tela inteira do slide de oferta</p>
                                         </div>
                                     </div>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideBackgroundTransparent" value="0">
+                                        <input type="checkbox" name="offerSlideBackgroundTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideBackgroundTransparent', $config->offerSlideBackgroundTransparent ?? false))>
+                                        <span class="text-sm text-gray-700">Ativar transparência na tela inteira</span>
+                                    </label>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideBackgroundImageFullScreen" value="0">
+                                        <input type="checkbox" name="offerSlideBackgroundImageFullScreen" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideBackgroundImageFullScreen', $config->offerSlideBackgroundImageFullScreen ?? true))>
+                                        <span class="text-sm text-gray-700">Fazer imagem ocupar a tela inteira</span>
+                                    </label>
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
@@ -1408,11 +1482,35 @@
                                         </div>
                                     </div>
 
-                                    <label class="inline-flex items-center gap-2">
-                                        <input type="hidden" name="offerSlideBackgroundTransparent" value="0">
-                                        <input type="checkbox" name="offerSlideBackgroundTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideBackgroundTransparent', $config->offerSlideBackgroundTransparent ?? false))>
-                                        <span class="text-sm text-gray-700">Ativar transparência na tela inteira</span>
-                                    </label>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem (px)</label>
+                                            <input type="number" name="offerSlideBackgroundImageWidth" min="0" max="5000" value="{{ old('offerSlideBackgroundImageWidth', $config->offerSlideBackgroundImageWidth ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            <p class="text-xs text-gray-500 mt-1">Use 0 para ajustar automaticamente pela área disponível.</p>
+                                            @error('offerSlideBackgroundImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura da imagem (px)</label>
+                                            <input type="number" name="offerSlideBackgroundImageHeight" min="0" max="5000" value="{{ old('offerSlideBackgroundImageHeight', $config->offerSlideBackgroundImageHeight ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            <p class="text-xs text-gray-500 mt-1">Use 0 para ajustar automaticamente pela área disponível.</p>
+                                            @error('offerSlideBackgroundImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Margem acima (px)</label>
+                                            <input type="number" name="offerSlideBackgroundImageMarginTop" min="0" max="1000" value="{{ old('offerSlideBackgroundImageMarginTop', $config->offerSlideBackgroundImageMarginTop ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideBackgroundImageMarginTop')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Margem abaixo (px)</label>
+                                            <input type="number" name="offerSlideBackgroundImageMarginBottom" min="0" max="1000" value="{{ old('offerSlideBackgroundImageMarginBottom', $config->offerSlideBackgroundImageMarginBottom ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideBackgroundImageMarginBottom')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Link da imagem na tela inteira</label>
@@ -1436,8 +1534,64 @@
                                     @endif
                                 </div>
 
-                                <div class="rounded-md border border-amber-200 bg-amber-50/70 p-3 space-y-3">
+                                <div id="offerSlideProductImageBlock" data-offer-slide-name="Imagem do produto" class="hidden rounded-md border border-fuchsia-200 bg-fuchsia-50/70 p-3 space-y-3">
+                                    <h5 class="border-l-4 border-fuchsia-400 pl-3 text-sm font-semibold text-fuchsia-900">Imagem do produto</h5>
+
+                                    <p class="text-xs text-fuchsia-800">Essas opções só são aplicadas quando o modo de exibição estiver em 1 item por vez.</p>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideSingleItemProductImageEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideSingleItemProductImageEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideSingleItemProductImageEnabled', $config->offerSlideSingleItemProductImageEnabled ?? true))>
+                                        <span class="text-sm text-gray-700">Exibir imagem do produto</span>
+                                    </label>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Lado da imagem</label>
+                                        <select name="offerSlideSingleItemProductImageSide" class="w-full border rounded px-3 py-2">
+                                            <option value="right" @selected(old('offerSlideSingleItemProductImageSide', $config->offerSlideSingleItemProductImageSide ?? 'right') === 'right')>Direita</option>
+                                            <option value="left" @selected(old('offerSlideSingleItemProductImageSide', $config->offerSlideSingleItemProductImageSide ?? 'right') === 'left')>Esquerda</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500 mt-1">Escolhe em qual borda da TV a imagem vai ficar presa.</p>
+                                        @error('offerSlideSingleItemProductImageSide')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem (px)</label>
+                                            <input type="number" name="offerSlideSingleItemProductImageWidth" min="0" max="2000" value="{{ old('offerSlideSingleItemProductImageWidth', $config->offerSlideSingleItemProductImageWidth ?? 320) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideSingleItemProductImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura da imagem (px)</label>
+                                            <input type="number" name="offerSlideSingleItemProductImageHeight" min="0" max="2000" value="{{ old('offerSlideSingleItemProductImageHeight', $config->offerSlideSingleItemProductImageHeight ?? 320) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideSingleItemProductImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Distância do topo (px)</label>
+                                            <input type="number" name="offerSlideSingleItemProductImageTop" min="0" max="1200" value="{{ old('offerSlideSingleItemProductImageTop', $config->offerSlideSingleItemProductImageTop ?? 32) }}" class="w-full border rounded px-3 py-2">
+                                            @error('offerSlideSingleItemProductImageTop')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Distância da borda (px)</label>
+                                            <input type="number" name="offerSlideSingleItemProductImageRight" min="0" max="1200" value="{{ old('offerSlideSingleItemProductImageRight', $config->offerSlideSingleItemProductImageRight ?? 3) }}" class="w-full border rounded px-3 py-2">
+                                            <p class="text-xs text-gray-500 mt-1">Usa o lado escolhido acima. Menor valor deixa a imagem mais colada na borda.</p>
+                                            @error('offerSlideSingleItemProductImageRight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="offerSlideTitleBlock" data-offer-slide-name="Titulo" class="hidden rounded-md border border-amber-200 bg-amber-50/70 p-3 space-y-3">
                                     <h5 class="border-l-4 border-amber-400 pl-3 text-sm font-semibold text-amber-900">Título</h5>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideTitleEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideTitleEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideTitleEnabled', $config->offerSlideTitleEnabled ?? true))>
+                                        <span class="text-sm text-gray-700">Exibir título na TV</span>
+                                    </label>
 
                                     <div id="offerSlideTitlePreview" class="rounded-md border border-amber-200 bg-white/90 px-4 py-3 shadow-sm">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">Exemplo</p>
@@ -1490,6 +1644,7 @@
                                     </div>
                                 </div>
 
+                                <div id="offerSlideLineBlock" data-offer-slide-name="Bloco da linha" class="hidden space-y-4">
                                 <div class="rounded-md border border-slate-200 bg-slate-50/80 p-3 space-y-3">
                                     <h5 class="border-l-4 border-slate-400 pl-3 text-sm font-semibold text-slate-900">Linha geral da tela</h5>
 
@@ -1516,6 +1671,26 @@
                                 <div class="rounded-md border border-cyan-200 bg-cyan-50/70 p-3 space-y-3">
                                     <h5 class="border-l-4 border-cyan-400 pl-3 text-sm font-semibold text-cyan-900">Linha da oferta</h5>
 
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor de fundo da linha</label>
+                                            <input type="color" name="offerSlideCardBackgroundColor" value="{{ old('offerSlideCardBackgroundColor', $config->offerSlideCardBackgroundColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
+                                            @error('offerSlideCardBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Transparência da linha (%)</label>
+                                            <input type="number" name="offerSlideCardBackgroundTransparencyPercent" min="0" max="100" value="{{ old('offerSlideCardBackgroundTransparencyPercent', $config->offerSlideCardBackgroundTransparencyPercent ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                            <p class="text-xs text-gray-500 mt-1">0 mantém a cor sólida. 100 deixa o fundo totalmente transparente.</p>
+                                            @error('offerSlideCardBackgroundTransparencyPercent')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideCardBackgroundTransparent" value="0">
+                                        <input type="checkbox" name="offerSlideCardBackgroundTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideCardBackgroundTransparent', $config->offerSlideCardBackgroundTransparent ?? false))>
+                                        <span class="text-sm text-gray-700">Deixar o fundo da linha transparente</span>
+                                    </label>
+
                                     <label class="inline-flex items-center gap-2">
                                         <input type="hidden" name="offerSlideCardBorderEnabled" value="0">
                                         <input type="checkbox" name="offerSlideCardBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideCardBorderEnabled', $config->offerSlideCardBorderEnabled ?? true))>
@@ -1536,9 +1711,9 @@
                                     </div>
                                 </div>
                             </div>
+                                </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="rounded-md border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+                                <div id="offerSlideDescriptionBlock" data-offer-slide-name="Descricao" class="hidden rounded-md border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
                                     <h4 class="border-l-4 border-emerald-400 pl-3 text-sm font-semibold text-emerald-900">Descrição</h4>
 
                                     <div id="offerSlideDescriptionPreview" class="rounded-md border border-emerald-200 bg-white/90 px-4 py-3 shadow-sm">
@@ -1583,7 +1758,7 @@
 
                                 </div>
 
-                                <div class="rounded-md border border-rose-200 bg-rose-50/70 p-4 space-y-3">
+                                <div id="offerSlidePriceBlock" data-offer-slide-name="Valor" class="hidden rounded-md border border-rose-200 bg-rose-50/70 p-4 space-y-3">
                                     <h4 class="border-l-4 border-rose-400 pl-3 text-sm font-semibold text-rose-900">Valor da oferta</h4>
 
                                     <div id="offerSlidePricePreview" class="rounded-md border border-rose-200 bg-white/90 px-4 py-3 shadow-sm">
@@ -1622,11 +1797,21 @@
                                         <select name="offerSlidePricePosition" class="w-full border rounded px-3 py-2">
                                             <option value="bottom" @selected(old('offerSlidePricePosition', $config->offerSlidePricePosition ?? 'bottom') === 'bottom')>Abaixo</option>
                                             <option value="top" @selected(old('offerSlidePricePosition', $config->offerSlidePricePosition ?? 'bottom') === 'top')>Acima</option>
+                                            <option value="footer" @selected(old('offerSlidePricePosition', $config->offerSlidePricePosition ?? 'bottom') === 'footer')>Rodapé</option>
                                         </select>
                                         @error('offerSlidePricePosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Alinhamento do valor</label>
+                                        <select name="offerSlidePriceAlignment" class="w-full border rounded px-3 py-2">
+                                            <option value="left" @selected(old('offerSlidePriceAlignment', $config->offerSlidePriceAlignment ?? 'left') === 'left')>Esquerda</option>
+                                            <option value="center" @selected(old('offerSlidePriceAlignment', $config->offerSlidePriceAlignment ?? 'left') === 'center')>Centralizado</option>
+                                            <option value="right" @selected(old('offerSlidePriceAlignment', $config->offerSlidePriceAlignment ?? 'left') === 'right')>Direita</option>
+                                        </select>
+                                        @error('offerSlidePriceAlignment')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
                                 </div>
-                            </div>
                         </div>
                             </div>
                         </div>
@@ -1708,13 +1893,24 @@
         const offerSlidePriceColorInput = document.querySelector('input[name="offerSlidePriceColor"]');
         const offerSlidePriceFontSizeInput = document.querySelector('input[name="offerSlidePriceFontSize"]');
         const offerSlidePriceFontFamilyInput = document.querySelector('select[name="offerSlidePriceFontFamily"]');
+        const offerSlidePricePositionInput = document.querySelector('select[name="offerSlidePricePosition"]');
+        const offerSlidePriceAlignmentInput = document.querySelector('select[name="offerSlidePriceAlignment"]');
         const offerSlidePricePreview = document.getElementById('offerSlidePricePreview');
         const offerSlidePricePreviewText = document.getElementById('offerSlidePricePreviewText');
+        const offerSlideTitleEnabledInput = document.querySelector('input[name="offerSlideTitleEnabled"]:not([type="hidden"])');
+        const offerSlideCardBackgroundTransparentInput = document.querySelector('input[name="offerSlideCardBackgroundTransparent"]:not([type="hidden"])');
+        const offerSlideCardBackgroundTransparencyPercentInput = document.querySelector('input[name="offerSlideCardBackgroundTransparencyPercent"]');
         const offerSlideBackgroundTransparentInput = document.querySelector('input[name="offerSlideBackgroundTransparent"]:not([type="hidden"])');
+        const offerSlideBackgroundImageFullScreenInput = document.querySelector('input[name="offerSlideBackgroundImageFullScreen"]:not([type="hidden"])');
         const offerSlideBackgroundImageUrlInput = document.querySelector('input[name="offerSlideBackgroundImageUrl"]');
         const offerSlideGeneralPreviewFrame = document.getElementById('offerSlideGeneralPreviewFrame');
+        const offerSlideGeneralPreviewMedia = document.getElementById('offerSlideGeneralPreviewMedia');
         const offerSlideBackgroundColorStartInput = document.querySelector('input[name="offerSlideBackgroundColorStart"]');
         const offerSlideBackgroundColorEndInput = document.querySelector('input[name="offerSlideBackgroundColorEnd"]');
+        const offerSlideBackgroundImageWidthInput = document.querySelector('input[name="offerSlideBackgroundImageWidth"]');
+        const offerSlideBackgroundImageHeightInput = document.querySelector('input[name="offerSlideBackgroundImageHeight"]');
+        const offerSlideBackgroundImageMarginTopInput = document.querySelector('input[name="offerSlideBackgroundImageMarginTop"]');
+        const offerSlideBackgroundImageMarginBottomInput = document.querySelector('input[name="offerSlideBackgroundImageMarginBottom"]');
         const rightSidebarImageScheduleEditor = document.getElementById('rightSidebarImageScheduleEditor');
         const rightSidebarImageScheduleHint = document.getElementById('rightSidebarImageScheduleHint');
         const configAccordionMenu = document.getElementById('configAccordionMenu');
@@ -1735,6 +1931,11 @@
         const selectedModelConfigSelect = document.getElementById('selectedModelConfigSelect');
         const modelActionInput = document.getElementById('modelAction');
         const createModelButton = document.getElementById('createModelButton');
+        const cloneModelButton = document.getElementById('cloneModelButton');
+        const toggleDefaultModelButton = document.getElementById('toggleDefaultModelButton');
+        const deleteModelButton = document.getElementById('deleteModelButton');
+        const isAdminDefaultCheckbox = document.getElementById('isAdminDefaultCheckbox');
+        const adminDefaultValueInput = document.getElementById('adminDefaultValue');
         const suggestedSlideSelectionSubmittedInput = document.getElementById('suggestedSlideSelectionSubmitted');
         const openCompanyGalleryTargetInput = document.getElementById('openCompanyGalleryTarget');
         const openRightSidebarImageScheduleUrlInput = document.getElementById('openRightSidebarImageScheduleUrl');
@@ -1743,6 +1944,9 @@
         const rightSidebarSlideImageSelecionadaStorageKey = 'right_sidebar_slide_image_url_selected';
         const companyGallerySubmenuList = document.getElementById('companyGallerySubmenuList');
         let companyGallerySubmenuButtons = [];
+        const offerSlideSubmenuList = document.getElementById('offerSlideSubmenuList');
+        const offerSlideNavBlocks = Array.from(document.querySelectorAll('#offerSlideConfigSection [data-offer-slide-name]'));
+        let offerSlideSubmenuButtons = [];
         const companyGalleryNavBlocks = Array.from(document.querySelectorAll('[data-company-gallery-name][id]'));
         let activeCompanyGalleryTargetId = null;
         let openedConfigPanelId = null;
@@ -1778,16 +1982,57 @@
             const gradientEnd = String(offerSlideBackgroundColorEndInput?.value || '#020617');
             const offerSlideBackgroundImageUrl = String(offerSlideBackgroundImageUrlInput?.value || '').trim();
             const isOfferSlideTransparent = !!offerSlideBackgroundTransparentInput?.checked;
+            const isOfferSlideBackgroundFullScreen = offerSlideBackgroundImageFullScreenInput ? !!offerSlideBackgroundImageFullScreenInput.checked : true;
+            const offerSlideBackgroundImageWidth = Math.max(0, Math.min(5000, Number(offerSlideBackgroundImageWidthInput?.value || 0) || 0));
+            const offerSlideBackgroundImageHeight = Math.max(0, Math.min(5000, Number(offerSlideBackgroundImageHeightInput?.value || 0) || 0));
+            const offerSlideBackgroundImageMarginTop = Math.max(0, Math.min(1000, Number(offerSlideBackgroundImageMarginTopInput?.value || 0) || 0));
+            const offerSlideBackgroundImageMarginBottom = Math.max(0, Math.min(1000, Number(offerSlideBackgroundImageMarginBottomInput?.value || 0) || 0));
+            const offerSlideBackgroundImageHasCustomBox = offerSlideBackgroundImageWidth > 0
+                || offerSlideBackgroundImageHeight > 0
+                || offerSlideBackgroundImageMarginTop > 0
+                || offerSlideBackgroundImageMarginBottom > 0;
+            const shouldUseOfferSlideBackgroundFullScreen = isOfferSlideBackgroundFullScreen && !offerSlideBackgroundImageHasCustomBox;
+
+            [offerSlideBackgroundColorStartInput, offerSlideBackgroundColorEndInput].forEach((input) => {
+                if (!(input instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                input.removeAttribute('disabled');
+                input.setAttribute('aria-disabled', isOfferSlideTransparent ? 'true' : 'false');
+                input.classList.toggle('cursor-not-allowed', isOfferSlideTransparent);
+                input.classList.toggle('opacity-60', isOfferSlideTransparent);
+            });
+
+            [
+                offerSlideBackgroundImageWidthInput,
+                offerSlideBackgroundImageHeightInput,
+                offerSlideBackgroundImageMarginTopInput,
+                offerSlideBackgroundImageMarginBottomInput,
+            ].forEach((input) => {
+                if (!(input instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                input.removeAttribute('disabled');
+                input.setAttribute('aria-disabled', shouldUseOfferSlideBackgroundFullScreen ? 'true' : 'false');
+                input.classList.toggle('cursor-not-allowed', shouldUseOfferSlideBackgroundFullScreen);
+                input.classList.toggle('opacity-60', shouldUseOfferSlideBackgroundFullScreen);
+            });
+
+            if (offerSlideCardBackgroundTransparencyPercentInput instanceof HTMLInputElement) {
+                const isCardTransparent = offerSlideCardBackgroundTransparentInput ? !!offerSlideCardBackgroundTransparentInput.checked : false;
+                offerSlideCardBackgroundTransparencyPercentInput.removeAttribute('disabled');
+                offerSlideCardBackgroundTransparencyPercentInput.setAttribute('aria-disabled', isCardTransparent ? 'false' : 'true');
+                offerSlideCardBackgroundTransparencyPercentInput.classList.toggle('cursor-not-allowed', !isCardTransparent);
+                offerSlideCardBackgroundTransparencyPercentInput.classList.toggle('opacity-60', !isCardTransparent);
+            }
 
             if (offerSlideGeneralPreviewFrame) {
                 if (isOfferSlideTransparent) {
-                    offerSlideGeneralPreviewFrame.style.backgroundImage = offerSlideBackgroundImageUrl ? `url("${offerSlideBackgroundImageUrl}")` : 'none';
+                    offerSlideGeneralPreviewFrame.style.backgroundImage = 'none';
                     offerSlideGeneralPreviewFrame.style.backgroundColor = 'transparent';
                     offerSlideGeneralPreviewFrame.style.backgroundSize = 'cover';
-                } else if (offerSlideBackgroundImageUrl) {
-                    offerSlideGeneralPreviewFrame.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.84)), url("${offerSlideBackgroundImageUrl}")`;
-                    offerSlideGeneralPreviewFrame.style.backgroundColor = gradientEnd;
-                    offerSlideGeneralPreviewFrame.style.backgroundSize = 'cover, cover';
                 } else {
                     offerSlideGeneralPreviewFrame.style.backgroundImage = `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`;
                     offerSlideGeneralPreviewFrame.style.backgroundColor = gradientEnd;
@@ -1798,13 +2043,57 @@
                 offerSlideGeneralPreviewFrame.style.backgroundRepeat = 'no-repeat';
             }
 
+            if (offerSlideGeneralPreviewMedia) {
+                if (offerSlideBackgroundImageUrl === '') {
+                    offerSlideGeneralPreviewMedia.classList.add('hidden');
+                    offerSlideGeneralPreviewMedia.style.backgroundImage = 'none';
+                } else {
+                    offerSlideGeneralPreviewMedia.classList.remove('hidden');
+                    offerSlideGeneralPreviewMedia.style.backgroundImage = `url("${offerSlideBackgroundImageUrl}")`;
+                    offerSlideGeneralPreviewMedia.style.backgroundRepeat = 'no-repeat';
+                    offerSlideGeneralPreviewMedia.style.backgroundPosition = 'center';
+                    offerSlideGeneralPreviewMedia.style.opacity = isOfferSlideTransparent ? '1' : '0.78';
+                    offerSlideGeneralPreviewMedia.style.borderRadius = shouldUseOfferSlideBackgroundFullScreen ? '0' : '10px';
+
+                    if (shouldUseOfferSlideBackgroundFullScreen) {
+                        offerSlideGeneralPreviewMedia.style.inset = '0';
+                        offerSlideGeneralPreviewMedia.style.margin = '0';
+                        offerSlideGeneralPreviewMedia.style.transform = 'none';
+                        offerSlideGeneralPreviewMedia.style.width = '100%';
+                        offerSlideGeneralPreviewMedia.style.height = '100%';
+                        offerSlideGeneralPreviewMedia.style.maxWidth = '100%';
+                        offerSlideGeneralPreviewMedia.style.maxHeight = '100%';
+                        offerSlideGeneralPreviewMedia.style.backgroundSize = 'cover';
+                    } else {
+                        const previewTop = Math.min(offerSlideBackgroundImageMarginTop, 40);
+                        const previewBottom = Math.min(offerSlideBackgroundImageMarginBottom, 40);
+                        const previewWidth = offerSlideBackgroundImageWidth > 0 ? Math.min(offerSlideBackgroundImageWidth, 320) : 320;
+                        const previewHeight = offerSlideBackgroundImageHeight > 0 ? Math.min(offerSlideBackgroundImageHeight, 120) : Math.max(40, 120 - previewTop - previewBottom);
+
+                        offerSlideGeneralPreviewMedia.style.top = `${previewTop}px`;
+                        offerSlideGeneralPreviewMedia.style.bottom = 'auto';
+                        offerSlideGeneralPreviewMedia.style.left = '50%';
+                        offerSlideGeneralPreviewMedia.style.right = 'auto';
+                        offerSlideGeneralPreviewMedia.style.margin = '0';
+                        offerSlideGeneralPreviewMedia.style.transform = 'translateX(-50%)';
+                        offerSlideGeneralPreviewMedia.style.width = `min(100%, ${previewWidth}px)`;
+                        offerSlideGeneralPreviewMedia.style.height = `${previewHeight}px`;
+                        offerSlideGeneralPreviewMedia.style.maxWidth = 'calc(100% - 16px)';
+                        offerSlideGeneralPreviewMedia.style.maxHeight = `calc(100% - ${previewTop + previewBottom}px)`;
+                        offerSlideGeneralPreviewMedia.style.backgroundSize = '100% 100%';
+                    }
+                }
+            }
+
             if (offerSlideTitlePreview && offerSlideTitlePreviewText) {
+                const isOfferSlideTitleEnabled = offerSlideTitleEnabledInput ? !!offerSlideTitleEnabledInput.checked : true;
                 const titleText = String(offerSlideTitleTextInput?.value || '').trim() || 'Slide de oferta';
                 const titleColor = String(offerSlideTitleColorInput?.value || '#FDE68A');
                 const titleFontSize = Math.max(10, Math.min(160, Number(offerSlideTitleFontSizeInput?.value || 48) || 48));
                 const titleFontFamily = resolveAdminPreviewFontFamily(offerSlideTitleFontFamilyInput?.value || 'arial');
                 const titleAlignment = String(offerSlideTitleAlignmentInput?.value || 'left').toLowerCase();
 
+                offerSlideTitlePreview.style.display = isOfferSlideTitleEnabled ? '' : 'none';
                 offerSlideTitlePreview.style.background = `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`;
                 offerSlideTitlePreviewText.textContent = titleText;
                 offerSlideTitlePreviewText.style.color = titleColor;
@@ -1820,13 +2109,22 @@
             }
 
             if (offerSlidePricePreview && offerSlidePricePreviewText) {
+                const pricePosition = String(offerSlidePricePositionInput?.value || 'bottom').toLowerCase();
+                const priceAlignment = String(offerSlidePriceAlignmentInput?.value || 'left').toLowerCase();
                 offerSlidePricePreviewText.style.color = String(offerSlidePriceColorInput?.value || '#FDE68A');
                 offerSlidePricePreviewText.style.fontFamily = resolveAdminPreviewFontFamily(offerSlidePriceFontFamilyInput?.value || 'arial');
                 offerSlidePricePreviewText.style.fontSize = `${Math.max(10, Math.min(200, Number(offerSlidePriceFontSizeInput?.value || 72) || 72))}px`;
+                offerSlidePricePreview.style.display = 'flex';
+                offerSlidePricePreview.style.flexDirection = 'column';
+                offerSlidePricePreview.style.minHeight = '120px';
+                offerSlidePricePreview.style.justifyContent = pricePosition === 'footer' ? 'flex-end' : 'flex-start';
+                offerSlidePricePreviewText.style.textAlign = ['left', 'center', 'right'].includes(priceAlignment) ? priceAlignment : 'left';
+                offerSlidePricePreviewText.style.width = '100%';
             }
         }
 
         [
+            offerSlideTitleEnabledInput,
             offerSlideTitleTextInput,
             offerSlideTitleColorInput,
             offerSlideTitleFontSizeInput,
@@ -1838,10 +2136,19 @@
             offerSlidePriceColorInput,
             offerSlidePriceFontSizeInput,
             offerSlidePriceFontFamilyInput,
+            offerSlidePricePositionInput,
+            offerSlidePriceAlignmentInput,
             offerSlideBackgroundTransparentInput,
+            offerSlideCardBackgroundTransparentInput,
+            offerSlideCardBackgroundTransparencyPercentInput,
+            offerSlideBackgroundImageFullScreenInput,
             offerSlideBackgroundImageUrlInput,
             offerSlideBackgroundColorStartInput,
             offerSlideBackgroundColorEndInput,
+            offerSlideBackgroundImageWidthInput,
+            offerSlideBackgroundImageHeightInput,
+            offerSlideBackgroundImageMarginTopInput,
+            offerSlideBackgroundImageMarginBottomInput,
         ].forEach((element) => {
             if (!element) {
                 return;
@@ -4123,6 +4430,102 @@
         buildCompanyGallerySubmenuButtons();
         closeAllCompanyGalleryBlocks();
 
+        function setOfferSlideSubmenuButtonState(button, isActive) {
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            button.classList.toggle('bg-indigo-100', isActive);
+            button.classList.toggle('text-indigo-700', isActive);
+            button.classList.toggle('font-semibold', isActive);
+            button.classList.toggle('bg-white', !isActive);
+            button.classList.toggle('text-gray-700', !isActive);
+        }
+
+        function closeAllOfferSlideBlocks() {
+            offerSlideNavBlocks.forEach((block) => {
+                block.classList.add('hidden');
+                block.style.display = 'none';
+            });
+
+            offerSlideSubmenuButtons.forEach((button) => setOfferSlideSubmenuButtonState(button, false));
+        }
+
+        function openOfferSlideBlock(targetId) {
+            const normalizedTargetId = String(targetId || '').trim();
+            if (!normalizedTargetId) {
+                return;
+            }
+
+            const targetButton = offerSlideSubmenuButtons.find(
+                (button) => String(button.getAttribute('data-offer-slide-target') || '').trim() === normalizedTargetId
+            );
+
+            if (!targetButton) {
+                return;
+            }
+
+            offerSlideNavBlocks.forEach((block) => {
+                const isActive = block.id === normalizedTargetId;
+                block.classList.toggle('hidden', !isActive);
+                block.style.display = isActive ? '' : 'none';
+
+                if (isActive) {
+                    targetButton.insertAdjacentElement('afterend', block);
+                }
+            });
+
+            offerSlideSubmenuButtons.forEach((button) => {
+                setOfferSlideSubmenuButtonState(button, button === targetButton);
+            });
+        }
+
+        function buildOfferSlideSubmenuButtons() {
+            if (!offerSlideSubmenuList) {
+                return;
+            }
+
+            offerSlideSubmenuList.innerHTML = '';
+
+            offerSlideNavBlocks.forEach((block) => {
+                const targetId = String(block.id || '').trim();
+                const label = String(block.getAttribute('data-offer-slide-name') || '').trim();
+
+                if (!targetId || !label) {
+                    return;
+                }
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'offer-slide-submenu-btn w-full rounded border border-gray-300 px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50';
+                button.setAttribute('data-offer-slide-target', targetId);
+                button.textContent = label;
+                button.addEventListener('click', () => {
+                    const clickedTargetId = String(button.getAttribute('data-offer-slide-target') || '').trim();
+                    if (!clickedTargetId) {
+                        return;
+                    }
+
+                    const targetBlock = offerSlideNavBlocks.find((block) => block.id === clickedTargetId);
+                    const isAlreadyOpen = targetBlock && !targetBlock.classList.contains('hidden');
+
+                    if (isAlreadyOpen) {
+                        closeAllOfferSlideBlocks();
+                        return;
+                    }
+
+                    openOfferSlideBlock(clickedTargetId);
+                });
+
+                offerSlideSubmenuList.appendChild(button);
+            });
+
+            offerSlideSubmenuButtons = Array.from(offerSlideSubmenuList.querySelectorAll('.offer-slide-submenu-btn'));
+        }
+
+        buildOfferSlideSubmenuButtons();
+        closeAllOfferSlideBlocks();
+
         if (addSlideImageFromGalleryBtn) {
             addSlideImageFromGalleryBtn.addEventListener('click', () => {
                 abrirGaleriaNovaParaSelecionarSlide((selectedUrl) => {
@@ -4380,6 +4783,58 @@
 
                 if (modelActionInput instanceof HTMLInputElement) {
                     modelActionInput.value = 'create';
+                }
+
+                webConfigForm.requestSubmit();
+            });
+        }
+
+        if (cloneModelButton instanceof HTMLButtonElement && webConfigForm instanceof HTMLFormElement) {
+            cloneModelButton.addEventListener('click', () => {
+                if (saveSectionInput instanceof HTMLInputElement) {
+                    saveSectionInput.value = '';
+                }
+
+                if (modelActionInput instanceof HTMLInputElement) {
+                    modelActionInput.value = 'clone_default';
+                }
+
+                webConfigForm.requestSubmit();
+            });
+        }
+
+        if (toggleDefaultModelButton instanceof HTMLButtonElement && webConfigForm instanceof HTMLFormElement) {
+            toggleDefaultModelButton.addEventListener('click', () => {
+                if (saveSectionInput instanceof HTMLInputElement) {
+                    saveSectionInput.value = '';
+                }
+
+                if (adminDefaultValueInput instanceof HTMLInputElement && isAdminDefaultCheckbox instanceof HTMLInputElement) {
+                    adminDefaultValueInput.value = isAdminDefaultCheckbox.checked ? '1' : '0';
+                }
+
+                if (modelActionInput instanceof HTMLInputElement) {
+                    modelActionInput.value = 'toggle_default';
+                }
+
+                webConfigForm.requestSubmit();
+            });
+        }
+
+        if (deleteModelButton instanceof HTMLButtonElement && webConfigForm instanceof HTMLFormElement) {
+            deleteModelButton.addEventListener('click', () => {
+                const confirmationText = window.prompt('Para excluir este modelo, digite EXCLUIR.');
+
+                if (confirmationText !== 'EXCLUIR') {
+                    return;
+                }
+
+                if (saveSectionInput instanceof HTMLInputElement) {
+                    saveSectionInput.value = '';
+                }
+
+                if (modelActionInput instanceof HTMLInputElement) {
+                    modelActionInput.value = 'delete';
                 }
 
                 webConfigForm.requestSubmit();

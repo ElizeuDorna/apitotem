@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
+use App\Models\DeviceConfiguration;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
+use App\Models\User;
 use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +28,7 @@ class WebScreenConfigController extends Controller
 
     public function edit(Request $request): View
     {
+        $user = Auth::user();
         $empresaId = $this->resolveEmpresaId();
 
         $companyConfig = Configuracao::firstOrCreate([
@@ -33,7 +36,7 @@ class WebScreenConfigController extends Controller
         ], []);
 
         $companyConfig = $companyConfig->fresh() ?? $companyConfig;
-        $selectedModel = $this->resolveSelectedModel($empresaId, $request->query('model_id'));
+        $selectedModel = $this->resolveSelectedModel($user, $empresaId, $request->query('model_id'));
         $config = $companyConfig->replicate();
         $config->empresa_id = $companyConfig->empresa_id;
 
@@ -59,12 +62,22 @@ class WebScreenConfigController extends Controller
         return view('admin.web-screen-config', [
             'config' => $config,
             'responsiveModeEnabled' => $this->isResponsiveModeEnabled($empresaId),
-            'availableModels' => WebScreenModel::query()
+            'ownedModels' => WebScreenModel::query()
                 ->where('empresa_id', $empresaId)
+                ->where('is_admin_default', false)
                 ->orderBy('nome')
-                ->get(['id', 'nome']),
+                ->get(['id', 'nome', 'source_model_id']),
+            'sharedDefaultModels' => WebScreenModel::query()
+                ->where('is_admin_default', true)
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'empresa_id']),
             'selectedModel' => $selectedModel,
             'selectedModelId' => $selectedModel?->id,
+            'selectedModelCanEdit' => $selectedModel
+                ? $this->canEditSelectedModel($user, $empresaId, $selectedModel)
+                : false,
+            'selectedModelIsAdminDefault' => (bool) ($selectedModel?->is_admin_default ?? false),
+            'canManageDefaultModels' => $user->isDefaultAdmin(),
             'companyGalleryImages' => $this->listCompanyGalleryImages(),
             'availableGroups' => Grupo::query()
                 ->where('empresa_id', $empresaId)
@@ -75,10 +88,11 @@ class WebScreenConfigController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
+        $user = Auth::user();
         $empresaId = $this->resolveEmpresaId();
 
         $selectedModelInput = $request->input('selected_model_id');
-        $selectedModel = $this->resolveSelectedModel($empresaId, $selectedModelInput);
+        $selectedModel = $this->resolveSelectedModel($user, $empresaId, $selectedModelInput);
         if ($selectedModelInput !== null && $selectedModelInput !== '' && ! $selectedModel) {
             return redirect()
                 ->back()
@@ -121,6 +135,7 @@ class WebScreenConfigController extends Controller
             $createdModel = WebScreenModel::query()->create([
                 'empresa_id' => $empresaId,
                 'nome' => trim((string) $validatedModel['new_model_name']),
+                'source_model_id' => $selectedModel?->is_admin_default ? $selectedModel->id : null,
                 'config_payload' => $this->extractConfigPayloadFromConfig($currentConfig),
             ]);
 
@@ -131,12 +146,112 @@ class WebScreenConfigController extends Controller
                 ->with('success', 'Modelo criado com a configuracao atual da tela.');
         }
 
+        if ($modelAction === 'clone_default') {
+            if (! $selectedModel || ! $selectedModel->is_admin_default) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selected_model_id' => 'Selecione um modelo padrao do admin para clonar.',
+                    ])
+                    ->withInput();
+            }
+
+            $validatedClone = $request->validate([
+                'new_model_name' => ['nullable', 'string', 'max:120'],
+            ]);
+
+            $cloneName = trim((string) ($validatedClone['new_model_name'] ?? ''));
+            if ($cloneName === '') {
+                $cloneName = $this->generateClonedModelName($empresaId, $selectedModel->nome);
+            }
+
+            $clonedModel = WebScreenModel::query()->create([
+                'empresa_id' => $empresaId,
+                'nome' => $cloneName,
+                'source_model_id' => $selectedModel->id,
+                'config_payload' => is_array($selectedModel->config_payload) ? $selectedModel->config_payload : [],
+            ]);
+
+            return redirect()
+                ->route('admin.web-screen-config.edit', ['model_id' => $clonedModel->id])
+                ->with('success', 'Modelo padrao clonado com sucesso. Agora voce pode editar a sua copia.');
+        }
+
+        if ($modelAction === 'toggle_default') {
+            abort_unless($user->isDefaultAdmin(), 403);
+
+            if (! $selectedModel) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selected_model_id' => 'Selecione um modelo para alterar o status de padrao.',
+                    ])
+                    ->withInput();
+            }
+
+            $shouldBeAdminDefault = $this->resolveBooleanInput($request, 'admin_default_value', false);
+
+            $selectedModel->forceFill([
+                'is_admin_default' => $shouldBeAdminDefault,
+            ])->save();
+
+            return redirect()
+                ->route('admin.web-screen-config.edit', ['model_id' => $selectedModel->id])
+                ->with('success', $selectedModel->is_admin_default
+                    ? 'Modelo marcado como padrao global do admin e liberado para todas as empresas.'
+                    : 'Modelo removido da lista de padroes do admin e mantido na empresa de origem.');
+        }
+
+        if ($modelAction === 'delete') {
+            if (! $selectedModel) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selected_model_id' => 'Selecione um modelo para excluir.',
+                    ])
+                    ->withInput();
+            }
+
+            if (! $this->canDeleteSelectedModel($user, $empresaId, $selectedModel)) {
+                abort(403);
+            }
+
+            $devicesUsingModel = DeviceConfiguration::query()
+                ->where('web_screen_model_id', $selectedModel->id)
+                ->count();
+
+            if ($devicesUsingModel > 0) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selected_model_id' => 'Esse modelo nao pode ser excluido porque existem dispositivos usando ele. Troque o modelo das TVs primeiro.',
+                    ])
+                    ->withInput();
+            }
+
+            $selectedModelName = $selectedModel->nome;
+            $selectedModel->delete();
+
+            return redirect()
+                ->route('admin.web-screen-config.edit')
+                ->with('success', 'Modelo "'.$selectedModelName.'" excluido com sucesso.');
+        }
+
         $saveSection = trim((string) $request->input('saveSection', ''));
         if ($saveSection !== '' && ! $selectedModel) {
             return redirect()
                 ->back()
                 ->withErrors([
                     'selected_model_id' => 'Selecione ou crie um modelo antes de editar qualquer configuracao.',
+                ])
+                ->withInput();
+        }
+
+        if ($saveSection !== '' && ! $this->canEditSelectedModel($user, $empresaId, $selectedModel)) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'selected_model_id' => 'Esse modelo padrao do admin nao pode ser editado diretamente. Clone o modelo para criar a sua copia editavel.',
                 ])
                 ->withInput();
         }
@@ -431,12 +546,28 @@ class WebScreenConfigController extends Controller
             'offerSlideBackgroundTransparent' => ['nullable', 'boolean'],
             'offerSlideBackgroundImageUrl' => ['nullable', 'string', 'max:1000'],
             'offerSlideBackgroundImageUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'offerSlideBackgroundImageFullScreen' => ['nullable', 'boolean'],
+            'offerSlideBackgroundImageWidth' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'offerSlideBackgroundImageHeight' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'offerSlideBackgroundImageMarginTop' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'offerSlideBackgroundImageMarginBottom' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'offerSlideSingleItemProductImageEnabled' => ['nullable', 'boolean'],
+            'offerSlideSingleItemProductImageWidth' => ['nullable', 'integer', 'min:0', 'max:2000'],
+            'offerSlideSingleItemProductImageHeight' => ['nullable', 'integer', 'min:0', 'max:2000'],
+            'offerSlideSingleItemProductImageTop' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            'offerSlideSingleItemProductImageRight' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            'offerSlideSingleItemProductImageSide' => ['nullable', 'in:left,right'],
+            'offerSlideTitleEnabled' => ['nullable', 'boolean'],
             'offerSlideTitleText' => ['nullable', 'string', 'max:120'],
             'offerSlideTitleColor' => ['nullable', 'string', 'max:9'],
             'offerSlideTitleFontSize' => ['nullable', 'integer', 'min:10', 'max:160'],
             'offerSlideTitleFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
             'offerSlideTitleAlignment' => ['nullable', 'in:left,center,right'],
             'offerSlideLayoutMode' => ['nullable', 'in:single_item,single_list,double_list'],
+            'offerSlideSmoothTransitionEnabled' => ['nullable', 'boolean'],
+            'offerSlideCardBackgroundColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideCardBackgroundTransparent' => ['nullable', 'boolean'],
+            'offerSlideCardBackgroundTransparencyPercent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'offerSlideCardBorderEnabled' => ['nullable', 'boolean'],
             'offerSlideCardBorderColor' => ['nullable', 'string', 'max:9'],
             'offerSlideCardBorderWidth' => ['nullable', 'integer', 'min:0', 'max:20'],
@@ -446,7 +577,8 @@ class WebScreenConfigController extends Controller
             'offerSlidePriceFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
             'offerSlidePriceFontSize' => ['nullable', 'integer', 'min:10', 'max:200'],
             'offerSlidePriceColor' => ['nullable', 'string', 'max:9'],
-            'offerSlidePricePosition' => ['nullable', 'in:top,bottom'],
+            'offerSlidePricePosition' => ['nullable', 'in:top,bottom,footer'],
+            'offerSlidePriceAlignment' => ['nullable', 'in:left,center,right'],
             'isPaginationEnabled' => ['nullable', 'boolean'],
             'pageSize' => ['nullable', 'integer', 'min:1', 'max:100'],
             'paginationInterval' => ['nullable', 'integer', 'min:1', 'max:120'],
@@ -721,19 +853,40 @@ class WebScreenConfigController extends Controller
         $validated['offerSlideBackgroundColorStart'] = $this->normalizeHexColor((string) ($validated['offerSlideBackgroundColorStart'] ?? '#0f172a'), '#0f172a');
         $validated['offerSlideBackgroundColorEnd'] = $this->normalizeHexColor((string) ($validated['offerSlideBackgroundColorEnd'] ?? '#020617'), '#020617');
         $validated['offerSlideBackgroundTransparent'] = (bool) ($validated['offerSlideBackgroundTransparent'] ?? false);
-        $validated['offerSlideBackgroundImageUrl'] = trim((string) ($validated['offerSlideBackgroundImageUrl'] ?? ''));
+        $validated['offerSlideBackgroundImageUrl'] = $this->normalizeSingleImageUrl((string) ($validated['offerSlideBackgroundImageUrl'] ?? ''));
+        $validated['offerSlideBackgroundImageFullScreen'] = (bool) ($validated['offerSlideBackgroundImageFullScreen'] ?? true);
+        $validated['offerSlideBackgroundImageWidth'] = (int) ($validated['offerSlideBackgroundImageWidth'] ?? 0);
+        $validated['offerSlideBackgroundImageHeight'] = (int) ($validated['offerSlideBackgroundImageHeight'] ?? 0);
+        $validated['offerSlideBackgroundImageMarginTop'] = (int) ($validated['offerSlideBackgroundImageMarginTop'] ?? 0);
+        $validated['offerSlideBackgroundImageMarginBottom'] = (int) ($validated['offerSlideBackgroundImageMarginBottom'] ?? 0);
+        $validated['offerSlideSingleItemProductImageEnabled'] = (bool) ($validated['offerSlideSingleItemProductImageEnabled'] ?? true);
+        $validated['offerSlideSingleItemProductImageWidth'] = (int) ($validated['offerSlideSingleItemProductImageWidth'] ?? 320);
+        $validated['offerSlideSingleItemProductImageHeight'] = (int) ($validated['offerSlideSingleItemProductImageHeight'] ?? 320);
+        $validated['offerSlideSingleItemProductImageTop'] = (int) ($validated['offerSlideSingleItemProductImageTop'] ?? 32);
+        $validated['offerSlideSingleItemProductImageRight'] = (int) ($validated['offerSlideSingleItemProductImageRight'] ?? 3);
+        $validated['offerSlideSingleItemProductImageSide'] = (string) ($validated['offerSlideSingleItemProductImageSide'] ?? 'right');
+        $validated['offerSlideTitleEnabled'] = (bool) ($validated['offerSlideTitleEnabled'] ?? true);
         $validated['offerSlideTitleText'] = trim((string) ($validated['offerSlideTitleText'] ?? ''));
         $validated['offerSlideTitleColor'] = $this->normalizeHexColor((string) ($validated['offerSlideTitleColor'] ?? '#fde68a'), '#fde68a');
         $validated['offerSlideTitleFontSize'] = (int) ($validated['offerSlideTitleFontSize'] ?? 48);
         $validated['offerSlideTitleFontFamily'] = (string) ($validated['offerSlideTitleFontFamily'] ?? 'arial');
         $validated['offerSlideTitleAlignment'] = (string) ($validated['offerSlideTitleAlignment'] ?? 'left');
         $validated['offerSlideLayoutMode'] = (string) ($validated['offerSlideLayoutMode'] ?? 'double_list');
+        $validated['offerSlideSmoothTransitionEnabled'] = (bool) ($validated['offerSlideSmoothTransitionEnabled'] ?? false);
+        $validated['offerSlideCardBackgroundColor'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBackgroundColor'] ?? '#0f172a'), '#0f172a');
+        $validated['offerSlideCardBackgroundTransparent'] = (bool) ($validated['offerSlideCardBackgroundTransparent'] ?? false);
+        $validated['offerSlideCardBackgroundTransparencyPercent'] = (int) ($validated['offerSlideCardBackgroundTransparencyPercent'] ?? 0);
         $validated['offerSlideCardBorderEnabled'] = (bool) ($validated['offerSlideCardBorderEnabled'] ?? true);
         $validated['offerSlideCardBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBorderColor'] ?? '#94a3b8'), '#94a3b8');
         $validated['offerSlideCardBorderWidth'] = (int) ($validated['offerSlideCardBorderWidth'] ?? 1);
         $validated['offerSlideScreenBorderEnabled'] = (bool) ($validated['offerSlideScreenBorderEnabled'] ?? true);
         $validated['offerSlideScreenBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideScreenBorderColor'] ?? '#94a3b8'), '#94a3b8');
         $validated['offerSlideScreenBorderWidth'] = (int) ($validated['offerSlideScreenBorderWidth'] ?? 1);
+        $validated['offerSlidePriceFontFamily'] = (string) ($validated['offerSlidePriceFontFamily'] ?? 'arial');
+        $validated['offerSlidePriceFontSize'] = (int) ($validated['offerSlidePriceFontSize'] ?? 72);
+        $validated['offerSlidePriceColor'] = $this->normalizeHexColor((string) ($validated['offerSlidePriceColor'] ?? '#fde68a'), '#fde68a');
+        $validated['offerSlidePricePosition'] = (string) ($validated['offerSlidePricePosition'] ?? 'bottom');
+        $validated['offerSlidePriceAlignment'] = (string) ($validated['offerSlidePriceAlignment'] ?? 'left');
         $validated['gradientStartColor'] = $this->normalizeHexColor(
             $validated['gradientStartColor'] ?? null,
             (string) ($validated['rowBackgroundColor'] ?? '#0b1220')
@@ -870,6 +1023,70 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageUrl')) {
             unset($validated['offerSlideBackgroundImageUrl']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageFullScreen')) {
+            unset($validated['offerSlideBackgroundImageFullScreen']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageWidth')) {
+            unset($validated['offerSlideBackgroundImageWidth']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageHeight')) {
+            unset($validated['offerSlideBackgroundImageHeight']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageMarginTop')) {
+            unset($validated['offerSlideBackgroundImageMarginTop']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageMarginBottom')) {
+            unset($validated['offerSlideBackgroundImageMarginBottom']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageEnabled')) {
+            unset($validated['offerSlideSingleItemProductImageEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageWidth')) {
+            unset($validated['offerSlideSingleItemProductImageWidth']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageHeight')) {
+            unset($validated['offerSlideSingleItemProductImageHeight']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageTop')) {
+            unset($validated['offerSlideSingleItemProductImageTop']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageRight')) {
+            unset($validated['offerSlideSingleItemProductImageRight']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageSide')) {
+            unset($validated['offerSlideSingleItemProductImageSide']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideTitleEnabled')) {
+            unset($validated['offerSlideTitleEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSmoothTransitionEnabled')) {
+            unset($validated['offerSlideSmoothTransitionEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundColor')) {
+            unset($validated['offerSlideCardBackgroundColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundTransparent')) {
+            unset($validated['offerSlideCardBackgroundTransparent']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundTransparencyPercent')) {
+            unset($validated['offerSlideCardBackgroundTransparencyPercent']);
         }
 
         if ($shouldProcessGeneralConfig && $request->hasFile('rightSidebarLogoUpload') && Schema::hasColumn('configuracoes', 'rightSidebarLogoUrl')) {
@@ -1259,7 +1476,7 @@ class WebScreenConfigController extends Controller
             ->all();
     }
 
-    private function resolveSelectedModel(int $empresaId, mixed $modelId): ?WebScreenModel
+    private function resolveSelectedModel(User $user, int $empresaId, mixed $modelId): ?WebScreenModel
     {
         $normalizedModelId = (int) $modelId;
         if ($normalizedModelId <= 0) {
@@ -1267,9 +1484,55 @@ class WebScreenConfigController extends Controller
         }
 
         return WebScreenModel::query()
-            ->where('empresa_id', $empresaId)
             ->where('id', $normalizedModelId)
+            ->where(function ($query) use ($empresaId) {
+                $query->where('empresa_id', $empresaId)
+                    ->orWhere('is_admin_default', true);
+            })
             ->first();
+    }
+
+    private function canEditSelectedModel(User $user, int $empresaId, ?WebScreenModel $model): bool
+    {
+        if (! $model) {
+            return false;
+        }
+
+        if ($user->isDefaultAdmin()) {
+            return true;
+        }
+
+        return (int) $model->empresa_id === $empresaId && ! $model->is_admin_default;
+    }
+
+    private function canDeleteSelectedModel(User $user, int $empresaId, ?WebScreenModel $model): bool
+    {
+        if (! $model) {
+            return false;
+        }
+
+        if ($user->isDefaultAdmin()) {
+            return true;
+        }
+
+        return (int) $model->empresa_id === $empresaId && ! $model->is_admin_default;
+    }
+
+    private function generateClonedModelName(int $empresaId, string $baseName): string
+    {
+        $normalizedBaseName = trim($baseName) !== '' ? trim($baseName) : 'Modelo clonado';
+        $candidate = $normalizedBaseName.' - Copia';
+        $suffix = 2;
+
+        while (WebScreenModel::query()
+            ->where('empresa_id', $empresaId)
+            ->where('nome', $candidate)
+            ->exists()) {
+            $candidate = $normalizedBaseName.' - Copia '.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 
     private function applyConfigPayload(Configuracao $config, array $payload): void
@@ -1463,12 +1726,28 @@ class WebScreenConfigController extends Controller
             'offerSlideBackgroundColorEnd',
             'offerSlideBackgroundTransparent',
             'offerSlideBackgroundImageUrl',
+            'offerSlideBackgroundImageFullScreen',
+            'offerSlideBackgroundImageWidth',
+            'offerSlideBackgroundImageHeight',
+            'offerSlideBackgroundImageMarginTop',
+            'offerSlideBackgroundImageMarginBottom',
+            'offerSlideSingleItemProductImageEnabled',
+            'offerSlideSingleItemProductImageWidth',
+            'offerSlideSingleItemProductImageHeight',
+            'offerSlideSingleItemProductImageTop',
+            'offerSlideSingleItemProductImageRight',
+            'offerSlideSingleItemProductImageSide',
+            'offerSlideTitleEnabled',
             'offerSlideTitleText',
             'offerSlideTitleColor',
             'offerSlideTitleFontSize',
             'offerSlideTitleFontFamily',
             'offerSlideTitleAlignment',
             'offerSlideLayoutMode',
+            'offerSlideSmoothTransitionEnabled',
+            'offerSlideCardBackgroundColor',
+            'offerSlideCardBackgroundTransparent',
+            'offerSlideCardBackgroundTransparencyPercent',
             'offerSlideCardBorderEnabled',
             'offerSlideCardBorderColor',
             'offerSlideCardBorderWidth',
@@ -1479,6 +1758,7 @@ class WebScreenConfigController extends Controller
             'offerSlidePriceFontSize',
             'offerSlidePriceColor',
             'offerSlidePricePosition',
+            'offerSlidePriceAlignment',
             'isPaginationEnabled',
             'pageSize',
             'paginationInterval',
