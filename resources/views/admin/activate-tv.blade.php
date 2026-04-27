@@ -159,118 +159,158 @@
                         @endif
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead class="bg-gray-50">
+                    <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-white/80 text-slate-600">
                                 <tr>
-                                    <th class="px-3 py-2 text-left">Nome</th>
-                                    <th class="px-3 py-2 text-left">Local</th>
-                                    <th class="px-3 py-2 text-left">Identificacao do Dispositivo</th>
-                                    <th class="px-3 py-2 text-left">Token</th>
-                                    <th class="px-3 py-2 text-left">Empresa</th>
-                                    <th class="px-3 py-2 text-left">Modelo em uso</th>
-                                    <th class="px-3 py-2 text-left">Departamento</th>
-                                    <th class="px-3 py-2 text-left">Grupo</th>
-                                    <th class="px-3 py-2 text-left">Status</th>
-                                    <th class="px-3 py-2 text-left">Última comunicação</th>
-                                    <th class="px-3 py-2 text-right">Ações</th>
+                                    <th class="px-4 py-3 text-left font-semibold">TV</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Empresa</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Configuração</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Status</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Última comunicação</th>
+                                    <th class="px-4 py-3 text-right font-semibold">Detalhes</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                @forelse ($devices as $device)
-                                    @php
-                                        $isOnline = $device->last_seen_at && $device->last_seen_at->gt(now()->subMinutes(2));
-                                        $statusLabel = ! $device->ativo
-                                            ? 'Desativada'
-                                            : ($isOnline ? 'Online' : 'Offline');
-                                        $statusClass = ! $device->ativo
-                                            ? 'text-red-700'
-                                            : ($isOnline ? 'text-green-700' : 'text-gray-600');
-                                    @endphp
-                                    <tr>
-                                        <td class="px-3 py-2">
-                                            <input form="update-device-{{ $device->id }}" name="nome" type="text" value="{{ old('nome', $device->nome) }}" class="w-full rounded-md border-gray-300 shadow-sm" required>
+                            @forelse ($devices as $device)
+                                @php
+                                    $isOnline = $device->last_seen_at && $device->last_seen_at->gt(now()->subMinutes(2));
+                                    $statusLabel = ! $device->ativo
+                                        ? 'Desativada'
+                                        : ($isOnline ? 'Online' : 'Offline');
+                                    $statusClass = ! $device->ativo
+                                        ? 'bg-red-100 text-red-700'
+                                        : ($isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700');
+                                    $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
+                                    $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
+                                    $deviceModels = $modelsByEmpresa->get((int) $device->empresa_id, collect());
+                                    $deviceDepartments = $departmentsByEmpresa->get((int) $device->empresa_id, collect());
+                                    $deviceGroups = $groupsByEmpresa->get((int) $device->empresa_id, collect());
+                                    $selectedModel = $deviceModels->firstWhere('id', (int) ($device->configuration?->web_screen_model_id ?? 0));
+                                    $selectedDepartment = $deviceDepartments->firstWhere('id', (int) ($device->configuration?->product_department_id ?? 0));
+                                    $selectedGroup = $deviceGroups->firstWhere('id', (int) ($device->configuration?->product_group_id ?? 0));
+                                @endphp
+                                <tbody x-data="{ open: false }" class="divide-y divide-slate-200 bg-white" :class="open ? 'bg-sky-50/70' : 'bg-white'">
+                                    <tr class="cursor-pointer border-l-4 border-transparent transition hover:bg-slate-50" :class="open ? 'border-sky-400 bg-sky-50' : 'border-transparent'" @click="open = !open">
+                                        <td class="px-4 py-3 align-top">
+                                            <div class="min-w-0">
+                                                <p class="truncate font-semibold text-slate-900">{{ $device->nome ?: 'TV sem nome' }}</p>
+                                                <p class="mt-1 truncate text-xs text-slate-500">{{ $device->local ?: 'Sem local definido' }}</p>
+                                            </div>
                                         </td>
-                                        <td class="px-3 py-2">
-                                            <input form="update-device-{{ $device->id }}" name="local" type="text" value="{{ old('local', $device->local) }}" class="w-full rounded-md border-gray-300 shadow-sm">
+                                        <td class="px-4 py-3 align-top">
+                                            <div class="min-w-0">
+                                                <p class="truncate font-medium text-slate-800">{{ $empresaNome ?? 'Empresa nao vinculada' }}</p>
+                                                <p class="mt-1 truncate text-xs text-slate-500">{{ $empresaCnpj ?: 'Sem documento' }}</p>
+                                            </div>
                                         </td>
-                                        <td class="px-3 py-2">
-                                            <input type="text" value="{{ $device->device_uuid }}" class="w-full rounded-md border-gray-200 bg-gray-50 font-mono text-xs text-gray-700" readonly>
+                                        <td class="px-4 py-3 align-top">
+                                            <div class="space-y-1 text-xs text-slate-600">
+                                                <p><span class="font-semibold text-slate-700">Modelo:</span> {{ $selectedModel?->nome ?? 'Geral da empresa' }}</p>
+                                                <p><span class="font-semibold text-slate-700">Depto:</span> {{ $selectedDepartment?->nome ?? 'Todos' }}</p>
+                                                <p><span class="font-semibold text-slate-700">Grupo:</span> {{ $selectedGroup?->nome ?? 'Todos' }}</p>
+                                            </div>
                                         </td>
-                                        <td class="px-3 py-2">
-                                            <input type="text" value="{{ $device->token }}" class="w-full rounded-md border-gray-200 bg-gray-50 font-mono text-xs text-gray-700" readonly>
+                                        <td class="px-4 py-3 align-top">
+                                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
                                         </td>
-                                        <td class="px-3 py-2">
-                                            @php
-                                                $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
-                                                $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
-                                                $deviceModels = $modelsByEmpresa->get((int) $device->empresa_id, collect());
-                                                $deviceDepartments = $departmentsByEmpresa->get((int) $device->empresa_id, collect());
-                                                $deviceGroups = $groupsByEmpresa->get((int) $device->empresa_id, collect());
-                                            @endphp
-                                            <span>
-                                                {{ $empresaNome ?? 'Empresa nao vinculada' }}
-                                                @if ($empresaCnpj)
-                                                    - {{ $empresaCnpj }}
-                                                @endif
-                                            </span>
+                                        <td class="px-4 py-3 align-top text-sm text-slate-600">{{ $device->last_seen_at?->format('d/m/Y H:i:s') ?? '-' }}</td>
+                                        <td class="px-4 py-3 text-right align-top">
+                                            <button type="button" class="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition" :class="open ? 'border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'" @click.stop="open = !open">
+                                                <span x-text="open ? 'Fechar' : 'Abrir'"></span>
+                                            </button>
                                         </td>
-                                        <td class="px-3 py-2">
-                                            <select form="update-device-{{ $device->id }}" name="web_screen_model_id" class="w-full rounded-md border-gray-300 shadow-sm">
-                                                <option value="">Usar configuracao geral da empresa</option>
-                                                @foreach ($deviceModels as $model)
-                                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id', $device->configuration?->web_screen_model_id) === (string) $model->id)>{{ $model->nome }}</option>
-                                                @endforeach
-                                            </select>
-                                        </td>
-                                        <td class="px-3 py-2">
-                                            <select form="update-device-{{ $device->id }}" name="product_department_id" class="w-full rounded-md border-gray-300 shadow-sm">
-                                                <option value="">Todos</option>
-                                                @foreach ($deviceDepartments as $department)
-                                                    <option value="{{ $department->id }}" @selected((string) old('product_department_id', $device->configuration?->product_department_id) === (string) $department->id)>{{ $department->nome }}</option>
-                                                @endforeach
-                                            </select>
-                                        </td>
-                                        <td class="px-3 py-2">
-                                            <select form="update-device-{{ $device->id }}" name="product_group_id" class="w-full rounded-md border-gray-300 shadow-sm">
-                                                <option value="">Todos</option>
-                                                @foreach ($deviceGroups as $group)
-                                                    <option value="{{ $group->id }}" data-department-id="{{ $group->departamento_id }}" @selected((string) old('product_group_id', $device->configuration?->product_group_id) === (string) $group->id)>{{ $group->nome }}</option>
-                                                @endforeach
-                                            </select>
-                                        </td>
-                                        <td class="px-3 py-2">
-                                            <label class="inline-flex items-center gap-2">
-                                                <input form="update-device-{{ $device->id }}" type="hidden" name="ativo" value="0">
-                                                <input form="update-device-{{ $device->id }}" type="checkbox" name="ativo" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm" @checked($device->ativo)>
-                                                <span class="text-xs {{ $statusClass }}">{{ $statusLabel }}</span>
-                                            </label>
-                                        </td>
-                                        <td class="px-3 py-2">{{ $device->last_seen_at?->format('d/m/Y H:i:s') ?? '-' }}</td>
-                                        <td class="px-3 py-2 text-right">
-                                            <div class="flex items-center justify-end gap-2">
-                                                <form id="update-device-{{ $device->id }}" method="POST" action="{{ route('admin.activate-tv.devices.update', $device) }}" class="inline">
+                                    </tr>
+                                    <tr x-show="open" x-cloak>
+                                        <td colspan="6" class="bg-sky-50/80 px-4 py-4">
+                                            <div class="rounded-xl border border-sky-200 bg-white p-4 shadow-sm shadow-sky-100/60 ring-1 ring-sky-100">
+                                                <div class="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                                    <div>
+                                                        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Identificação do dispositivo</p>
+                                                        <input type="text" value="{{ $device->device_uuid }}" class="mt-1 w-full rounded-md border-gray-200 bg-slate-50 font-mono text-xs text-slate-700" readonly>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Token</p>
+                                                        <input type="text" value="{{ $device->token }}" class="mt-1 w-full rounded-md border-gray-200 bg-slate-50 font-mono text-xs text-slate-700" readonly>
+                                                    </div>
+                                                </div>
+
+                                                <form id="update-device-{{ $device->id }}" method="POST" action="{{ route('admin.activate-tv.devices.update', $device) }}" class="space-y-4">
                                                     @csrf
                                                     @method('PUT')
                                                     <input type="hidden" name="devices_page" value="{{ $devices->currentPage() }}">
-                                                    <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">Salvar</button>
+
+                                                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">Nome da TV</label>
+                                                            <input name="nome" type="text" value="{{ old('nome', $device->nome) }}" class="mt-1 w-full rounded-md border-gray-300 shadow-sm" required>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">Local</label>
+                                                            <input name="local" type="text" value="{{ old('local', $device->local) }}" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">Modelo em uso</label>
+                                                            <select name="web_screen_model_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                                                                <option value="">Usar configuracao geral da empresa</option>
+                                                                @foreach ($deviceModels as $model)
+                                                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id', $device->configuration?->web_screen_model_id) === (string) $model->id)>{{ $model->nome }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div class="flex items-end">
+                                                            <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                                                <input type="hidden" name="ativo" value="0">
+                                                                <input type="checkbox" name="ativo" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm" @checked($device->ativo)>
+                                                                <span>Dispositivo ativo</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="grid gap-4 md:grid-cols-2">
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">Departamento dos produtos</label>
+                                                            <select name="product_department_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                                                                <option value="">Todos</option>
+                                                                @foreach ($deviceDepartments as $department)
+                                                                    <option value="{{ $department->id }}" @selected((string) old('product_department_id', $device->configuration?->product_department_id) === (string) $department->id)>{{ $department->nome }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">Grupo dos produtos</label>
+                                                            <select name="product_group_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
+                                                                <option value="">Todos</option>
+                                                                @foreach ($deviceGroups as $group)
+                                                                    <option value="{{ $group->id }}" data-department-id="{{ $group->departamento_id }}" @selected((string) old('product_group_id', $device->configuration?->product_group_id) === (string) $group->id)>{{ $group->nome }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+                                                        <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">Salvar</button>
+                                                    </div>
                                                 </form>
 
-                                                <form method="POST" action="{{ route('admin.activate-tv.devices.destroy', $device) }}" class="inline" onsubmit="return confirm('Deseja remover esta TV?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <input type="hidden" name="devices_page" value="{{ $devices->currentPage() }}">
-                                                    <button type="submit" class="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500">Excluir</button>
-                                                </form>
+                                                <div class="mt-3 flex justify-end border-t border-slate-200 pt-3">
+                                                    <form method="POST" action="{{ route('admin.activate-tv.devices.destroy', $device) }}" class="inline" onsubmit="return confirm('Deseja remover esta TV?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <input type="hidden" name="devices_page" value="{{ $devices->currentPage() }}">
+                                                        <button type="submit" class="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500">Excluir</button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
-                                @empty
+                                </tbody>
+                            @empty
+                                <tbody>
                                     <tr>
-                                        <td colspan="11" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
+                                        <td colspan="6" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
                                     </tr>
-                                @endforelse
-                            </tbody>
+                                </tbody>
+                            @endforelse
                         </table>
                     </div>
 
@@ -328,9 +368,14 @@
                     return;
                 }
 
+                const formId = String(form.id || '').trim();
+                if (formId === '') {
+                    return;
+                }
+
                 bindGroupFilter(
-                    form.querySelector('select[name="product_department_id"]'),
-                    form.querySelector('select[name="product_group_id"]')
+                    document.querySelector(`select[form="${formId}"][name="product_department_id"]`),
+                    document.querySelector(`select[form="${formId}"][name="product_group_id"]`)
                 );
             });
         });
