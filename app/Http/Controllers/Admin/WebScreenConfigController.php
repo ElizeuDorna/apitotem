@@ -68,10 +68,12 @@ class WebScreenConfigController extends Controller
                 ->where('empresa_id', $empresaId)
                 ->where('is_admin_default', false)
                 ->orderBy('nome')
+                ->withCount('deviceConfigurations')
                 ->get(['id', 'nome', 'source_model_id']),
             'sharedDefaultModels' => WebScreenModel::query()
                 ->where('is_admin_default', true)
                 ->orderBy('nome')
+                ->withCount('deviceConfigurations')
                 ->get(['id', 'nome', 'empresa_id']),
             'selectedModel' => $selectedModel,
             'selectedModelId' => $selectedModel?->id,
@@ -580,6 +582,8 @@ class WebScreenConfigController extends Controller
             'offerSlideTestModeEnabled' => ['nullable', 'boolean'],
             'offerSlideSmoothTransitionEnabled' => ['nullable', 'boolean'],
             'offerSlideCardBackgroundColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideCardBackgroundColorStart' => ['nullable', 'string', 'max:9'],
+            'offerSlideCardBackgroundColorEnd' => ['nullable', 'string', 'max:9'],
             'offerSlideCardBackgroundTransparent' => ['nullable', 'boolean'],
             'offerSlideCardBackgroundTransparencyPercent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'offerSlideCardBorderEnabled' => ['nullable', 'boolean'],
@@ -905,6 +909,9 @@ class WebScreenConfigController extends Controller
         $validated['offerSlideTestModeEnabled'] = (bool) ($validated['offerSlideTestModeEnabled'] ?? false);
         $validated['offerSlideSmoothTransitionEnabled'] = (bool) ($validated['offerSlideSmoothTransitionEnabled'] ?? false);
         $validated['offerSlideCardBackgroundColor'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBackgroundColor'] ?? '#0f172a'), '#0f172a');
+        $validated['offerSlideCardBackgroundColorStart'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBackgroundColorStart'] ?? $validated['offerSlideCardBackgroundColor'] ?? '#0f172a'), '#0f172a');
+        $validated['offerSlideCardBackgroundColorEnd'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBackgroundColorEnd'] ?? $validated['offerSlideCardBackgroundColor'] ?? '#0f172a'), '#0f172a');
+        $validated['offerSlideCardBackgroundColor'] = $validated['offerSlideCardBackgroundColorStart'];
         $validated['offerSlideCardBackgroundTransparent'] = (bool) ($validated['offerSlideCardBackgroundTransparent'] ?? false);
         $validated['offerSlideCardBackgroundTransparencyPercent'] = $validated['offerSlideCardBackgroundTransparent'] ? 100 : 0;
         $validated['offerSlideCardBorderEnabled'] = (bool) ($validated['offerSlideCardBorderEnabled'] ?? true);
@@ -1195,6 +1202,14 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundColor')) {
             unset($validated['offerSlideCardBackgroundColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundColorStart')) {
+            unset($validated['offerSlideCardBackgroundColorStart']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundColorEnd')) {
+            unset($validated['offerSlideCardBackgroundColorEnd']);
         }
 
         if (! Schema::hasColumn('configuracoes', 'offerSlideCardBackgroundTransparent')) {
@@ -1874,6 +1889,8 @@ class WebScreenConfigController extends Controller
             'offerSlideTestModeEnabled',
             'offerSlideSmoothTransitionEnabled',
             'offerSlideCardBackgroundColor',
+            'offerSlideCardBackgroundColorStart',
+            'offerSlideCardBackgroundColorEnd',
             'offerSlideCardBackgroundTransparent',
             'offerSlideCardBackgroundTransparencyPercent',
             'offerSlideCardBorderEnabled',

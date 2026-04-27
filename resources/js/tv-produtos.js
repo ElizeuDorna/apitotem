@@ -3374,6 +3374,8 @@ function applyOfferSlideTheme() {
     const screenBorderColor = String(visualConfig.offerSlideScreenBorderColor || '#94a3b8').trim() || '#94a3b8';
     const screenBorderWidth = Math.max(0, Math.min(24, Number(visualConfig.offerSlideScreenBorderWidth ?? 1)));
     const cardBackgroundColor = String(visualConfig.offerSlideCardBackgroundColor || '#0F172A').trim() || '#0F172A';
+    const cardBackgroundColorStart = String(visualConfig.offerSlideCardBackgroundColorStart || cardBackgroundColor || '#0F172A').trim() || '#0F172A';
+    const cardBackgroundColorEnd = String(visualConfig.offerSlideCardBackgroundColorEnd || cardBackgroundColor || '#0F172A').trim() || '#0F172A';
     const cardBackgroundTransparent = toBoolean(visualConfig.offerSlideCardBackgroundTransparent, false);
     const cardBackgroundTransparencyPercent = cardBackgroundTransparent ? 100 : 0;
     const cardBackgroundOpacity = cardBackgroundTransparent ? Math.max(0, 1 - (cardBackgroundTransparencyPercent / 100)) : 1;
@@ -3405,7 +3407,9 @@ function applyOfferSlideTheme() {
     offerSlideOverlay.style.setProperty('--offer-slide-panel-bg-end', panelColorEnd);
     offerSlideOverlay.style.setProperty('--offer-slide-screen-border-color', screenBorderEnabled ? screenBorderColor : 'transparent');
     offerSlideOverlay.style.setProperty('--offer-slide-screen-border-width', `${screenBorderEnabled ? screenBorderWidth : 0}px`);
-    offerSlideOverlay.style.setProperty('--offer-slide-card-bg', toRgbaColor(cardBackgroundColor, cardBackgroundOpacity, 'rgba(15, 23, 42, 0.46)'));
+    offerSlideOverlay.style.setProperty('--offer-slide-card-bg-start', toRgbaColor(cardBackgroundColorStart, cardBackgroundOpacity, 'rgba(15, 23, 42, 0.46)'));
+    offerSlideOverlay.style.setProperty('--offer-slide-card-bg-end', toRgbaColor(cardBackgroundColorEnd, cardBackgroundOpacity, 'rgba(15, 23, 42, 0.46)'));
+    offerSlideOverlay.style.setProperty('--offer-slide-card-bg', `linear-gradient(135deg, ${toRgbaColor(cardBackgroundColorStart, cardBackgroundOpacity, 'rgba(15, 23, 42, 0.46)')}, ${toRgbaColor(cardBackgroundColorEnd, cardBackgroundOpacity, 'rgba(15, 23, 42, 0.46)')})`);
     offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-width', `${singleItemProductImageWidth}px`);
     offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-height', `${singleItemProductImageHeight}px`);
     offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-top', `${singleItemProductImageTop}px`);
@@ -5500,6 +5504,8 @@ async function loadVisualConfig(token) {
         visualConfig.offerSlideLayoutMode = getOfferSlideLayoutMode();
         visualConfig.offerSlideTestModeEnabled = toBoolean(visualConfig.offerSlideTestModeEnabled, false);
         visualConfig.offerSlideCardBackgroundColor = String(visualConfig.offerSlideCardBackgroundColor || '#0F172A');
+        visualConfig.offerSlideCardBackgroundColorStart = String(visualConfig.offerSlideCardBackgroundColorStart || visualConfig.offerSlideCardBackgroundColor || '#0F172A');
+        visualConfig.offerSlideCardBackgroundColorEnd = String(visualConfig.offerSlideCardBackgroundColorEnd || visualConfig.offerSlideCardBackgroundColor || '#0F172A');
         visualConfig.offerSlideCardBackgroundTransparent = toBoolean(visualConfig.offerSlideCardBackgroundTransparent, false);
         visualConfig.offerSlideCardBackgroundTransparencyPercent = visualConfig.offerSlideCardBackgroundTransparent ? 100 : 0;
         visualConfig.offerSlideCardBorderEnabled = toBoolean(visualConfig.offerSlideCardBorderEnabled, true);

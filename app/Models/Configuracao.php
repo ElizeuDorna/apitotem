@@ -187,6 +187,8 @@ class Configuracao extends Model
         'offerSlideTestModeEnabled',
         'offerSlideSmoothTransitionEnabled',
         'offerSlideCardBackgroundColor',
+        'offerSlideCardBackgroundColorStart',
+        'offerSlideCardBackgroundColorEnd',
         'offerSlideCardBackgroundTransparent',
         'offerSlideCardBackgroundTransparencyPercent',
         'offerSlideCardBorderEnabled',

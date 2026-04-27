@@ -40,4 +40,9 @@ class WebScreenModel extends Model
     {
         return $this->hasMany(self::class, 'source_model_id');
     }
+
+    public function deviceConfigurations(): HasMany
+    {
+        return $this->hasMany(DeviceConfiguration::class, 'web_screen_model_id');
+    }
 }

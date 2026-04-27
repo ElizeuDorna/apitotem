@@ -117,55 +117,79 @@
                                 @endif
                             </div>
 
-                            <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 space-y-3">
-                                <p class="text-sm font-semibold text-indigo-900">O modelo guarda o snapshot completo da configuração salva.</p>
-                                <p class="text-xs text-indigo-800">Você precisa escolher um modelo existente ou criar um novo antes de editar qualquer outro menu.</p>
-                                <p class="text-xs text-indigo-800">Novo modelo sera criado usando a configuração atual da empresa.</p>
-                                @if ($selectedModelIsAdminDefault && ! $selectedModelCanEdit)
-                                    <div class="rounded-md border border-indigo-200 bg-white p-3 space-y-1">
-                                        <p class="text-sm font-semibold text-indigo-900">Este modelo e um padrao do admin.</p>
-                                        <p class="text-xs text-indigo-800">Voce pode visualizar e clonar esse modelo, mas nao pode editar o original. Depois do clone, a copia fica editavel para usar nos seus dispositivos.</p>
-                                    </div>
-                                @endif
-                                @if ($selectedModel)
-                                    <div class="rounded-md border {{ $selectedModelHasSavedConfig ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-3 space-y-1">
-                                        <p class="text-sm font-semibold {{ $selectedModelHasSavedConfig ? 'text-emerald-900' : 'text-amber-900' }}">
-                                            {{ $selectedModelHasSavedConfig ? 'Configuracoes do modelo carregadas na tela.' : 'Este modelo ainda nao tem configuracoes salvas.' }}
-                                        </p>
-                                        <p class="text-xs {{ $selectedModelHasSavedConfig ? 'text-emerald-800' : 'text-amber-800' }}">
-                                            {{ $selectedModelHasSavedConfig ? 'Os menus abaixo ja estao preenchidos com o que foi salvo neste modelo.' : 'Ao salvar os menus, este modelo passara a guardar a configuracao editada.' }}
-                                        </p>
-                                    </div>
-                                @endif
-                            </div>
-
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="selectedModelConfigSelect">Editar modelo existente</label>
-                                    <select id="selectedModelConfigSelect" class="w-full border rounded px-3 py-2 bg-white" data-config-url="{{ route('admin.web-screen-config.edit') }}">
-                                        <option value="">Selecione um modelo</option>
-                                        @if(($ownedModels ?? collect())->isNotEmpty())
-                                            <optgroup label="Modelos da empresa">
-                                                @foreach($ownedModels as $availableModel)
-                                                    <option value="{{ $availableModel->id }}" @selected((string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id)>
-                                                        {{ $availableModel->nome }}@if(!empty($availableModel->source_model_id)) - clone @endif
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endif
-                                        @if(($sharedDefaultModels ?? collect())->isNotEmpty())
-                                            <optgroup label="Padroes do admin">
-                                                @foreach($sharedDefaultModels as $availableModel)
-                                                    <option value="{{ $availableModel->id }}" @selected((string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id)>
-                                                        {{ $availableModel->nome }} - padrao do admin
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endif
-                                    </select>
-                                    <p class="mt-1 text-xs text-gray-500">A lista acima mostra os modelos da empresa e os padroes do admin disponiveis para clonagem.</p>
-                                    @error('selected_model_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                <div class="grid gap-4 lg:grid-cols-2 lg:items-start">
+                                    <div class="flex min-h-0 flex-col overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-4 space-y-3" style="overflow: hidden;">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h4 class="text-sm font-semibold text-slate-800">Modelos da empresa logada</h4>
+                                            <span class="text-xs text-slate-500">Editáveis</span>
+                                        </div>
+                                        <div class="h-96 min-h-0 space-y-2 overflow-y-scroll pr-1" style="height: 24rem; overflow-y: scroll; overscroll-behavior: contain;">
+                                            @forelse(($ownedModels ?? collect()) as $availableModel)
+                                                @php
+                                                    $isSelectedModel = (string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id;
+                                                @endphp
+                                                <a
+                                                    href="{{ route('admin.web-screen-config.edit', ['model_id' => $availableModel->id]) }}"
+                                                    class="flex items-start justify-between gap-3 rounded-md border px-3 py-3 transition {{ $isSelectedModel ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50' }}"
+                                                >
+                                                    <div class="min-w-0">
+                                                        <p class="truncate text-sm font-semibold {{ $isSelectedModel ? 'text-emerald-900' : 'text-slate-800' }}">{{ $availableModel->nome }}</p>
+                                                        <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+                                                            <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">Empresa</span>
+                                                            @if(!empty($availableModel->source_model_id))
+                                                                <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-800">Clone</span>
+                                                            @endif
+                                                            <span class="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-700">Em uso {{ (int) ($availableModel->device_configurations_count ?? 0) }}</span>
+                                                        </div>
+                                                    </div>
+                                                    @if($isSelectedModel)
+                                                        <span class="inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">Ativo</span>
+                                                    @endif
+                                                </a>
+                                            @empty
+                                                <div class="rounded-md border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-500">
+                                                    Nenhum modelo próprio cadastrado ainda.
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+
+                                    <div class="flex min-h-0 flex-col overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-4 space-y-3" style="overflow: hidden;">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h4 class="text-sm font-semibold text-slate-800">Modelos do admin disponíveis</h4>
+                                            <span class="text-xs text-slate-500">Para visualizar ou clonar</span>
+                                        </div>
+                                        <div class="h-96 min-h-0 space-y-2 overflow-y-scroll pr-1" style="height: 24rem; overflow-y: scroll; overscroll-behavior: contain;">
+                                            @forelse(($sharedDefaultModels ?? collect()) as $availableModel)
+                                                @php
+                                                    $isSelectedModel = (string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id;
+                                                @endphp
+                                                <a
+                                                    href="{{ route('admin.web-screen-config.edit', ['model_id' => $availableModel->id]) }}"
+                                                    class="flex items-start justify-between gap-3 rounded-md border px-3 py-3 transition {{ $isSelectedModel ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50' }}"
+                                                >
+                                                    <div class="min-w-0">
+                                                        <p class="truncate text-sm font-semibold {{ $isSelectedModel ? 'text-emerald-900' : 'text-slate-800' }}">{{ $availableModel->nome }}</p>
+                                                        <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
+                                                            <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-800">Padrão do admin</span>
+                                                            <span class="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-700">Em uso {{ (int) ($availableModel->device_configurations_count ?? 0) }}</span>
+                                                        </div>
+                                                    </div>
+                                                    @if($isSelectedModel)
+                                                        <span class="inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">Ativo</span>
+                                                    @endif
+                                                </a>
+                                            @empty
+                                                <div class="rounded-md border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-500">
+                                                    Nenhum modelo do admin disponível no momento.
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
                                 </div>
+
+                                @error('selected_model_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
 
                                 @if ($selectedModel && $canManageDefaultModels)
                                     <div class="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-3">
@@ -1768,9 +1792,16 @@
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor de fundo da linha</label>
-                                            <input type="color" name="offerSlideCardBackgroundColor" value="{{ old('offerSlideCardBackgroundColor', $config->offerSlideCardBackgroundColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
-                                            @error('offerSlideCardBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor degradê início da linha</label>
+                                            <input type="color" name="offerSlideCardBackgroundColorStart" value="{{ old('offerSlideCardBackgroundColorStart', $config->offerSlideCardBackgroundColorStart ?? $config->offerSlideCardBackgroundColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
+                                            @error('offerSlideCardBackgroundColorStart')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor degradê fim da linha</label>
+                                            <input type="color" name="offerSlideCardBackgroundColorEnd" value="{{ old('offerSlideCardBackgroundColorEnd', $config->offerSlideCardBackgroundColorEnd ?? $config->offerSlideCardBackgroundColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
+                                            <p class="text-xs text-gray-500 mt-1">As duas cores formam o degradê do bloco da linha da oferta.</p>
+                                            @error('offerSlideCardBackgroundColorEnd')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                         </div>
                                     </div>
 
@@ -2110,7 +2141,6 @@
         const webConfigForm = document.getElementById('webConfigForm');
         const saveSectionInput = document.getElementById('saveSection');
         const selectedModelIdInput = document.getElementById('selectedModelId');
-        const selectedModelConfigSelect = document.getElementById('selectedModelConfigSelect');
         const modelActionInput = document.getElementById('modelAction');
         const createModelButton = document.getElementById('createModelButton');
         const cloneModelButton = document.getElementById('cloneModelButton');
@@ -4987,23 +5017,6 @@
                     renderRightSidebarImageScheduleEditor();
                 }
             }
-        }
-
-        if (selectedModelConfigSelect instanceof HTMLSelectElement) {
-            selectedModelConfigSelect.addEventListener('change', () => {
-                const nextModelId = String(selectedModelConfigSelect.value || '').trim();
-                if (selectedModelIdInput instanceof HTMLInputElement) {
-                    selectedModelIdInput.value = nextModelId;
-                }
-
-                const baseUrl = String(selectedModelConfigSelect.getAttribute('data-config-url') || window.location.pathname);
-                const nextUrl = new URL(baseUrl, window.location.origin);
-                if (nextModelId !== '') {
-                    nextUrl.searchParams.set('model_id', nextModelId);
-                }
-
-                window.location.href = nextUrl.toString();
-            });
         }
 
         if (createModelButton instanceof HTMLButtonElement && webConfigForm instanceof HTMLFormElement) {

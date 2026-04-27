@@ -750,6 +750,8 @@ class TvController extends Controller
                 'offerSlideTestModeEnabled' => (bool) ($config->offerSlideTestModeEnabled ?? false),
                 'offerSlideSmoothTransitionEnabled' => (bool) ($config->offerSlideSmoothTransitionEnabled ?? false),
                 'offerSlideCardBackgroundColor' => (string) ($config->offerSlideCardBackgroundColor ?? '#0F172A'),
+                'offerSlideCardBackgroundColorStart' => (string) ($config->offerSlideCardBackgroundColorStart ?? $config->offerSlideCardBackgroundColor ?? '#0F172A'),
+                'offerSlideCardBackgroundColorEnd' => (string) ($config->offerSlideCardBackgroundColorEnd ?? $config->offerSlideCardBackgroundColor ?? '#0F172A'),
                 'offerSlideCardBackgroundTransparent' => (bool) ($config->offerSlideCardBackgroundTransparent ?? false),
                 'offerSlideCardBackgroundTransparencyPercent' => (int) ($config->offerSlideCardBackgroundTransparencyPercent ?? 0),
                 'offerSlideCardBorderEnabled' => (bool) ($config->offerSlideCardBorderEnabled ?? true),
