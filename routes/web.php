@@ -124,6 +124,9 @@ Route::get('/dashboard', function () {
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('/install.apk', [\App\Http\Controllers\Admin\ApkUploadController::class, 'download'])
+    ->name('public.apk.download');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -132,6 +135,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('admin/home-carousel', \App\Http\Controllers\Admin\HomeCarouselController::class, ['as' => 'admin'])
         ->parameters(['home-carousel' => 'homeCarousel'])
         ->except(['show']);
+    Route::get('/admin/apk-upload', [\App\Http\Controllers\Admin\ApkUploadController::class, 'index'])
+        ->name('admin.apk-upload.index');
+    Route::post('/admin/apk-upload', [\App\Http\Controllers\Admin\ApkUploadController::class, 'store'])
+        ->name('admin.apk-upload.store');
     Route::get('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'edit'])
         ->name('admin.revenda-public-page.edit');
     Route::put('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'update'])

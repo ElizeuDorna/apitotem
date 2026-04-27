@@ -1,8 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Config Totem Web
-        </h2>
+        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                Config Totem Web
+            </h2>
+
+            @if (!empty($currentEmpresa?->nome_fantasia) || !empty($currentEmpresa?->nome))
+                <div class="inline-flex max-w-full items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-800">
+                    <span class="mr-2 text-indigo-500">Empresa:</span>
+                    <span class="truncate">{{ $currentEmpresa->nome_fantasia ?: $currentEmpresa->nome }}</span>
+                </div>
+            @endif
+        </div>
     </x-slot>
 
     <div class="py-8">
@@ -889,6 +898,20 @@
                                                     <input type="number" id="rightSidebarAndroidWidth" name="rightSidebarAndroidWidth" min="0" max="1000" value="{{ old('rightSidebarAndroidWidth', $config->rightSidebarAndroidWidth ?? 0) }}" class="w-full border rounded px-3 py-2">
                                                     @error('rightSidebarAndroidWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                                 </div>
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Deslocamento horizontal Android (px)</label>
+                                                <input type="number" id="rightSidebarAndroidHorizontalOffset" name="rightSidebarAndroidHorizontalOffset" min="-300" max="300" value="{{ old('rightSidebarAndroidHorizontalOffset', $config->rightSidebarAndroidHorizontalOffset ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                                @error('rightSidebarAndroidHorizontalOffset')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                                <p class="text-xs text-gray-500 mt-1">Use 0 para padrao. Valor negativo puxa a lateral para a esquerda e valor positivo empurra para a direita.</p>
+                                            </div>
+
+                                            <div class="mt-3">
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Margem direita Android (px)</label>
+                                                <input type="number" id="rightSidebarAndroidRightMargin" name="rightSidebarAndroidRightMargin" min="-300" max="300" value="{{ old('rightSidebarAndroidRightMargin', $config->rightSidebarAndroidRightMargin ?? 0) }}" class="w-full border rounded px-3 py-2">
+                                                @error('rightSidebarAndroidRightMargin')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                                <p class="text-xs text-gray-500 mt-1">Use 0 para padrao. Valor positivo cria folga na direita. Valor negativo empurra a lateral mais para a borda.</p>
                                             </div>
 
                                             <div class="mt-3">

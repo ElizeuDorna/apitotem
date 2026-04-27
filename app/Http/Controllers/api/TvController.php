@@ -646,6 +646,8 @@ class TvController extends Controller
                 'rightSidebarImageWidth' => (int) ($config->rightSidebarImageWidth ?? 0),
                 'rightSidebarAndroidHeight' => (int) ($config->rightSidebarAndroidHeight ?? 0),
                 'rightSidebarAndroidWidth' => (int) ($config->rightSidebarAndroidWidth ?? 0),
+                'rightSidebarAndroidHorizontalOffset' => (int) ($config->rightSidebarAndroidHorizontalOffset ?? 0),
+                'rightSidebarAndroidRightMargin' => (int) ($config->rightSidebarAndroidRightMargin ?? 0),
                 'rightSidebarAndroidVerticalOffset' => (int) ($config->rightSidebarAndroidVerticalOffset ?? 0),
                 'rightSidebarHybridVideoDuration' => (int) ($config->rightSidebarHybridVideoDuration ?? 2),
                 'rightSidebarHybridImageDuration' => (int) ($config->rightSidebarHybridImageDuration ?? 4),

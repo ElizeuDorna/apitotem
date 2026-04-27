@@ -247,6 +247,8 @@ const visualConfig = {
     rightSidebarImageFit: 'scale-down',
     rightSidebarAndroidHeight: 0,
     rightSidebarAndroidWidth: 0,
+    rightSidebarAndroidHorizontalOffset: 0,
+    rightSidebarAndroidRightMargin: 0,
     rightSidebarAndroidVerticalOffset: 0,
     rightSidebarHybridVideoDuration: 120,
     rightSidebarHybridImageDuration: 120,
@@ -741,14 +743,18 @@ function getCurrentFullscreenElement() {
 }
 
 function isCompactViewport() {
-    if (!toBoolean(visualConfig.enableResponsiveLayout, false)) {
-        return false;
-    }
-
     try {
+        const byAndroidUa = /android/i.test(String(navigator.userAgent || ''));
+        if (byAndroidUa) {
+            return true;
+        }
+
+        if (!toBoolean(visualConfig.enableResponsiveLayout, false)) {
+            return false;
+        }
+
         const byWidth = window.matchMedia('(max-width: 1023px)').matches;
         const byTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-        const byAndroidUa = /android/i.test(String(navigator.userAgent || ''));
         return byWidth || byTouch || byAndroidUa;
     } catch (_error) {
         return false;
@@ -788,7 +794,10 @@ function getRightSidebarLayoutDimensions() {
         };
     }
 
-    const compactBaseWidth = Math.round(window.innerWidth * 0.36);
+    const visualViewportWidth = Number(window.visualViewport?.width || 0);
+    const innerViewportWidth = Number(window.innerWidth || 0);
+    const viewportWidth = Math.max(240, visualViewportWidth || innerViewportWidth);
+    const compactBaseWidth = Math.round(viewportWidth * (isAndroidDevice() ? 0.34 : 0.36));
     let compactWidth = Math.max(110, Math.min(420, compactBaseWidth));
     const visualViewportHeight = Number(window.visualViewport?.height || 0);
     const innerViewportHeight = Number(window.innerHeight || 0);
@@ -799,6 +808,8 @@ function getRightSidebarLayoutDimensions() {
     const mainGap = tvMain ? Number.parseFloat(window.getComputedStyle(tvMain).rowGap || window.getComputedStyle(tvMain).gap || '0') : 0;
     const headerHeight = tvHeader && tvHeader.offsetParent !== null ? tvHeader.getBoundingClientRect().height : 0;
     const footerHeight = tvFooter && tvFooter.offsetParent !== null ? tvFooter.getBoundingClientRect().height : 0;
+    const reservedProductsWidth = Math.max(160, Math.round(viewportWidth * 0.48));
+    const availableSidebarWidth = Math.max(110, viewportWidth - reservedProductsWidth - 12);
     const availablePanelHeight = Math.max(
         220,
         Math.round(viewportHeight - shellPaddingTop - shellPaddingBottom - headerHeight - footerHeight - mainGap - 12)
@@ -808,15 +819,21 @@ function getRightSidebarLayoutDimensions() {
     let compactMinHeight = Math.max(180, Math.min(compactMaxHeight - 48, Math.round(availablePanelHeight * 0.74)));
 
     if (isAndroidDevice()) {
+        compactWidth = Math.max(110, Math.min(availableSidebarWidth, compactWidth));
+        compactMaxHeight = Math.max(220, Math.min(availablePanelHeight, compactMaxHeight));
+        compactMinHeight = Math.max(160, Math.min(compactMaxHeight - 24, compactMinHeight));
+    }
+
+    if (isAndroidDevice()) {
         const configuredAndroidWidth = Math.max(0, Number(visualConfig.rightSidebarAndroidWidth || 0));
         const configuredAndroidHeight = Math.max(0, Number(visualConfig.rightSidebarAndroidHeight || 0));
 
         if (configuredAndroidWidth > 0) {
-            compactWidth = Math.max(90, Math.min(700, Math.round(configuredAndroidWidth)));
+            compactWidth = Math.max(90, Math.min(availableSidebarWidth, Math.round(configuredAndroidWidth)));
         }
 
         if (configuredAndroidHeight > 0) {
-            compactMaxHeight = Math.max(140, Math.min(1400, Math.round(configuredAndroidHeight)));
+            compactMaxHeight = Math.max(140, Math.min(availablePanelHeight, Math.round(configuredAndroidHeight)));
             compactMinHeight = Math.max(120, Math.min(compactMaxHeight, compactMaxHeight - 24));
         }
     }
@@ -4556,6 +4573,9 @@ function applyCompactRightSidebarLayout() {
         tvVideoPanel.style.padding = '';
         tvVideoPanel.style.gap = '';
         tvVideoPanel.style.marginTop = '';
+        tvVideoPanel.style.marginRight = '';
+        tvVideoPanel.style.transform = '';
+        tvVideoPanel.style.justifySelf = '';
         tvVideoPanel.style.width = '';
         tvVideoPanel.style.maxWidth = '';
         tvVideoPanel.style.minHeight = '';
@@ -4591,9 +4611,22 @@ function applyCompactRightSidebarLayout() {
     tvVideoPanel.style.order = '';
     tvVideoPanel.style.padding = '10px';
     tvVideoPanel.style.gap = isAndroid ? '6px' : '10px';
+    const androidHorizontalOffset = isAndroid
+        ? Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidHorizontalOffset || 0)))
+        : 0;
+    const androidRightMargin = isAndroid
+        ? Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidRightMargin || 0)))
+        : 0;
     const androidVerticalOffset = isAndroid
         ? Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidVerticalOffset || 0)))
         : 0;
+    tvVideoPanel.style.justifySelf = compactSidebarActive ? 'end' : '';
+    tvVideoPanel.style.marginRight = compactSidebarActive && androidRightMargin !== 0
+        ? `${androidRightMargin}px`
+        : '';
+    tvVideoPanel.style.transform = compactSidebarActive && androidHorizontalOffset !== 0
+        ? `translateX(${androidHorizontalOffset}px)`
+        : '';
     tvVideoPanel.style.marginTop = compactSidebarActive && androidVerticalOffset !== 0
         ? `${androidVerticalOffset}px`
         : '';
@@ -5421,6 +5454,8 @@ async function loadVisualConfig(token) {
             : [];
         visualConfig.rightSidebarAndroidHeight = Math.max(0, Math.min(1500, Number(visualConfig.rightSidebarAndroidHeight || 0)));
         visualConfig.rightSidebarAndroidWidth = Math.max(0, Math.min(1000, Number(visualConfig.rightSidebarAndroidWidth || 0)));
+        visualConfig.rightSidebarAndroidHorizontalOffset = Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidHorizontalOffset || 0)));
+        visualConfig.rightSidebarAndroidRightMargin = Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidRightMargin || 0)));
         visualConfig.rightSidebarAndroidVerticalOffset = Math.max(-300, Math.min(300, Number(visualConfig.rightSidebarAndroidVerticalOffset || 0)));
         visualConfig.rowVerticalPadding = Math.min(40, Math.max(0, Number(visualConfig.rowVerticalPadding ?? 9)));
         visualConfig.rowLineSpacing = Math.min(40, Math.max(0, Number(visualConfig.rowLineSpacing ?? 12)));

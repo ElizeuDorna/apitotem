@@ -30,6 +30,7 @@ class WebScreenConfigController extends Controller
     {
         $user = Auth::user();
         $empresaId = $this->resolveEmpresaId();
+        $currentEmpresa = Empresa::query()->find($empresaId);
 
         $companyConfig = Configuracao::firstOrCreate([
             'empresa_id' => $empresaId,
@@ -61,6 +62,7 @@ class WebScreenConfigController extends Controller
 
         return view('admin.web-screen-config', [
             'config' => $config,
+            'currentEmpresa' => $currentEmpresa,
             'responsiveModeEnabled' => $this->isResponsiveModeEnabled($empresaId),
             'ownedModels' => WebScreenModel::query()
                 ->where('empresa_id', $empresaId)
@@ -335,6 +337,8 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarAndroidHeight' => ['nullable', 'integer', 'min:0', 'max:1500'],
             'rightSidebarAndroidWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'rightSidebarAndroidHorizontalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
+            'rightSidebarAndroidRightMargin' => ['nullable', 'integer', 'min:-300', 'max:300'],
             'rightSidebarAndroidVerticalOffset' => ['nullable', 'integer', 'min:-300', 'max:300'],
             'videoUrl' => ['nullable', 'string', 'max:10000'],
             'videoPlaylist' => ['nullable', 'array', 'max:10'],
@@ -853,6 +857,8 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarImageWidth'] = (int) ($validated['rightSidebarImageWidth'] ?? 0);
         $validated['rightSidebarAndroidHeight'] = (int) ($validated['rightSidebarAndroidHeight'] ?? 0);
         $validated['rightSidebarAndroidWidth'] = (int) ($validated['rightSidebarAndroidWidth'] ?? 0);
+        $validated['rightSidebarAndroidHorizontalOffset'] = (int) ($validated['rightSidebarAndroidHorizontalOffset'] ?? 0);
+        $validated['rightSidebarAndroidRightMargin'] = (int) ($validated['rightSidebarAndroidRightMargin'] ?? 0);
         $validated['rightSidebarAndroidVerticalOffset'] = (int) ($validated['rightSidebarAndroidVerticalOffset'] ?? 0);
         $validated['rowVerticalPadding'] = (int) ($validated['rowVerticalPadding'] ?? 9);
         $validated['rowLineSpacing'] = (int) ($validated['rowLineSpacing'] ?? 12);
@@ -1021,6 +1027,14 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'rightSidebarLogoHeightAndroid')) {
             unset($validated['rightSidebarLogoHeightAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarAndroidHorizontalOffset')) {
+            unset($validated['rightSidebarAndroidHorizontalOffset']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarAndroidRightMargin')) {
+            unset($validated['rightSidebarAndroidRightMargin']);
         }
 
         if (! Schema::hasColumn('configuracoes', 'leftVerticalLogoWidthWindows')) {
@@ -1760,6 +1774,8 @@ class WebScreenConfigController extends Controller
             'rightSidebarImageWidth',
             'rightSidebarAndroidHeight',
             'rightSidebarAndroidWidth',
+            'rightSidebarAndroidHorizontalOffset',
+            'rightSidebarAndroidRightMargin',
             'rightSidebarAndroidVerticalOffset',
             'rightSidebarHybridVideoDuration',
             'rightSidebarHybridImageDuration',
