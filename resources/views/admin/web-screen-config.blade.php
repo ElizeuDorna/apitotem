@@ -4719,12 +4719,6 @@
                     return;
                 }
 
-                if (currentLayoutMode === 'single_item' && targetId === 'offerSlideLineBlock') {
-                    block.classList.add('hidden');
-                    block.style.display = 'none';
-                    return;
-                }
-
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'offer-slide-submenu-btn w-full rounded border border-gray-300 px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50';
