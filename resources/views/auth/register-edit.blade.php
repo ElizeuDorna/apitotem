@@ -1,13 +1,13 @@
-@extends('home')
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-xl font-semibold text-gray-800 leading-tight">Editar Usuário</h2>
+            <x-back-button />
+        </div>
+    </x-slot>
 
-@section('title', 'Admin - Editar Usuário')
-
-@section('content')
-<div class="mb-4 px-4">
-    <x-back-button />
-</div>
-
-<div class="max-w-3xl mx-auto bg-white p-8 shadow">
+<div class="py-8">
+    <div class="max-w-3xl mx-auto overflow-hidden rounded-lg bg-white p-8 shadow-sm sm:px-6 lg:px-8">
     <h2 class="text-2xl font-bold mb-6">Editar Usuário</h2>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
@@ -80,6 +80,7 @@
             <a href="{{ route('register') }}" class="px-6 py-2 bg-gray-400 text-white rounded">Voltar</a>
         </div>
     </form>
+    </div>
 </div>
 
 <script>
@@ -117,4 +118,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@endsection
+</x-app-layout>

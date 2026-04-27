@@ -1,20 +1,20 @@
-@extends('home')
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-xl font-semibold text-gray-800 leading-tight">Cadastro de Usuários</h2>
+            <x-back-button />
+        </div>
+    </x-slot>
 
-@section('title', 'Admin - Cadastro de Usuários')
-
-@section('content')
 @php
     $showCadastroForm = request()->boolean('form') || $errors->any();
 @endphp
 
-<div class="mb-4 px-4">
-    <x-back-button />
-</div>
-
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="py-8">
+    <div class="max-w-6xl mx-auto space-y-6 sm:px-6 lg:px-8">
     @if($showCadastroForm)
-        <div class="max-w-3xl bg-white p-8 shadow">
-            <h2 class="text-2xl font-bold mb-6">Cadastrar Novo Usuário</h2>
+        <div class="max-w-3xl overflow-hidden rounded-lg bg-white p-8 shadow-sm">
+            <h2 class="mb-6 text-2xl font-bold">Cadastrar Novo Usuário</h2>
 
             <x-auth-session-status class="mb-4" :status="session('status')" />
 
@@ -94,7 +94,7 @@
     @endif
 
     @if(! $showCadastroForm)
-        <div class="bg-white p-8 shadow">
+        <div class="overflow-hidden rounded-lg bg-white p-8 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold">Usuários cadastrados</h3>
                 <a href="{{ route('register', ['form' => 1]) }}" class="px-4 py-2 bg-green-600 text-white rounded">+ Novo Cadastro</a>
@@ -134,6 +134,7 @@
             </div>
         </div>
     @endif
+    </div>
 </div>
 
 <script>
@@ -171,4 +172,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@endsection
+</x-app-layout>

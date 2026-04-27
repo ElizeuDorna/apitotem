@@ -2,6 +2,166 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+	color-scheme: light;
+}
+
+html[data-panel-theme='dark'] {
+	color-scheme: dark;
+}
+
+:root {
+	--panel-shell-bg: #eef2f7;
+	--panel-content-bg: radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 28%), linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+	--panel-header-bg: rgba(255, 255, 255, 0.92);
+	--panel-header-border: #d8e1ec;
+	--panel-header-text: #0f172a;
+	--panel-main-text: #0f172a;
+	--panel-sidebar-bg: linear-gradient(180deg, #0f172a 0%, #111c30 100%);
+	--panel-sidebar-border: #1f3147;
+	--panel-sidebar-card: rgba(15, 23, 42, 0.78);
+	--panel-sidebar-card-border: rgba(71, 85, 105, 0.5);
+	--panel-sidebar-toggle-bg: rgba(30, 41, 59, 0.92);
+	--panel-sidebar-toggle-border: rgba(71, 85, 105, 0.7);
+	--panel-sidebar-toggle-text: #f8fafc;
+	--panel-surface-bg: #ffffff;
+	--panel-surface-muted: #f8fafc;
+	--panel-surface-alt: #f1f5f9;
+	--panel-border: #dbe3ee;
+	--panel-text: #0f172a;
+	--panel-text-soft: #475569;
+	--panel-input-bg: #ffffff;
+	--panel-input-border: #cbd5e1;
+	--panel-input-text: #0f172a;
+}
+
+html[data-panel-theme='dark'] {
+	--panel-shell-bg: #07111f;
+	--panel-content-bg: radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 26%), linear-gradient(180deg, #08111f 0%, #0b1628 100%);
+	--panel-header-bg: rgba(9, 18, 32, 0.9);
+	--panel-header-border: #1d3149;
+	--panel-header-text: #e2e8f0;
+	--panel-main-text: #dbe7f5;
+	--panel-sidebar-bg: linear-gradient(180deg, #030712 0%, #08101d 100%);
+	--panel-sidebar-border: #17263b;
+	--panel-sidebar-card: rgba(8, 16, 29, 0.9);
+	--panel-sidebar-card-border: rgba(51, 65, 85, 0.82);
+	--panel-sidebar-toggle-bg: rgba(15, 23, 42, 0.92);
+	--panel-sidebar-toggle-border: rgba(56, 189, 248, 0.28);
+	--panel-sidebar-toggle-text: #e0f2fe;
+	--panel-surface-bg: #0f1b2d;
+	--panel-surface-muted: #111c30;
+	--panel-surface-alt: #162338;
+	--panel-border: #24364d;
+	--panel-text: #e2e8f0;
+	--panel-text-soft: #93a9c5;
+	--panel-input-bg: #0b1628;
+	--panel-input-border: #2a3d57;
+	--panel-input-text: #e2e8f0;
+}
+
+.panel-auth-body {
+	background: var(--panel-shell-bg);
+	color: var(--panel-main-text);
+}
+
+.panel-auth-shell {
+	background: var(--panel-content-bg) !important;
+	color: var(--panel-main-text);
+}
+
+.panel-auth-header {
+	background: var(--panel-header-bg) !important;
+	border-color: var(--panel-header-border) !important;
+	backdrop-filter: blur(12px);
+	color: var(--panel-header-text);
+}
+
+.panel-auth-main {
+	color: var(--panel-main-text);
+}
+
+.panel-sidebar {
+	background: var(--panel-sidebar-bg) !important;
+	border-color: var(--panel-sidebar-border) !important;
+}
+
+.panel-sidebar .rounded-xl.border.border-slate-800.bg-slate-900\/40,
+.panel-sidebar .rounded-xl.border.border-slate-800.bg-slate-900,
+.panel-sidebar .rounded-lg.border.border-slate-800.bg-slate-900\/60 {
+	background: var(--panel-sidebar-card) !important;
+	border-color: var(--panel-sidebar-card-border) !important;
+}
+
+.panel-theme-toggle {
+	background: var(--panel-sidebar-toggle-bg) !important;
+	border-color: var(--panel-sidebar-toggle-border) !important;
+	color: var(--panel-sidebar-toggle-text) !important;
+	margin-bottom: 0.75rem;
+}
+
+.panel-auth-shell .bg-slate-100,
+.panel-auth-shell .bg-white,
+.panel-auth-shell .bg-gray-50,
+.panel-auth-shell .bg-slate-50,
+.panel-auth-shell .bg-white\/80,
+.panel-auth-shell .bg-white\/90,
+.panel-auth-shell .bg-slate-50\/70,
+.panel-auth-shell .bg-slate-50\/80 {
+	background-color: var(--panel-surface-bg) !important;
+	color: var(--panel-text) !important;
+}
+
+.panel-auth-shell .bg-slate-50,
+.panel-auth-shell .bg-gray-50,
+.panel-auth-shell .bg-slate-50\/70,
+.panel-auth-shell .bg-slate-50\/80,
+.panel-auth-shell .bg-slate-100,
+.panel-auth-shell .bg-white\/80,
+.panel-auth-shell .bg-white\/90 {
+	background: var(--panel-surface-muted) !important;
+}
+
+.panel-auth-shell .border-gray-100,
+.panel-auth-shell .border-gray-200,
+.panel-auth-shell .border-slate-100,
+.panel-auth-shell .border-slate-200,
+.panel-auth-shell .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.panel-auth-shell .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+.panel-auth-shell .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.panel-auth-shell .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+	border-color: var(--panel-border) !important;
+}
+
+.panel-auth-shell .text-gray-900,
+.panel-auth-shell .text-gray-800,
+.panel-auth-shell .text-slate-900,
+.panel-auth-shell .text-slate-800 {
+	color: var(--panel-text) !important;
+}
+
+.panel-auth-shell .text-gray-700,
+.panel-auth-shell .text-gray-600,
+.panel-auth-shell .text-gray-500,
+.panel-auth-shell .text-slate-700,
+.panel-auth-shell .text-slate-600,
+.panel-auth-shell .text-slate-500 {
+	color: var(--panel-text-soft) !important;
+}
+
+.panel-auth-shell input:not([type='checkbox']):not([type='radio']):not([type='color']),
+.panel-auth-shell select,
+.panel-auth-shell textarea {
+	background: var(--panel-input-bg) !important;
+	border-color: var(--panel-input-border) !important;
+	color: var(--panel-input-text) !important;
+}
+
+.panel-auth-shell input::placeholder,
+.panel-auth-shell textarea::placeholder {
+	color: var(--panel-text-soft) !important;
+}
+
 [x-cloak] {
 	display: none !important;
 }
