@@ -83,7 +83,6 @@
                             <aside id="configAccordionMenu" class="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium" data-target="modelsSection">Modelos</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="generalConfigSection" @disabled($configMenusLocked)>Configuração geral</button>
-                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="colorConfigSection" @disabled($configMenusLocked)>Configuração de Cores</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="rightSidebarConfigSection" @disabled($configMenusLocked)>Configuração Tela Lateral Direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="videoConfigSection" @disabled($configMenusLocked)>Configuração de Vídeos lateral direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="companyGalleryConfigSection" @disabled($configMenusLocked)>Configuraçao de Slide</button>
@@ -218,6 +217,26 @@
                                     >
                                     <p class="text-xs text-gray-500 mt-1">Define de quanto em quanto tempo a tela consulta a API novamente.</p>
                                     @error('apiRefreshInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cor de toda a tela</label>
+                                        <input type="color" name="appBackgroundColor" value="{{ old('appBackgroundColor', $config->appBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
+                                        @error('appBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo do painel de produtos</label>
+                                        <input type="color" id="productsPanelBackgroundColor" name="productsPanelBackgroundColor" value="{{ old('productsPanelBackgroundColor', $config->productsPanelBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
+                                        @error('productsPanelBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                        <label class="mt-2 inline-flex items-center gap-2">
+                                            <input type="hidden" name="isProductsPanelTransparent" value="0">
+                                            <input type="checkbox" id="isProductsPanelTransparent" name="isProductsPanelTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isProductsPanelTransparent', $config->isProductsPanelTransparent ?? false))>
+                                            <span class="text-sm text-gray-700">Deixar painel de produtos transparente</span>
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <h4 class="text-sm font-semibold text-gray-800">Borda geral</h4>
@@ -607,84 +626,6 @@
                                 @endfor
                                 <p class="text-xs text-gray-500">A reprodução na TV segue a ordem: Vídeo 1 até Vídeo 10.</p>
                             </div>
-                        </div>
-
-                        <div id="colorConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
-                            <div class="flex items-center justify-between gap-2">
-                                <h3 class="text-base font-semibold text-gray-800">Configuração de Cores</h3>
-                                <button type="button" data-save-section="colorConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
-                            </div>
-                            <p class="text-sm text-gray-600">Aqui ficam somente as cores da Totem Web.</p>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor de toda a tela</label>
-                                    <input type="color" name="appBackgroundColor" value="{{ old('appBackgroundColor', $config->appBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
-                                    @error('appBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo do painel de produtos</label>
-                                    <input type="color" id="productsPanelBackgroundColor" name="productsPanelBackgroundColor" value="{{ old('productsPanelBackgroundColor', $config->productsPanelBackgroundColor ?? '#0f172a') }}" class="w-full h-10 border rounded">
-                                    @error('productsPanelBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-
-                                    <label class="mt-2 inline-flex items-center gap-2">
-                                        <input type="hidden" name="isProductsPanelTransparent" value="0">
-                                        <input type="checkbox" id="isProductsPanelTransparent" name="isProductsPanelTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isProductsPanelTransparent', $config->isProductsPanelTransparent ?? false))>
-                                        <span class="text-sm text-gray-700">Deixar painel de produtos transparente</span>
-                                    </label>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da lista</label>
-                                    <input type="color" id="listBorderColor" name="listBorderColor" value="{{ old('listBorderColor', $config->listBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
-                                    @error('listBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo da linha</label>
-                                    <input type="color" id="rowBackgroundColor" name="rowBackgroundColor" value="{{ old('rowBackgroundColor', $config->rowBackgroundColor ?? '#0b1220') }}" class="w-full h-10 border rounded">
-                                    @error('rowBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da linha</label>
-                                    <input type="color" id="borderColor" name="borderColor" value="{{ old('borderColor', $config->borderColor ?? '#334155') }}" class="w-full h-10 border rounded">
-                                    @error('borderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-
-                                    <label class="mt-2 inline-flex items-center gap-2">
-                                        <input type="hidden" name="isRowBorderTransparent" value="0">
-                                        <input type="checkbox" id="isRowBorderTransparent" name="isRowBorderTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isRowBorderTransparent', $config->isRowBorderTransparent ?? false))>
-                                        <span class="text-sm text-gray-700">Deixar borda da linha transparente</span>
-                                    </label>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor do nome/preço do produto</label>
-                                    <input type="color" name="priceColor" value="{{ old('priceColor', $config->priceColor ?? '#818cf8') }}" class="w-full h-10 border rounded">
-                                    @error('priceColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-                            </div>
-
-                            <div id="gradientFields" class="rounded-md border border-gray-200 bg-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor inicial do degradê</label>
-                                    <input type="color" name="gradientStartColor" value="{{ old('gradientStartColor') ?: ($config->gradientStartColor ?: '#111827') }}" class="w-full h-10 border rounded">
-                                    @error('gradientStartColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cor final do degradê</label>
-                                    <input type="color" name="gradientEndColor" value="{{ old('gradientEndColor') ?: ($config->gradientEndColor ?: '#1f2937') }}" class="w-full h-10 border rounded">
-                                    @error('gradientEndColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                </div>
-                            </div>
-
-                            <label class="inline-flex items-center gap-2">
-                                <input type="hidden" name="useGradient" value="0">
-                                <input type="checkbox" id="useGradient" name="useGradient" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('useGradient', $config->useGradient))>
-                                <span class="text-sm text-gray-700">Usar degradê na linha</span>
-                            </label>
                         </div>
 
                         <div id="rightSidebarConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
@@ -1174,6 +1115,15 @@
                                 <button type="button" data-save-section="imageSizeConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
                             </div>
 
+                            <div class="rounded-md border border-gray-200 bg-white p-2">
+                                <div class="flex flex-wrap gap-2" id="productListSubmenuList">
+                                    <button type="button" class="product-list-submenu-btn rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700" data-product-list-submenu-target="productListSettingsBlock">Configurações</button>
+                                    <button type="button" class="product-list-submenu-btn rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600" data-product-list-submenu-target="productListColorsBlock">Cores</button>
+                                </div>
+                            </div>
+
+                            <div id="productListSettingsBlock" data-product-list-block class="space-y-4">
+
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-3">
                                 <h4 class="text-sm font-semibold text-gray-800">Tipo de lista</h4>
                                 <input type="hidden" id="productListTypeHiddenSync" name="productListType" value="{{ old('productListType', $config->productListType ?? '1') }}">
@@ -1393,6 +1343,69 @@
                                         <input type="number" name="paginationInterval" min="1" max="120" value="{{ old('paginationInterval', $config->paginationInterval ?? 5) }}" class="w-full border rounded px-3 py-2">
                                         @error('paginationInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
+                                </div>
+                            </div>
+
+                            </div>
+
+                            <div id="productListColorsBlock" data-product-list-block class="hidden space-y-4">
+                                <div class="rounded-md border border-gray-200 bg-white p-4 space-y-4">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <h4 class="text-sm font-semibold text-gray-800">Cores da lista</h4>
+                                        <button type="button" data-save-section="imageSizeConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este bloco</button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da lista</label>
+                                            <input type="color" id="listBorderColor" name="listBorderColor" value="{{ old('listBorderColor', $config->listBorderColor ?? '#334155') }}" class="w-full h-10 border rounded">
+                                            @error('listBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor do fundo da linha</label>
+                                            <input type="color" id="rowBackgroundColor" name="rowBackgroundColor" value="{{ old('rowBackgroundColor', $config->rowBackgroundColor ?? '#0b1220') }}" class="w-full h-10 border rounded">
+                                            @error('rowBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da linha</label>
+                                            <input type="color" id="borderColor" name="borderColor" value="{{ old('borderColor', $config->borderColor ?? '#334155') }}" class="w-full h-10 border rounded">
+                                            @error('borderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                                            <label class="mt-2 inline-flex items-center gap-2">
+                                                <input type="hidden" name="isRowBorderTransparent" value="0">
+                                                <input type="checkbox" id="isRowBorderTransparent" name="isRowBorderTransparent" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('isRowBorderTransparent', $config->isRowBorderTransparent ?? false))>
+                                                <span class="text-sm text-gray-700">Deixar borda da linha transparente</span>
+                                            </label>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor do nome/preço do produto</label>
+                                            <input type="color" name="priceColor" value="{{ old('priceColor', $config->priceColor ?? '#818cf8') }}" class="w-full h-10 border rounded">
+                                            @error('priceColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div id="gradientFields" class="rounded-md border border-gray-200 bg-gray-50 p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor inicial do degradê</label>
+                                            <input type="color" name="gradientStartColor" value="{{ old('gradientStartColor') ?: ($config->gradientStartColor ?: '#111827') }}" class="w-full h-10 border rounded">
+                                            @error('gradientStartColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor final do degradê</label>
+                                            <input type="color" name="gradientEndColor" value="{{ old('gradientEndColor') ?: ($config->gradientEndColor ?: '#1f2937') }}" class="w-full h-10 border rounded">
+                                            @error('gradientEndColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="useGradient" value="0">
+                                        <input type="checkbox" id="useGradient" name="useGradient" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('useGradient', $config->useGradient))>
+                                        <span class="text-sm text-gray-700">Usar degradê na linha</span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -2093,6 +2106,8 @@
         const offerSlideSubmenuList = document.getElementById('offerSlideSubmenuList');
         const offerSlideNavBlocks = Array.from(document.querySelectorAll('#offerSlideConfigSection [data-offer-slide-name]'));
         let offerSlideSubmenuButtons = [];
+        const productListSubmenuButtons = Array.from(document.querySelectorAll('[data-product-list-submenu-target]'));
+        const productListNavBlocks = Array.from(document.querySelectorAll('[data-product-list-block]'));
         const companyGalleryNavBlocks = Array.from(document.querySelectorAll('[data-company-gallery-name][id]'));
         let activeCompanyGalleryTargetId = null;
         let openedConfigPanelId = null;
@@ -2580,6 +2595,44 @@
         if (isListBorderTransparent) {
             isListBorderTransparent.addEventListener('change', updateListBorderColorState);
             updateListBorderColorState();
+        }
+
+        function openProductListBlock(targetId) {
+            productListNavBlocks.forEach((block) => {
+                if (!(block instanceof HTMLElement)) {
+                    return;
+                }
+
+                block.classList.toggle('hidden', block.id !== targetId);
+            });
+
+            productListSubmenuButtons.forEach((button) => {
+                if (!(button instanceof HTMLButtonElement)) {
+                    return;
+                }
+
+                const isActive = button.dataset.productListSubmenuTarget === targetId;
+                button.classList.toggle('border-indigo-200', isActive);
+                button.classList.toggle('bg-indigo-50', isActive);
+                button.classList.toggle('text-indigo-700', isActive);
+                button.classList.toggle('border-gray-200', !isActive);
+                button.classList.toggle('bg-white', !isActive);
+                button.classList.toggle('text-gray-600', !isActive);
+            });
+        }
+
+        productListSubmenuButtons.forEach((button) => {
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            button.addEventListener('click', () => {
+                openProductListBlock(String(button.dataset.productListSubmenuTarget || 'productListSettingsBlock'));
+            });
+        });
+
+        if (productListNavBlocks.length > 0) {
+            openProductListBlock('productListSettingsBlock');
         }
 
         function updateRightSidebarBorderState() {
