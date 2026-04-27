@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('configuracoes', function (Blueprint $table) {
+            if (! Schema::hasColumn('configuracoes', 'offerSlideTestModeEnabled')) {
+                $table->boolean('offerSlideTestModeEnabled')
+                    ->default(false)
+                    ->after('offerSlideLayoutMode');
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('configuracoes', function (Blueprint $table) {
+            if (Schema::hasColumn('configuracoes', 'offerSlideTestModeEnabled')) {
+                $table->dropColumn('offerSlideTestModeEnabled');
+            }
+        });
+    }
+};

@@ -1438,6 +1438,13 @@
                                     </div>
 
                                     <label class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="offerSlideTestModeEnabled" value="0">
+                                        <input type="checkbox" name="offerSlideTestModeEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideTestModeEnabled', $config->offerSlideTestModeEnabled ?? false))>
+                                        <span class="text-sm text-gray-700">Modo de teste: travar apenas no slide de oferta</span>
+                                    </label>
+                                    <p class="text-xs text-gray-500">Quando habilitado, a TV entra direto no slide de oferta e fica em loop continuo ate voce desmarcar essa opcao e salvar novamente.</p>
+
+                                    <label class="inline-flex items-center gap-2">
                                         <input type="hidden" name="offerSlideSmoothTransitionEnabled" value="0">
                                         <input type="checkbox" name="offerSlideSmoothTransitionEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideSmoothTransitionEnabled', $config->offerSlideSmoothTransitionEnabled ?? false))>
                                         <span class="text-sm text-gray-700">Ativar transição suave na entrada e saída</span>
@@ -1545,44 +1552,95 @@
                                         <span class="text-sm text-gray-700">Exibir imagem do produto</span>
                                     </label>
 
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Lado da imagem</label>
-                                        <select name="offerSlideSingleItemProductImageSide" class="w-full border rounded px-3 py-2">
-                                            <option value="right" @selected(old('offerSlideSingleItemProductImageSide', $config->offerSlideSingleItemProductImageSide ?? 'right') === 'right')>Direita</option>
-                                            <option value="left" @selected(old('offerSlideSingleItemProductImageSide', $config->offerSlideSingleItemProductImageSide ?? 'right') === 'left')>Esquerda</option>
-                                        </select>
-                                        <p class="text-xs text-gray-500 mt-1">Escolhe em qual borda da TV a imagem vai ficar presa.</p>
-                                        @error('offerSlideSingleItemProductImageSide')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    <div class="rounded-md border border-fuchsia-200 bg-white/80 p-3 space-y-3">
+                                        <h6 class="text-xs font-semibold uppercase tracking-[0.16em] text-fuchsia-700">Posicionamento</h6>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Lado da imagem</label>
+                                                <select name="offerSlideSingleItemProductImageSide" class="w-full border rounded px-3 py-2">
+                                                    <option value="right" @selected(old('offerSlideSingleItemProductImageSide', $config->offerSlideSingleItemProductImageSide ?? 'right') === 'right')>Direita</option>
+                                                    <option value="left" @selected(old('offerSlideSingleItemProductImageSide', $config->offerSlideSingleItemProductImageSide ?? 'right') === 'left')>Esquerda</option>
+                                                </select>
+                                                <p class="text-xs text-gray-500 mt-1">Escolhe em qual borda da TV a imagem vai ficar presa.</p>
+                                                @error('offerSlideSingleItemProductImageSide')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Posição vertical do bloco</label>
+                                                <select name="offerSlideSingleItemProductImageVerticalPosition" class="w-full border rounded px-3 py-2">
+                                                    <option value="top" @selected(old('offerSlideSingleItemProductImageVerticalPosition', $config->offerSlideSingleItemProductImageVerticalPosition ?? 'top') === 'top')>Acima</option>
+                                                    <option value="bottom" @selected(old('offerSlideSingleItemProductImageVerticalPosition', $config->offerSlideSingleItemProductImageVerticalPosition ?? 'top') === 'bottom')>Abaixo</option>
+                                                </select>
+                                                <p class="text-xs text-gray-500 mt-1">Controla se o retângulo da imagem fica preso no alto ou embaixo da coluna lateral.</p>
+                                                @error('offerSlideSingleItemProductImageVerticalPosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Ajuste vertical do bloco (px)</label>
+                                                <input id="offerSlideSingleItemProductImageTopRange" type="range" min="-1200" max="1200" step="1" value="{{ old('offerSlideSingleItemProductImageTop', $config->offerSlideSingleItemProductImageTop ?? 32) }}" class="w-full accent-fuchsia-600" oninput="document.getElementById('offerSlideSingleItemProductImageTopInput').value = this.value">
+                                                <input id="offerSlideSingleItemProductImageTopInput" type="number" name="offerSlideSingleItemProductImageTop" min="-1200" max="1200" step="1" value="{{ old('offerSlideSingleItemProductImageTop', $config->offerSlideSingleItemProductImageTop ?? 32) }}" class="mt-2 w-full border rounded px-3 py-2" oninput="document.getElementById('offerSlideSingleItemProductImageTopRange').value = this.value">
+                                                <p class="text-xs text-gray-500 mt-1">Valor negativo puxa ainda mais para baixo se precisar. Valor positivo sobe ou desce conforme a referência vertical escolhida acima.</p>
+                                                @error('offerSlideSingleItemProductImageTop')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Ajuste horizontal do bloco (px)</label>
+                                                <input id="offerSlideSingleItemProductImageRightRange" type="range" min="-1200" max="1200" step="1" value="{{ old('offerSlideSingleItemProductImageRight', $config->offerSlideSingleItemProductImageRight ?? 3) }}" class="w-full accent-indigo-600" oninput="document.getElementById('offerSlideSingleItemProductImageRightInput').value = this.value">
+                                                <input id="offerSlideSingleItemProductImageRightInput" type="number" name="offerSlideSingleItemProductImageRight" min="-1200" max="1200" step="1" value="{{ old('offerSlideSingleItemProductImageRight', $config->offerSlideSingleItemProductImageRight ?? 3) }}" class="mt-2 w-full border rounded px-3 py-2" oninput="document.getElementById('offerSlideSingleItemProductImageRightRange').value = this.value">
+                                                <p class="text-xs text-gray-500 mt-1">Aceita valores negativos e positivos para puxar a imagem horizontalmente para os dois lados.</p>
+                                                @error('offerSlideSingleItemProductImageRight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem (px)</label>
-                                            <input type="number" name="offerSlideSingleItemProductImageWidth" min="0" max="2000" value="{{ old('offerSlideSingleItemProductImageWidth', $config->offerSlideSingleItemProductImageWidth ?? 320) }}" class="w-full border rounded px-3 py-2">
-                                            @error('offerSlideSingleItemProductImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
+                                    <div class="rounded-md border border-fuchsia-200 bg-white/80 p-3 space-y-3">
+                                        <h6 class="text-xs font-semibold uppercase tracking-[0.16em] text-fuchsia-700">Tamanho</h6>
 
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura da imagem (px)</label>
-                                            <input type="number" name="offerSlideSingleItemProductImageHeight" min="0" max="2000" value="{{ old('offerSlideSingleItemProductImageHeight', $config->offerSlideSingleItemProductImageHeight ?? 320) }}" class="w-full border rounded px-3 py-2">
-                                            @error('offerSlideSingleItemProductImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Largura da imagem (px)</label>
+                                                <input type="number" name="offerSlideSingleItemProductImageWidth" min="0" max="2000" value="{{ old('offerSlideSingleItemProductImageWidth', $config->offerSlideSingleItemProductImageWidth ?? 320) }}" class="w-full border rounded px-3 py-2">
+                                                @error('offerSlideSingleItemProductImageWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Altura da imagem (px)</label>
+                                                <input type="number" name="offerSlideSingleItemProductImageHeight" min="0" max="2000" value="{{ old('offerSlideSingleItemProductImageHeight', $config->offerSlideSingleItemProductImageHeight ?? 320) }}" class="w-full border rounded px-3 py-2">
+                                                @error('offerSlideSingleItemProductImageHeight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Distância do topo (px)</label>
-                                            <input type="number" name="offerSlideSingleItemProductImageTop" min="0" max="1200" value="{{ old('offerSlideSingleItemProductImageTop', $config->offerSlideSingleItemProductImageTop ?? 32) }}" class="w-full border rounded px-3 py-2">
-                                            @error('offerSlideSingleItemProductImageTop')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    <div class="rounded-md border border-fuchsia-200 bg-white/80 p-3 space-y-3">
+                                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                            <h6 class="text-xs font-semibold uppercase tracking-[0.16em] text-fuchsia-700">Borda</h6>
+                                            <label class="inline-flex items-center gap-2">
+                                                <input type="hidden" name="offerSlideSingleItemProductImageBorderEnabled" value="0">
+                                                <input type="checkbox" name="offerSlideSingleItemProductImageBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideSingleItemProductImageBorderEnabled', $config->offerSlideSingleItemProductImageBorderEnabled ?? true))>
+                                                <span class="text-sm text-gray-700">Exibir borda da imagem</span>
+                                            </label>
                                         </div>
 
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Distância da borda (px)</label>
-                                            <input type="number" name="offerSlideSingleItemProductImageRight" min="0" max="1200" value="{{ old('offerSlideSingleItemProductImageRight', $config->offerSlideSingleItemProductImageRight ?? 3) }}" class="w-full border rounded px-3 py-2">
-                                            <p class="text-xs text-gray-500 mt-1">Usa o lado escolhido acima. Menor valor deixa a imagem mais colada na borda.</p>
-                                            @error('offerSlideSingleItemProductImageRight')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da imagem</label>
+                                                <input type="color" name="offerSlideSingleItemProductImageBorderColor" value="{{ old('offerSlideSingleItemProductImageBorderColor', $config->offerSlideSingleItemProductImageBorderColor ?? '#ffffff') }}" class="h-11 w-full border rounded px-2 py-2 bg-white">
+                                                <p class="text-xs text-gray-500 mt-1">Define a cor do retângulo da imagem.</p>
+                                                @error('offerSlideSingleItemProductImageBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Espessura da borda (px)</label>
+                                                <input type="number" name="offerSlideSingleItemProductImageBorderWidth" min="0" max="20" value="{{ old('offerSlideSingleItemProductImageBorderWidth', $config->offerSlideSingleItemProductImageBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                                <p class="text-xs text-gray-500 mt-1">A borda só aparece quando a opção acima estiver ativada.</p>
+                                                @error('offerSlideSingleItemProductImageBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
                                         </div>
                                     </div>
+
                                 </div>
 
                                 <div id="offerSlideTitleBlock" data-offer-slide-name="Titulo" class="hidden rounded-md border border-amber-200 bg-amber-50/70 p-3 space-y-3">
@@ -1647,6 +1705,7 @@
                                 <div id="offerSlideLineBlock" data-offer-slide-name="Bloco da linha" class="hidden space-y-4">
                                 <div class="rounded-md border border-slate-200 bg-slate-50/80 p-3 space-y-3">
                                     <h5 class="border-l-4 border-slate-400 pl-3 text-sm font-semibold text-slate-900">Linha geral da tela</h5>
+                                    <p class="text-xs text-slate-600">Essas configurações servem para os modos 1 lista e 2 listas. No modo 1 item por vez, descrição e valor usam os próprios blocos abaixo.</p>
 
                                     <label class="inline-flex items-center gap-2">
                                         <input type="hidden" name="offerSlideScreenBorderEnabled" value="0">
@@ -1676,12 +1735,6 @@
                                             <label class="block text-sm font-medium text-gray-700 mb-1">Cor de fundo da linha</label>
                                             <input type="color" name="offerSlideCardBackgroundColor" value="{{ old('offerSlideCardBackgroundColor', $config->offerSlideCardBackgroundColor ?? '#0F172A') }}" class="w-full h-10 border rounded">
                                             @error('offerSlideCardBackgroundColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Transparência da linha (%)</label>
-                                            <input type="number" name="offerSlideCardBackgroundTransparencyPercent" min="0" max="100" value="{{ old('offerSlideCardBackgroundTransparencyPercent', $config->offerSlideCardBackgroundTransparencyPercent ?? 0) }}" class="w-full border rounded px-3 py-2">
-                                            <p class="text-xs text-gray-500 mt-1">0 mantém a cor sólida. 100 deixa o fundo totalmente transparente.</p>
-                                            @error('offerSlideCardBackgroundTransparencyPercent')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                         </div>
                                     </div>
 
@@ -1756,6 +1809,52 @@
                                         @error('offerSlideDescriptionPosition')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                     </div>
 
+                                    <div class="rounded-md border border-emerald-200 bg-white/80 p-3 space-y-3">
+                                        <h5 class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Ajuste fino da descrição</h5>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Mover para cima / baixo (px)</label>
+                                                <input id="offerSlideDescriptionOffsetYRange" type="range" min="-1200" max="1200" step="1" value="{{ old('offerSlideDescriptionOffsetY', $config->offerSlideDescriptionOffsetY ?? 0) }}" class="w-full accent-emerald-600" oninput="document.getElementById('offerSlideDescriptionOffsetYInput').value = this.value">
+                                                <input id="offerSlideDescriptionOffsetYInput" type="number" name="offerSlideDescriptionOffsetY" min="-1200" max="1200" step="1" value="{{ old('offerSlideDescriptionOffsetY', $config->offerSlideDescriptionOffsetY ?? 0) }}" class="mt-2 w-full border rounded px-3 py-2" oninput="document.getElementById('offerSlideDescriptionOffsetYRange').value = this.value">
+                                                <p class="text-xs text-gray-500 mt-1">Valor negativo sobe. Valor positivo desce.</p>
+                                                @error('offerSlideDescriptionOffsetY')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Mover para esquerda / direita (px)</label>
+                                                <input id="offerSlideDescriptionOffsetXRange" type="range" min="-1200" max="1200" step="1" value="{{ old('offerSlideDescriptionOffsetX', $config->offerSlideDescriptionOffsetX ?? 0) }}" class="w-full accent-emerald-600" oninput="document.getElementById('offerSlideDescriptionOffsetXInput').value = this.value">
+                                                <input id="offerSlideDescriptionOffsetXInput" type="number" name="offerSlideDescriptionOffsetX" min="-1200" max="1200" step="1" value="{{ old('offerSlideDescriptionOffsetX', $config->offerSlideDescriptionOffsetX ?? 0) }}" class="mt-2 w-full border rounded px-3 py-2" oninput="document.getElementById('offerSlideDescriptionOffsetXRange').value = this.value">
+                                                <p class="text-xs text-gray-500 mt-1">Valor negativo puxa para a esquerda. Valor positivo puxa para a direita.</p>
+                                                @error('offerSlideDescriptionOffsetX')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-md border border-emerald-200 bg-white/80 p-3 space-y-3">
+                                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                            <h5 class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Borda da descrição</h5>
+                                            <label class="inline-flex items-center gap-2">
+                                                <input type="hidden" name="offerSlideDescriptionBorderEnabled" value="0">
+                                                <input type="checkbox" name="offerSlideDescriptionBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlideDescriptionBorderEnabled', $config->offerSlideDescriptionBorderEnabled ?? true))>
+                                                <span class="text-sm text-gray-700">Exibir borda da descrição</span>
+                                            </label>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda da descrição</label>
+                                                <input type="color" name="offerSlideDescriptionBorderColor" value="{{ old('offerSlideDescriptionBorderColor', $config->offerSlideDescriptionBorderColor ?? '#94a3b8') }}" class="w-full h-10 border rounded">
+                                                @error('offerSlideDescriptionBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda da descrição (px)</label>
+                                                <input type="number" name="offerSlideDescriptionBorderWidth" min="0" max="20" value="{{ old('offerSlideDescriptionBorderWidth', $config->offerSlideDescriptionBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                                @error('offerSlideDescriptionBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
 
                                 <div id="offerSlidePriceBlock" data-offer-slide-name="Valor" class="hidden rounded-md border border-rose-200 bg-rose-50/70 p-4 space-y-3">
@@ -1810,6 +1909,52 @@
                                             <option value="right" @selected(old('offerSlidePriceAlignment', $config->offerSlidePriceAlignment ?? 'left') === 'right')>Direita</option>
                                         </select>
                                         @error('offerSlidePriceAlignment')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div class="rounded-md border border-rose-200 bg-white/80 p-3 space-y-3">
+                                        <h5 class="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">Ajuste fino do valor</h5>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Mover para cima / baixo (px)</label>
+                                                <input id="offerSlidePriceOffsetYRange" type="range" min="-1200" max="1200" step="1" value="{{ old('offerSlidePriceOffsetY', $config->offerSlidePriceOffsetY ?? 0) }}" class="w-full accent-rose-600" oninput="document.getElementById('offerSlidePriceOffsetYInput').value = this.value">
+                                                <input id="offerSlidePriceOffsetYInput" type="number" name="offerSlidePriceOffsetY" min="-1200" max="1200" step="1" value="{{ old('offerSlidePriceOffsetY', $config->offerSlidePriceOffsetY ?? 0) }}" class="mt-2 w-full border rounded px-3 py-2" oninput="document.getElementById('offerSlidePriceOffsetYRange').value = this.value">
+                                                <p class="text-xs text-gray-500 mt-1">Valor negativo sobe. Valor positivo desce.</p>
+                                                @error('offerSlidePriceOffsetY')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Mover para esquerda / direita (px)</label>
+                                                <input id="offerSlidePriceOffsetXRange" type="range" min="-1200" max="1200" step="1" value="{{ old('offerSlidePriceOffsetX', $config->offerSlidePriceOffsetX ?? 0) }}" class="w-full accent-rose-600" oninput="document.getElementById('offerSlidePriceOffsetXInput').value = this.value">
+                                                <input id="offerSlidePriceOffsetXInput" type="number" name="offerSlidePriceOffsetX" min="-1200" max="1200" step="1" value="{{ old('offerSlidePriceOffsetX', $config->offerSlidePriceOffsetX ?? 0) }}" class="mt-2 w-full border rounded px-3 py-2" oninput="document.getElementById('offerSlidePriceOffsetXRange').value = this.value">
+                                                <p class="text-xs text-gray-500 mt-1">Valor negativo puxa para a esquerda. Valor positivo puxa para a direita.</p>
+                                                @error('offerSlidePriceOffsetX')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-md border border-rose-200 bg-white/80 p-3 space-y-3">
+                                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                            <h5 class="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">Borda do valor</h5>
+                                            <label class="inline-flex items-center gap-2">
+                                                <input type="hidden" name="offerSlidePriceBorderEnabled" value="0">
+                                                <input type="checkbox" name="offerSlidePriceBorderEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('offerSlidePriceBorderEnabled', $config->offerSlidePriceBorderEnabled ?? true))>
+                                                <span class="text-sm text-gray-700">Exibir borda do valor</span>
+                                            </label>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Cor da borda do valor</label>
+                                                <input type="color" name="offerSlidePriceBorderColor" value="{{ old('offerSlidePriceBorderColor', $config->offerSlidePriceBorderColor ?? '#94a3b8') }}" class="w-full h-10 border rounded">
+                                                @error('offerSlidePriceBorderColor')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Grossura da borda do valor (px)</label>
+                                                <input type="number" name="offerSlidePriceBorderWidth" min="0" max="20" value="{{ old('offerSlidePriceBorderWidth', $config->offerSlidePriceBorderWidth ?? 1) }}" class="w-full border rounded px-3 py-2">
+                                                @error('offerSlidePriceBorderWidth')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                         </div>
@@ -1900,6 +2045,7 @@
         const offerSlideTitleEnabledInput = document.querySelector('input[name="offerSlideTitleEnabled"]:not([type="hidden"])');
         const offerSlideCardBackgroundTransparentInput = document.querySelector('input[name="offerSlideCardBackgroundTransparent"]:not([type="hidden"])');
         const offerSlideCardBackgroundTransparencyPercentInput = document.querySelector('input[name="offerSlideCardBackgroundTransparencyPercent"]');
+        const offerSlideLayoutModeInput = document.querySelector('select[name="offerSlideLayoutMode"]');
         const offerSlideBackgroundTransparentInput = document.querySelector('input[name="offerSlideBackgroundTransparent"]:not([type="hidden"])');
         const offerSlideBackgroundImageFullScreenInput = document.querySelector('input[name="offerSlideBackgroundImageFullScreen"]:not([type="hidden"])');
         const offerSlideBackgroundImageUrlInput = document.querySelector('input[name="offerSlideBackgroundImageUrl"]');
@@ -4487,11 +4633,19 @@
 
             offerSlideSubmenuList.innerHTML = '';
 
+            const currentLayoutMode = String(offerSlideLayoutModeInput?.value || 'double_list').trim().toLowerCase();
+
             offerSlideNavBlocks.forEach((block) => {
                 const targetId = String(block.id || '').trim();
                 const label = String(block.getAttribute('data-offer-slide-name') || '').trim();
 
                 if (!targetId || !label) {
+                    return;
+                }
+
+                if (currentLayoutMode === 'single_item' && targetId === 'offerSlideLineBlock') {
+                    block.classList.add('hidden');
+                    block.style.display = 'none';
                     return;
                 }
 
@@ -4525,6 +4679,13 @@
 
         buildOfferSlideSubmenuButtons();
         closeAllOfferSlideBlocks();
+
+        if (offerSlideLayoutModeInput) {
+            offerSlideLayoutModeInput.addEventListener('change', () => {
+                buildOfferSlideSubmenuButtons();
+                closeAllOfferSlideBlocks();
+            });
+        }
 
         if (addSlideImageFromGalleryBtn) {
             addSlideImageFromGalleryBtn.addEventListener('click', () => {

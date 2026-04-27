@@ -575,10 +575,6 @@
             padding: 10px 16px;
             border-radius: 9999px;
             background: rgba(251, 191, 36, 0.16);
-            color: #fde68a;
-            font-size: clamp(18px, 1.6vw, 28px);
-            font-weight: 800;
-            letter-spacing: 0.08em;
             text-transform: uppercase;
         }
 
@@ -599,32 +595,168 @@
 
         #offerSlideGrid[data-layout-mode="single_item"] {
             grid-template-columns: minmax(0, 1fr);
-            max-width: min(960px, 100%);
+            width: 100%;
+            max-width: 100%;
             margin: 0 auto;
             align-content: center;
         }
 
         #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card {
             min-height: min(54vh, 560px);
-            justify-content: center;
-            position: relative;
+            justify-content: flex-start;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(240px, calc(var(--offer-slide-single-item-product-image-width, 320px) + 40px));
+            grid-template-rows: minmax(0, 1fr) auto;
+            grid-template-areas:
+                "description media"
+                "price media";
+            column-gap: clamp(24px, 2.6vw, 36px);
+            row-gap: clamp(18px, 2vw, 28px);
+            align-items: stretch;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            padding: 0;
+            overflow: visible;
         }
 
-        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card.has-single-item-product-image .offer-slide-card-row {
-            padding-right: var(--offer-slide-single-item-product-image-padding-right, calc(var(--offer-slide-single-item-product-image-width, 320px) + var(--offer-slide-single-item-product-image-right, 3px) + 32px));
-            padding-left: var(--offer-slide-single-item-product-image-padding-left, 0px);
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card.offer-slide-card-single-item.image-left {
+            grid-template-columns: minmax(240px, calc(var(--offer-slide-single-item-product-image-width, 320px) + 40px)) minmax(0, 1fr);
+            grid-template-areas:
+                "media description"
+                "media price";
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-content {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: min(54vh, 560px);
+            gap: 18px;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card.offer-slide-card-single-item.image-right .offer-slide-card-single-item-content {
+            grid-column: 1;
+            justify-self: start;
+            width: 100%;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card.offer-slide-card-single-item.image-left .offer-slide-card-single-item-content {
+            grid-column: 2;
+            justify-self: start;
+            width: 100%;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-description {
+            grid-area: description;
+            text-align: left;
+            align-self: start;
+            min-width: 0;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-main {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+            margin-top: auto;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-description-box,
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-price-box {
+            border-radius: 22px;
+            background: var(--offer-slide-card-bg, rgba(15, 23, 42, 0.46));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            padding: clamp(18px, 1.8vw, 30px);
+            min-width: 0;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-description-box {
+            border: var(--offer-slide-description-border-width, 1px) solid var(--offer-slide-description-border-color, rgba(148, 163, 184, 0.18));
+            transform: translate(var(--offer-slide-description-offset-x, 0px), var(--offer-slide-description-offset-y, 0px));
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-price-box {
+            border: var(--offer-slide-price-border-width, 1px) solid var(--offer-slide-price-border-color, rgba(148, 163, 184, 0.18));
+            transform: translate(var(--offer-slide-price-offset-x, 0px), var(--offer-slide-price-offset-y, 0px));
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-description-box {
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
+            margin-left: 0;
+            margin-right: auto;
+            align-self: flex-start;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-price-box {
+            margin-top: auto;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-media {
+            grid-area: media;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: min(100%, calc(var(--offer-slide-single-item-product-image-width, 320px) + 40px));
+            max-width: 100%;
+            min-height: max(280px, calc(var(--offer-slide-single-item-product-image-height, 320px) + 40px));
+            padding: 20px;
+            border-radius: 24px;
+            background: transparent;
+            border: var(--offer-slide-single-item-product-image-border-width, 1px) solid var(--offer-slide-single-item-product-image-border-color, rgba(255, 255, 255, 0.10));
+            box-shadow: none;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-media.is-right {
+            justify-self: end;
+            transform: translateX(var(--offer-slide-single-item-product-image-inline-offset, 3px));
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-media.is-left {
+            justify-self: start;
+            transform: translateX(calc(var(--offer-slide-single-item-product-image-inline-offset, 3px) * -1));
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-media.is-top {
+            align-self: start;
+            margin-top: var(--offer-slide-single-item-product-image-top, 32px);
+            margin-bottom: 0;
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-media.is-bottom {
+            align-self: end;
+            margin-top: 0;
+            margin-bottom: var(--offer-slide-single-item-product-image-top, 32px);
+        }
+
+        #offerSlideGrid[data-layout-mode="single_item"] .offer-slide-card-single-item-price {
+            grid-area: price;
+            align-self: end;
+            width: 100%;
+            text-align: left;
         }
 
         .offer-slide-single-item-product-image {
-            position: absolute;
-            top: var(--offer-slide-single-item-product-image-top, 32px);
-            left: var(--offer-slide-single-item-product-image-left, auto);
-            right: var(--offer-slide-single-item-product-image-right, 3px);
             width: var(--offer-slide-single-item-product-image-width, 320px);
             height: var(--offer-slide-single-item-product-image-height, 320px);
             object-fit: contain;
             object-position: center;
             pointer-events: none;
+            display: block;
+            max-width: 100%;
             filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.32));
         }
 
@@ -663,6 +795,15 @@
             line-height: 1.08;
             overflow-wrap: anywhere;
             word-break: break-word;
+        }
+
+        .offer-slide-description {
+            width: 100%;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: normal;
+            hyphens: none;
+            line-height: 1.18;
         }
 
         .offer-slide-price {

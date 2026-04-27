@@ -541,6 +541,11 @@ class WebScreenConfigController extends Controller
             'offerSlideDescriptionFontSize' => ['nullable', 'integer', 'min:10', 'max:160'],
             'offerSlideDescriptionColor' => ['nullable', 'string', 'max:9'],
             'offerSlideDescriptionPosition' => ['nullable', 'in:top,bottom'],
+            'offerSlideDescriptionOffsetY' => ['nullable', 'integer', 'min:-1200', 'max:1200'],
+            'offerSlideDescriptionOffsetX' => ['nullable', 'integer', 'min:-1200', 'max:1200'],
+            'offerSlideDescriptionBorderEnabled' => ['nullable', 'boolean'],
+            'offerSlideDescriptionBorderColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideDescriptionBorderWidth' => ['nullable', 'integer', 'min:0', 'max:20'],
             'offerSlideBackgroundColorStart' => ['nullable', 'string', 'max:9'],
             'offerSlideBackgroundColorEnd' => ['nullable', 'string', 'max:9'],
             'offerSlideBackgroundTransparent' => ['nullable', 'boolean'],
@@ -554,9 +559,13 @@ class WebScreenConfigController extends Controller
             'offerSlideSingleItemProductImageEnabled' => ['nullable', 'boolean'],
             'offerSlideSingleItemProductImageWidth' => ['nullable', 'integer', 'min:0', 'max:2000'],
             'offerSlideSingleItemProductImageHeight' => ['nullable', 'integer', 'min:0', 'max:2000'],
-            'offerSlideSingleItemProductImageTop' => ['nullable', 'integer', 'min:0', 'max:1200'],
-            'offerSlideSingleItemProductImageRight' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            'offerSlideSingleItemProductImageTop' => ['nullable', 'integer', 'min:-1200', 'max:1200'],
+            'offerSlideSingleItemProductImageRight' => ['nullable', 'integer', 'min:-1200', 'max:1200'],
             'offerSlideSingleItemProductImageSide' => ['nullable', 'in:left,right'],
+            'offerSlideSingleItemProductImageVerticalPosition' => ['nullable', 'in:top,bottom'],
+            'offerSlideSingleItemProductImageBorderEnabled' => ['nullable', 'boolean'],
+            'offerSlideSingleItemProductImageBorderColor' => ['nullable', 'string', 'max:9'],
+            'offerSlideSingleItemProductImageBorderWidth' => ['nullable', 'integer', 'min:0', 'max:20'],
             'offerSlideTitleEnabled' => ['nullable', 'boolean'],
             'offerSlideTitleText' => ['nullable', 'string', 'max:120'],
             'offerSlideTitleColor' => ['nullable', 'string', 'max:9'],
@@ -564,6 +573,7 @@ class WebScreenConfigController extends Controller
             'offerSlideTitleFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system'],
             'offerSlideTitleAlignment' => ['nullable', 'in:left,center,right'],
             'offerSlideLayoutMode' => ['nullable', 'in:single_item,single_list,double_list'],
+            'offerSlideTestModeEnabled' => ['nullable', 'boolean'],
             'offerSlideSmoothTransitionEnabled' => ['nullable', 'boolean'],
             'offerSlideCardBackgroundColor' => ['nullable', 'string', 'max:9'],
             'offerSlideCardBackgroundTransparent' => ['nullable', 'boolean'],
@@ -579,6 +589,11 @@ class WebScreenConfigController extends Controller
             'offerSlidePriceColor' => ['nullable', 'string', 'max:9'],
             'offerSlidePricePosition' => ['nullable', 'in:top,bottom,footer'],
             'offerSlidePriceAlignment' => ['nullable', 'in:left,center,right'],
+            'offerSlidePriceOffsetY' => ['nullable', 'integer', 'min:-1200', 'max:1200'],
+            'offerSlidePriceOffsetX' => ['nullable', 'integer', 'min:-1200', 'max:1200'],
+            'offerSlidePriceBorderEnabled' => ['nullable', 'boolean'],
+            'offerSlidePriceBorderColor' => ['nullable', 'string', 'max:9'],
+            'offerSlidePriceBorderWidth' => ['nullable', 'integer', 'min:0', 'max:20'],
             'isPaginationEnabled' => ['nullable', 'boolean'],
             'pageSize' => ['nullable', 'integer', 'min:1', 'max:100'],
             'paginationInterval' => ['nullable', 'integer', 'min:1', 'max:120'],
@@ -850,6 +865,11 @@ class WebScreenConfigController extends Controller
         $validated['paginationInterval'] = (int) ($validated['paginationInterval'] ?? 5);
         $validated['showGroupLabelBadge'] = (bool) ($validated['showGroupLabelBadge'] ?? false);
         $validated['groupLabelBadgeColor'] = (string) ($validated['groupLabelBadgeColor'] ?? '#0f172a');
+        $validated['offerSlideDescriptionOffsetY'] = (int) ($validated['offerSlideDescriptionOffsetY'] ?? 0);
+        $validated['offerSlideDescriptionOffsetX'] = (int) ($validated['offerSlideDescriptionOffsetX'] ?? 0);
+        $validated['offerSlideDescriptionBorderEnabled'] = (bool) ($validated['offerSlideDescriptionBorderEnabled'] ?? true);
+        $validated['offerSlideDescriptionBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideDescriptionBorderColor'] ?? '#94a3b8'), '#94a3b8');
+        $validated['offerSlideDescriptionBorderWidth'] = (int) ($validated['offerSlideDescriptionBorderWidth'] ?? 1);
         $validated['offerSlideBackgroundColorStart'] = $this->normalizeHexColor((string) ($validated['offerSlideBackgroundColorStart'] ?? '#0f172a'), '#0f172a');
         $validated['offerSlideBackgroundColorEnd'] = $this->normalizeHexColor((string) ($validated['offerSlideBackgroundColorEnd'] ?? '#020617'), '#020617');
         $validated['offerSlideBackgroundTransparent'] = (bool) ($validated['offerSlideBackgroundTransparent'] ?? false);
@@ -865,6 +885,10 @@ class WebScreenConfigController extends Controller
         $validated['offerSlideSingleItemProductImageTop'] = (int) ($validated['offerSlideSingleItemProductImageTop'] ?? 32);
         $validated['offerSlideSingleItemProductImageRight'] = (int) ($validated['offerSlideSingleItemProductImageRight'] ?? 3);
         $validated['offerSlideSingleItemProductImageSide'] = (string) ($validated['offerSlideSingleItemProductImageSide'] ?? 'right');
+        $validated['offerSlideSingleItemProductImageVerticalPosition'] = (string) ($validated['offerSlideSingleItemProductImageVerticalPosition'] ?? 'top');
+        $validated['offerSlideSingleItemProductImageBorderEnabled'] = (bool) ($validated['offerSlideSingleItemProductImageBorderEnabled'] ?? true);
+        $validated['offerSlideSingleItemProductImageBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideSingleItemProductImageBorderColor'] ?? '#ffffff1a'), '#ffffff1a');
+        $validated['offerSlideSingleItemProductImageBorderWidth'] = (int) ($validated['offerSlideSingleItemProductImageBorderWidth'] ?? 1);
         $validated['offerSlideTitleEnabled'] = (bool) ($validated['offerSlideTitleEnabled'] ?? true);
         $validated['offerSlideTitleText'] = trim((string) ($validated['offerSlideTitleText'] ?? ''));
         $validated['offerSlideTitleColor'] = $this->normalizeHexColor((string) ($validated['offerSlideTitleColor'] ?? '#fde68a'), '#fde68a');
@@ -872,10 +896,11 @@ class WebScreenConfigController extends Controller
         $validated['offerSlideTitleFontFamily'] = (string) ($validated['offerSlideTitleFontFamily'] ?? 'arial');
         $validated['offerSlideTitleAlignment'] = (string) ($validated['offerSlideTitleAlignment'] ?? 'left');
         $validated['offerSlideLayoutMode'] = (string) ($validated['offerSlideLayoutMode'] ?? 'double_list');
+        $validated['offerSlideTestModeEnabled'] = (bool) ($validated['offerSlideTestModeEnabled'] ?? false);
         $validated['offerSlideSmoothTransitionEnabled'] = (bool) ($validated['offerSlideSmoothTransitionEnabled'] ?? false);
         $validated['offerSlideCardBackgroundColor'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBackgroundColor'] ?? '#0f172a'), '#0f172a');
         $validated['offerSlideCardBackgroundTransparent'] = (bool) ($validated['offerSlideCardBackgroundTransparent'] ?? false);
-        $validated['offerSlideCardBackgroundTransparencyPercent'] = (int) ($validated['offerSlideCardBackgroundTransparencyPercent'] ?? 0);
+        $validated['offerSlideCardBackgroundTransparencyPercent'] = $validated['offerSlideCardBackgroundTransparent'] ? 100 : 0;
         $validated['offerSlideCardBorderEnabled'] = (bool) ($validated['offerSlideCardBorderEnabled'] ?? true);
         $validated['offerSlideCardBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlideCardBorderColor'] ?? '#94a3b8'), '#94a3b8');
         $validated['offerSlideCardBorderWidth'] = (int) ($validated['offerSlideCardBorderWidth'] ?? 1);
@@ -887,6 +912,11 @@ class WebScreenConfigController extends Controller
         $validated['offerSlidePriceColor'] = $this->normalizeHexColor((string) ($validated['offerSlidePriceColor'] ?? '#fde68a'), '#fde68a');
         $validated['offerSlidePricePosition'] = (string) ($validated['offerSlidePricePosition'] ?? 'bottom');
         $validated['offerSlidePriceAlignment'] = (string) ($validated['offerSlidePriceAlignment'] ?? 'left');
+        $validated['offerSlidePriceOffsetY'] = (int) ($validated['offerSlidePriceOffsetY'] ?? 0);
+        $validated['offerSlidePriceOffsetX'] = (int) ($validated['offerSlidePriceOffsetX'] ?? 0);
+        $validated['offerSlidePriceBorderEnabled'] = (bool) ($validated['offerSlidePriceBorderEnabled'] ?? true);
+        $validated['offerSlidePriceBorderColor'] = $this->normalizeHexColor((string) ($validated['offerSlidePriceBorderColor'] ?? '#94a3b8'), '#94a3b8');
+        $validated['offerSlidePriceBorderWidth'] = (int) ($validated['offerSlidePriceBorderWidth'] ?? 1);
         $validated['gradientStartColor'] = $this->normalizeHexColor(
             $validated['gradientStartColor'] ?? null,
             (string) ($validated['rowBackgroundColor'] ?? '#0b1220')
@@ -1067,6 +1097,78 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageSide')) {
             unset($validated['offerSlideSingleItemProductImageSide']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageVerticalPosition')) {
+            unset($validated['offerSlideSingleItemProductImageVerticalPosition']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageBorderEnabled')) {
+            unset($validated['offerSlideSingleItemProductImageBorderEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageBorderColor')) {
+            unset($validated['offerSlideSingleItemProductImageBorderColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideSingleItemProductImageBorderWidth')) {
+            unset($validated['offerSlideSingleItemProductImageBorderWidth']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideDescriptionBorderEnabled')) {
+            unset($validated['offerSlideDescriptionBorderEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideDescriptionOffsetY')) {
+            unset($validated['offerSlideDescriptionOffsetY']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideDescriptionOffsetX')) {
+            unset($validated['offerSlideDescriptionOffsetX']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideDescriptionBorderColor')) {
+            unset($validated['offerSlideDescriptionBorderColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideDescriptionBorderWidth')) {
+            unset($validated['offerSlideDescriptionBorderWidth']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlidePriceBorderEnabled')) {
+            unset($validated['offerSlidePriceBorderEnabled']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlidePriceOffsetY')) {
+            unset($validated['offerSlidePriceOffsetY']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlidePriceOffsetX')) {
+            unset($validated['offerSlidePriceOffsetX']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlidePriceBorderColor')) {
+            unset($validated['offerSlidePriceBorderColor']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlidePriceBorderWidth')) {
+            unset($validated['offerSlidePriceBorderWidth']);
+        }
+
+        if (
+            in_array($saveSection, ['', 'offerSlideConfigSection'], true)
+            && ! Schema::hasColumn('configuracoes', 'offerSlideTestModeEnabled')
+        ) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'offerSlideTestModeEnabled' => 'O campo "Modo de teste" do slide de oferta nao foi salvo porque a coluna offerSlideTestModeEnabled ainda nao existe no banco. Rode as migrations pendentes no servidor.',
+                ])
+                ->withInput();
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'offerSlideTestModeEnabled')) {
+            unset($validated['offerSlideTestModeEnabled']);
         }
 
         if (! Schema::hasColumn('configuracoes', 'offerSlideTitleEnabled')) {
@@ -1722,6 +1824,11 @@ class WebScreenConfigController extends Controller
             'offerSlideDescriptionFontSize',
             'offerSlideDescriptionColor',
             'offerSlideDescriptionPosition',
+            'offerSlideDescriptionOffsetY',
+            'offerSlideDescriptionOffsetX',
+            'offerSlideDescriptionBorderEnabled',
+            'offerSlideDescriptionBorderColor',
+            'offerSlideDescriptionBorderWidth',
             'offerSlideBackgroundColorStart',
             'offerSlideBackgroundColorEnd',
             'offerSlideBackgroundTransparent',
@@ -1737,6 +1844,10 @@ class WebScreenConfigController extends Controller
             'offerSlideSingleItemProductImageTop',
             'offerSlideSingleItemProductImageRight',
             'offerSlideSingleItemProductImageSide',
+            'offerSlideSingleItemProductImageVerticalPosition',
+            'offerSlideSingleItemProductImageBorderEnabled',
+            'offerSlideSingleItemProductImageBorderColor',
+            'offerSlideSingleItemProductImageBorderWidth',
             'offerSlideTitleEnabled',
             'offerSlideTitleText',
             'offerSlideTitleColor',
@@ -1744,6 +1855,7 @@ class WebScreenConfigController extends Controller
             'offerSlideTitleFontFamily',
             'offerSlideTitleAlignment',
             'offerSlideLayoutMode',
+            'offerSlideTestModeEnabled',
             'offerSlideSmoothTransitionEnabled',
             'offerSlideCardBackgroundColor',
             'offerSlideCardBackgroundTransparent',
@@ -1759,6 +1871,11 @@ class WebScreenConfigController extends Controller
             'offerSlidePriceColor',
             'offerSlidePricePosition',
             'offerSlidePriceAlignment',
+            'offerSlidePriceOffsetY',
+            'offerSlidePriceOffsetX',
+            'offerSlidePriceBorderEnabled',
+            'offerSlidePriceBorderColor',
+            'offerSlidePriceBorderWidth',
             'isPaginationEnabled',
             'pageSize',
             'paginationInterval',

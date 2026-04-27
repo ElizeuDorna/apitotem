@@ -313,7 +313,12 @@ const visualConfig = {
     offerSlideDescriptionFontFamily: 'arial',
     offerSlideDescriptionFontSize: 42,
     offerSlideDescriptionColor: '#FFFFFF',
+    offerSlideDescriptionOffsetY: 0,
+    offerSlideDescriptionOffsetX: 0,
     offerSlideDescriptionPosition: 'top',
+    offerSlideDescriptionBorderEnabled: true,
+    offerSlideDescriptionBorderColor: '#94a3b8',
+    offerSlideDescriptionBorderWidth: 1,
     offerSlideBackgroundColorStart: '#0F172A',
     offerSlideBackgroundColorEnd: '#020617',
     offerSlideBackgroundTransparent: false,
@@ -329,6 +334,10 @@ const visualConfig = {
     offerSlideSingleItemProductImageTop: 32,
     offerSlideSingleItemProductImageRight: 3,
     offerSlideSingleItemProductImageSide: 'right',
+    offerSlideSingleItemProductImageVerticalPosition: 'top',
+    offerSlideSingleItemProductImageBorderEnabled: true,
+    offerSlideSingleItemProductImageBorderColor: '#ffffff1a',
+    offerSlideSingleItemProductImageBorderWidth: 1,
     offerSlideTitleEnabled: true,
     offerSlideTitleText: 'Slide de oferta',
     offerSlideTitleColor: '#FDE68A',
@@ -336,6 +345,7 @@ const visualConfig = {
     offerSlideTitleFontFamily: 'arial',
     offerSlideTitleAlignment: 'left',
     offerSlideLayoutMode: 'double_list',
+    offerSlideTestModeEnabled: false,
     offerSlideSmoothTransitionEnabled: false,
     offerSlideCardBackgroundColor: '#0F172A',
     offerSlideCardBackgroundTransparent: false,
@@ -351,6 +361,11 @@ const visualConfig = {
     offerSlidePriceColor: '#FDE68A',
     offerSlidePricePosition: 'bottom',
     offerSlidePriceAlignment: 'left',
+    offerSlidePriceOffsetY: 0,
+    offerSlidePriceOffsetX: 0,
+    offerSlidePriceBorderEnabled: true,
+    offerSlidePriceBorderColor: '#94a3b8',
+    offerSlidePriceBorderWidth: 1,
     isPaginationEnabled: false,
     pageSize: 10,
     paginationInterval: 5,
@@ -3294,7 +3309,7 @@ function canStartOfferSlide() {
         return false;
     }
 
-    if (!toBoolean(visualConfig.offerSlideEnabled, false)) {
+    if (!toBoolean(visualConfig.offerSlideEnabled, false) && !isOfferSlideTestModeEnabled()) {
         return false;
     }
 
@@ -3343,16 +3358,29 @@ function applyOfferSlideTheme() {
     const screenBorderWidth = Math.max(0, Math.min(24, Number(visualConfig.offerSlideScreenBorderWidth ?? 1)));
     const cardBackgroundColor = String(visualConfig.offerSlideCardBackgroundColor || '#0F172A').trim() || '#0F172A';
     const cardBackgroundTransparent = toBoolean(visualConfig.offerSlideCardBackgroundTransparent, false);
-    const cardBackgroundTransparencyPercent = Math.max(0, Math.min(100, Number(visualConfig.offerSlideCardBackgroundTransparencyPercent ?? 0) || 0));
+    const cardBackgroundTransparencyPercent = cardBackgroundTransparent ? 100 : 0;
     const cardBackgroundOpacity = cardBackgroundTransparent ? Math.max(0, 1 - (cardBackgroundTransparencyPercent / 100)) : 1;
     const singleItemProductImageWidth = Math.max(0, Math.min(2000, Number(visualConfig.offerSlideSingleItemProductImageWidth ?? 320) || 320));
     const singleItemProductImageHeight = Math.max(0, Math.min(2000, Number(visualConfig.offerSlideSingleItemProductImageHeight ?? 320) || 320));
-    const singleItemProductImageTop = Math.max(0, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageTop ?? 32) || 32));
-    const singleItemProductImageOffset = Math.max(0, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageRight ?? 3) || 3));
+    const singleItemProductImageTop = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageTop ?? 32) || 32));
+    const singleItemProductImageOffset = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageRight ?? 3) || 3));
     const singleItemProductImageSide = String(visualConfig.offerSlideSingleItemProductImageSide || 'right').toLowerCase() === 'left' ? 'left' : 'right';
+    const singleItemProductImageBorderEnabled = toBoolean(visualConfig.offerSlideSingleItemProductImageBorderEnabled, true);
+    const singleItemProductImageBorderColor = String(visualConfig.offerSlideSingleItemProductImageBorderColor || '#ffffff1a').trim() || '#ffffff1a';
+    const singleItemProductImageBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideSingleItemProductImageBorderWidth ?? 1) || 1));
+    const descriptionBorderEnabled = toBoolean(visualConfig.offerSlideDescriptionBorderEnabled, true);
+    const descriptionBorderColor = String(visualConfig.offerSlideDescriptionBorderColor || '#94a3b8').trim() || '#94a3b8';
+    const descriptionBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideDescriptionBorderWidth ?? 1) || 1));
+    const descriptionOffsetY = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideDescriptionOffsetY ?? 0) || 0));
+    const descriptionOffsetX = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideDescriptionOffsetX ?? 0) || 0));
     const cardBorderEnabled = toBoolean(visualConfig.offerSlideCardBorderEnabled, true);
     const cardBorderColor = String(visualConfig.offerSlideCardBorderColor || '#94a3b8').trim() || '#94a3b8';
     const cardBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideCardBorderWidth ?? 1)));
+    const priceBorderEnabled = toBoolean(visualConfig.offerSlidePriceBorderEnabled, true);
+    const priceBorderColor = String(visualConfig.offerSlidePriceBorderColor || '#94a3b8').trim() || '#94a3b8';
+    const priceBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlidePriceBorderWidth ?? 1) || 1));
+    const priceOffsetY = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlidePriceOffsetY ?? 0) || 0));
+    const priceOffsetX = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlidePriceOffsetX ?? 0) || 0));
 
     offerSlideOverlay.style.setProperty('--offer-slide-bg-start', backgroundColorStart);
     offerSlideOverlay.style.setProperty('--offer-slide-bg-end', backgroundColorEnd);
@@ -3364,12 +3392,19 @@ function applyOfferSlideTheme() {
     offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-width', `${singleItemProductImageWidth}px`);
     offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-height', `${singleItemProductImageHeight}px`);
     offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-top', `${singleItemProductImageTop}px`);
-    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-left', singleItemProductImageSide === 'left' ? `${singleItemProductImageOffset}px` : 'auto');
-    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-right', singleItemProductImageSide === 'right' ? `${singleItemProductImageOffset}px` : 'auto');
-    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-padding-left', singleItemProductImageSide === 'left' ? `calc(${singleItemProductImageWidth}px + ${singleItemProductImageOffset}px + 32px)` : '0px');
-    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-padding-right', singleItemProductImageSide === 'right' ? `calc(${singleItemProductImageWidth}px + ${singleItemProductImageOffset}px + 32px)` : '0px');
+    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-inline-offset', `${singleItemProductImageOffset}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-border-color', singleItemProductImageBorderEnabled ? singleItemProductImageBorderColor : 'transparent');
+    offerSlideOverlay.style.setProperty('--offer-slide-single-item-product-image-border-width', `${singleItemProductImageBorderEnabled ? singleItemProductImageBorderWidth : 0}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-description-border-color', descriptionBorderEnabled ? descriptionBorderColor : 'transparent');
+    offerSlideOverlay.style.setProperty('--offer-slide-description-border-width', `${descriptionBorderEnabled ? descriptionBorderWidth : 0}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-description-offset-y', `${descriptionOffsetY}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-description-offset-x', `${descriptionOffsetX}px`);
     offerSlideOverlay.style.setProperty('--offer-slide-card-border-color', cardBorderEnabled ? cardBorderColor : 'transparent');
     offerSlideOverlay.style.setProperty('--offer-slide-card-border-width', `${cardBorderEnabled ? cardBorderWidth : 0}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-price-border-color', priceBorderEnabled ? priceBorderColor : 'transparent');
+    offerSlideOverlay.style.setProperty('--offer-slide-price-border-width', `${priceBorderEnabled ? priceBorderWidth : 0}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-price-offset-y', `${priceOffsetY}px`);
+    offerSlideOverlay.style.setProperty('--offer-slide-price-offset-x', `${priceOffsetX}px`);
 
     offerSlideOverlay.style.backgroundImage = 'none';
     offerSlideOverlay.style.backgroundColor = isOfferSlideBackgroundTransparent ? 'transparent' : backgroundColorEnd;
@@ -3439,6 +3474,9 @@ function applyOfferSlideTheme() {
     }
 
     if (offerSlideInner) {
+        offerSlideInner.style.background = isOfferSlideBackgroundTransparent
+            ? 'transparent'
+            : `linear-gradient(180deg, ${panelColorStart}, ${panelColorEnd})`;
         offerSlideInner.style.backdropFilter = isOfferSlideBackgroundTransparent ? 'none' : 'blur(10px)';
         offerSlideInner.style.boxShadow = isOfferSlideBackgroundTransparent ? 'none' : '0 22px 60px rgba(0, 0, 0, 0.35)';
     }
@@ -3518,13 +3556,16 @@ function renderOfferSlidePage(index) {
     const descriptionColor = String(visualConfig.offerSlideDescriptionColor || '#FFFFFF').trim() || '#FFFFFF';
     const priceColor = String(visualConfig.offerSlidePriceColor || '#FDE68A').trim() || '#FDE68A';
     const layoutMode = getOfferSlideLayoutMode();
+    const isSingleItemLayout = layoutMode === 'single_item';
     const shouldShowSingleItemProductImage = layoutMode === 'single_item' && toBoolean(visualConfig.offerSlideSingleItemProductImageEnabled, false);
+    const singleItemImageSideClass = String(visualConfig.offerSlideSingleItemProductImageSide || 'right').toLowerCase() === 'left' ? 'is-left' : 'is-right';
+    const singleItemImageVerticalClass = String(visualConfig.offerSlideSingleItemProductImageVerticalPosition || 'top').toLowerCase() === 'bottom' ? 'is-bottom' : 'is-top';
 
     offerSlideGrid.dataset.layoutMode = layoutMode;
 
     offerSlideGrid.innerHTML = items.map((item) => {
         const singleItemImageUrl = normalizeImageSrcCandidate(resolveRenderableImageUrl(String(item?.imagem || '').trim()));
-        const descriptionAlignmentStyle = shouldShowSingleItemProductImage ? 'text-align:left;width:100%;' : '';
+        const descriptionAlignmentStyle = 'text-align:left;width:100%;';
         const descriptionHtml = `<span class="offer-slide-description" style="font-family:${escapeHtmlAttribute(descriptionFontFamily)};font-size:${descriptionFontSize}px;color:${escapeHtmlAttribute(descriptionColor)};font-weight:700;${descriptionAlignmentStyle}">${escapeHtmlText(item?.nome || 'Sem descrição')}</span>`;
         const priceFooterStyle = pricePosition === 'footer' ? 'margin-top:auto;' : '';
         const priceHtml = `<span class="offer-slide-price" style="font-family:${escapeHtmlAttribute(priceFontFamily)};font-size:${priceFontSize}px;color:${escapeHtmlAttribute(priceColor)};text-align:${escapeHtmlAttribute(priceAlignment)};width:100%;${priceFooterStyle}">${escapeHtmlText(formatPrice(Number(item?.oferta || 0)))}</span>`;
@@ -3533,6 +3574,37 @@ function renderOfferSlidePage(index) {
         const singleItemImageMarkup = shouldShowSingleItemProductImage && singleItemImageUrl
             ? `<img src="${escapeHtmlAttribute(singleItemImageUrl)}" alt="${escapeHtmlAttribute(item?.nome || 'Produto')}" class="offer-slide-single-item-product-image" loading="lazy" onerror="this.style.display='none'">`
             : '';
+
+        if (isSingleItemLayout) {
+            const singleItemDescriptionHtml = `<div class="offer-slide-card-single-item-description-box"><div class="offer-slide-card-single-item-description">${descriptionHtml}</div></div>`;
+            const singleItemMediaHtml = singleItemImageMarkup
+                ? `<div class="offer-slide-card-single-item-media ${singleItemImageSideClass} ${singleItemImageVerticalClass}">${singleItemImageMarkup}</div>`
+                : '';
+            const singleItemPriceHtml = `<div class="offer-slide-card-single-item-price-box"><div class="offer-slide-card-single-item-price">${priceHtml}</div></div>`;
+            const hasSingleItemImageClass = singleItemImageMarkup ? ' has-single-item-product-image' : '';
+            const singleItemSideClass = singleItemImageSideClass === 'is-left' ? ' image-left' : ' image-right';
+            const singleItemMainBlocks = [];
+            const singleItemFooterBlocks = [];
+
+            if (descriptionPosition === 'top') {
+                singleItemMainBlocks.push(singleItemDescriptionHtml);
+            } else {
+                singleItemFooterBlocks.push(singleItemDescriptionHtml);
+            }
+
+            if (pricePosition === 'top') {
+                singleItemMainBlocks.push(singleItemPriceHtml);
+            } else {
+                singleItemFooterBlocks.push(singleItemPriceHtml);
+            }
+
+            const singleItemMainHtml = `<div class="offer-slide-card-single-item-main">${singleItemMainBlocks.join('')}</div>`;
+            const singleItemFooterHtml = singleItemFooterBlocks.length > 0
+                ? `<div class="offer-slide-card-single-item-footer">${singleItemFooterBlocks.join('')}</div>`
+                : '';
+
+            return `<article class="offer-slide-card offer-slide-card-single-item${hasSingleItemImageClass}${singleItemSideClass}"><div class="offer-slide-card-single-item-content">${singleItemMainHtml}${singleItemFooterHtml}</div>${singleItemMediaHtml}</article>`;
+        }
 
         if (descriptionPosition === 'top') {
             topContent.push(descriptionHtml);
@@ -3581,12 +3653,26 @@ function scheduleOfferSlidePageAdvance() {
             return;
         }
 
+        if (isOfferSlideTestModeEnabled()) {
+            renderOfferSlidePage(0);
+            scheduleOfferSlidePageAdvance();
+            return;
+        }
+
         hideOfferSlide(true);
     }, getOfferSlidePageStepMs());
 }
 
 function scheduleOfferSlideEntry(delayMs = null) {
     clearOfferSlideEntryTimer();
+
+    if (isOfferSlideTestModeEnabled()) {
+        if (!offerSlideActive && canStartOfferSlide()) {
+            startOfferSlide();
+        }
+
+        return;
+    }
 
     if (offerSlideActive || !toBoolean(visualConfig.offerSlideEnabled, false) || getOfferSlideItems().length === 0) {
         return;
@@ -3608,6 +3694,10 @@ function scheduleOfferSlideEntry(delayMs = null) {
 
 function isOfferSlideSmoothTransitionEnabled() {
     return toBoolean(visualConfig.offerSlideSmoothTransitionEnabled, false);
+}
+
+function isOfferSlideTestModeEnabled() {
+    return toBoolean(visualConfig.offerSlideTestModeEnabled, false);
 }
 
 function applyDocumentBackgroundFromVisualConfig(options = {}) {
@@ -3674,9 +3764,9 @@ function hideOfferSlide(scheduleNext = true) {
     }
 
     if (useSmoothTransition) {
-        setTvBaseScreenVisibility(true, { syncBackgroundImage: false });
         offerSlideVisibilityTimer = setTimeout(() => {
             if (!offerSlideActive) {
+                setTvBaseScreenVisibility(true, { syncBackgroundImage: false });
                 setBaseDocumentBackgroundImageVisibility(true);
             }
         }, OFFER_SLIDE_TRANSITION_MS);
@@ -3710,24 +3800,11 @@ function startOfferSlide() {
 
     setOfferSlideTransitionMode(useSmoothTransition);
     setBaseDocumentBackgroundImageVisibility(false);
-
-    if (!useSmoothTransition) {
-        setTvBaseScreenVisibility(false, { syncBackgroundImage: false });
-    } else {
-        setTvBaseScreenVisibility(true, { syncBackgroundImage: false });
-    }
+    setTvBaseScreenVisibility(false, { syncBackgroundImage: false });
 
     if (offerSlideOverlay) {
         offerSlideOverlay.classList.add('is-active');
         offerSlideOverlay.setAttribute('aria-hidden', 'false');
-    }
-
-    if (useSmoothTransition) {
-        offerSlideVisibilityTimer = setTimeout(() => {
-            if (offerSlideActive) {
-                setTvBaseScreenVisibility(false, { syncBackgroundImage: false });
-            }
-        }, OFFER_SLIDE_TRANSITION_MS);
     }
 
     renderOfferSlidePage(0);
@@ -3736,7 +3813,8 @@ function startOfferSlide() {
 }
 
 function syncOfferSlideSchedule() {
-    const enabled = toBoolean(visualConfig.offerSlideEnabled, false);
+    const testModeEnabled = isOfferSlideTestModeEnabled();
+    const enabled = toBoolean(visualConfig.offerSlideEnabled, false) || testModeEnabled;
     const hasOffers = getOfferSlideItems().length > 0;
 
     if (!enabled || !hasOffers) {
@@ -3757,6 +3835,7 @@ function syncOfferSlideSchedule() {
         }
 
         renderOfferSlidePage(Math.min(offerSlidePageIndex, offerSlidePages.length - 1));
+        scheduleOfferSlidePageAdvance();
         return;
     }
 
@@ -5356,6 +5435,11 @@ async function loadVisualConfig(token) {
         visualConfig.offerSlideDescriptionFontSize = Math.max(10, Math.min(160, Number(visualConfig.offerSlideDescriptionFontSize || 42)));
         visualConfig.offerSlideDescriptionColor = String(visualConfig.offerSlideDescriptionColor || '#FFFFFF');
         visualConfig.offerSlideDescriptionPosition = String(visualConfig.offerSlideDescriptionPosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
+        visualConfig.offerSlideDescriptionOffsetY = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideDescriptionOffsetY ?? 0) || 0));
+        visualConfig.offerSlideDescriptionOffsetX = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideDescriptionOffsetX ?? 0) || 0));
+        visualConfig.offerSlideDescriptionBorderEnabled = toBoolean(visualConfig.offerSlideDescriptionBorderEnabled, true);
+        visualConfig.offerSlideDescriptionBorderColor = String(visualConfig.offerSlideDescriptionBorderColor || '#94a3b8');
+        visualConfig.offerSlideDescriptionBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideDescriptionBorderWidth ?? 1) || 1));
         visualConfig.offerSlideBackgroundColorStart = String(visualConfig.offerSlideBackgroundColorStart || '#0F172A');
         visualConfig.offerSlideBackgroundColorEnd = String(visualConfig.offerSlideBackgroundColorEnd || '#020617');
         visualConfig.offerSlideBackgroundTransparent = toBoolean(visualConfig.offerSlideBackgroundTransparent, false);
@@ -5363,9 +5447,13 @@ async function loadVisualConfig(token) {
         visualConfig.offerSlideSingleItemProductImageEnabled = toBoolean(visualConfig.offerSlideSingleItemProductImageEnabled, true);
         visualConfig.offerSlideSingleItemProductImageWidth = Math.max(0, Math.min(2000, Number(visualConfig.offerSlideSingleItemProductImageWidth ?? 320) || 320));
         visualConfig.offerSlideSingleItemProductImageHeight = Math.max(0, Math.min(2000, Number(visualConfig.offerSlideSingleItemProductImageHeight ?? 320) || 320));
-        visualConfig.offerSlideSingleItemProductImageTop = Math.max(0, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageTop ?? 32) || 32));
-        visualConfig.offerSlideSingleItemProductImageRight = Math.max(0, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageRight ?? 3) || 3));
+        visualConfig.offerSlideSingleItemProductImageTop = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageTop ?? 32) || 32));
+        visualConfig.offerSlideSingleItemProductImageRight = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlideSingleItemProductImageRight ?? 3) || 3));
         visualConfig.offerSlideSingleItemProductImageSide = String(visualConfig.offerSlideSingleItemProductImageSide || 'right').toLowerCase() === 'left' ? 'left' : 'right';
+        visualConfig.offerSlideSingleItemProductImageVerticalPosition = String(visualConfig.offerSlideSingleItemProductImageVerticalPosition || 'top').toLowerCase() === 'bottom' ? 'bottom' : 'top';
+        visualConfig.offerSlideSingleItemProductImageBorderEnabled = toBoolean(visualConfig.offerSlideSingleItemProductImageBorderEnabled, true);
+        visualConfig.offerSlideSingleItemProductImageBorderColor = String(visualConfig.offerSlideSingleItemProductImageBorderColor || '#ffffff1a').trim() || '#ffffff1a';
+        visualConfig.offerSlideSingleItemProductImageBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideSingleItemProductImageBorderWidth ?? 1) || 1));
         visualConfig.offerSlideTitleEnabled = toBoolean(visualConfig.offerSlideTitleEnabled, true);
         visualConfig.offerSlideTitleText = String(visualConfig.offerSlideTitleText || 'Slide de oferta');
         visualConfig.offerSlideTitleColor = String(visualConfig.offerSlideTitleColor || '#FDE68A');
@@ -5375,9 +5463,10 @@ async function loadVisualConfig(token) {
             ? 'right'
             : (String(visualConfig.offerSlideTitleAlignment || 'left').toLowerCase() === 'center' ? 'center' : 'left');
         visualConfig.offerSlideLayoutMode = getOfferSlideLayoutMode();
+        visualConfig.offerSlideTestModeEnabled = toBoolean(visualConfig.offerSlideTestModeEnabled, false);
         visualConfig.offerSlideCardBackgroundColor = String(visualConfig.offerSlideCardBackgroundColor || '#0F172A');
         visualConfig.offerSlideCardBackgroundTransparent = toBoolean(visualConfig.offerSlideCardBackgroundTransparent, false);
-        visualConfig.offerSlideCardBackgroundTransparencyPercent = Math.max(0, Math.min(100, Number(visualConfig.offerSlideCardBackgroundTransparencyPercent ?? 0) || 0));
+        visualConfig.offerSlideCardBackgroundTransparencyPercent = visualConfig.offerSlideCardBackgroundTransparent ? 100 : 0;
         visualConfig.offerSlideCardBorderEnabled = toBoolean(visualConfig.offerSlideCardBorderEnabled, true);
         visualConfig.offerSlideCardBorderColor = String(visualConfig.offerSlideCardBorderColor || '#94a3b8');
         visualConfig.offerSlideCardBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlideCardBorderWidth ?? 1)));
@@ -5393,6 +5482,11 @@ async function loadVisualConfig(token) {
         visualConfig.offerSlidePriceAlignment = String(visualConfig.offerSlidePriceAlignment || 'left').toLowerCase() === 'right'
             ? 'right'
             : (String(visualConfig.offerSlidePriceAlignment || 'left').toLowerCase() === 'center' ? 'center' : 'left');
+        visualConfig.offerSlidePriceOffsetY = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlidePriceOffsetY ?? 0) || 0));
+        visualConfig.offerSlidePriceOffsetX = Math.max(-1200, Math.min(1200, Number(visualConfig.offerSlidePriceOffsetX ?? 0) || 0));
+        visualConfig.offerSlidePriceBorderEnabled = toBoolean(visualConfig.offerSlidePriceBorderEnabled, true);
+        visualConfig.offerSlidePriceBorderColor = String(visualConfig.offerSlidePriceBorderColor || '#94a3b8');
+        visualConfig.offerSlidePriceBorderWidth = Math.max(0, Math.min(20, Number(visualConfig.offerSlidePriceBorderWidth ?? 1) || 1));
         const normalizedRightSidebarFit = String(visualConfig.rightSidebarImageFit || 'scale-down').toLowerCase();
         visualConfig.rightSidebarImageFit = normalizedRightSidebarFit === 'cover'
             ? 'cover'
