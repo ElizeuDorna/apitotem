@@ -294,6 +294,8 @@ class TvController extends Controller
         $alphabeticalDirection = (string) ($screenConfig->productAlphabeticalDirection ?? 'asc');
         $departmentOrder = collect($screenConfig->productDepartmentOrder ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
         $groupOrder = collect($screenConfig->productGroupOrder ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
+        $deviceDepartmentId = (int) ($configuration->product_department_id ?? 0);
+        $deviceGroupId = (int) ($configuration->product_group_id ?? 0);
 
         $cacheSeconds = max(5, (int) $configuration->atualizar_produtos_segundos);
         $orderSignature = md5(json_encode([
@@ -301,16 +303,27 @@ class TvController extends Controller
             'alpha' => $alphabeticalDirection,
             'departments' => $departmentOrder,
             'groups' => $groupOrder,
+            'device_department' => $deviceDepartmentId,
+            'device_group' => $deviceGroupId,
         ]));
 
         $produtos = Cache::remember(
-            "tv:produtos:empresa:{$empresaId}:ordem:{$orderSignature}",
+            "tv:produtos:device:{$device->id}:empresa:{$empresaId}:ordem:{$orderSignature}",
             now()->addSeconds($cacheSeconds),
-            function () use ($empresaId, $orderMode, $alphabeticalDirection, $departmentOrder, $groupOrder) {
-                $items = Produto::query()
+            function () use ($empresaId, $orderMode, $alphabeticalDirection, $departmentOrder, $groupOrder, $deviceDepartmentId, $deviceGroupId) {
+                $itemsQuery = Produto::query()
                     ->with(['departamento:id,nome', 'grupo:id,nome,departamento_id'])
-                    ->where('empresa_id', $empresaId)
-                    ->get();
+                    ->where('empresa_id', $empresaId);
+
+                if ($deviceDepartmentId > 0) {
+                    $itemsQuery->where('departamento_id', $deviceDepartmentId);
+                }
+
+                if ($deviceGroupId > 0) {
+                    $itemsQuery->where('grupo_id', $deviceGroupId);
+                }
+
+                $items = $itemsQuery->get();
 
                 return $this->sortProductsForTv($items, $orderMode, $alphabeticalDirection, $departmentOrder, $groupOrder);
             }
@@ -1011,6 +1024,8 @@ class TvController extends Controller
         return DeviceConfiguration::query()->firstOrCreate(
             ['device_id' => $deviceId],
             [
+                'product_department_id' => null,
+                'product_group_id' => null,
                 'atualizar_produtos_segundos' => 30,
                 'volume' => 50,
                 'orientacao' => 'landscape',

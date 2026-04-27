@@ -77,6 +77,30 @@
                             <x-input-error :messages="$errors->get('web_screen_model_id')" class="mt-2" />
                         </div>
 
+                        <div>
+                            <label for="product_department_id" class="block text-sm font-medium text-gray-700">Departamento dos produtos deste dispositivo</label>
+                            <select id="product_department_id" name="product_department_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Todos os departamentos</option>
+                                @foreach ($activationDepartments as $department)
+                                    <option value="{{ $department->id }}" @selected((string) old('product_department_id') === (string) $department->id)>{{ $department->nome }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Se escolher um departamento, esta TV receberá apenas produtos dele.</p>
+                            <x-input-error :messages="$errors->get('product_department_id')" class="mt-2" />
+                        </div>
+
+                        <div>
+                            <label for="product_group_id" class="block text-sm font-medium text-gray-700">Grupo dos produtos deste dispositivo</label>
+                            <select id="product_group_id" name="product_group_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Todos os grupos</option>
+                                @foreach ($activationGroups as $group)
+                                    <option value="{{ $group->id }}" data-department-id="{{ $group->departamento_id }}" @selected((string) old('product_group_id') === (string) $group->id)>{{ $group->nome }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Se escolher um grupo, o filtro fica ainda mais específico para esta TV.</p>
+                            <x-input-error :messages="$errors->get('product_group_id')" class="mt-2" />
+                        </div>
+
                         @if (!($isDefaultAdmin && ($adminSemEmpresaAtiva ?? false)))
                             <div class="flex justify-end">
                                 <x-primary-button>
@@ -145,6 +169,8 @@
                                     <th class="px-3 py-2 text-left">Token</th>
                                     <th class="px-3 py-2 text-left">Empresa</th>
                                     <th class="px-3 py-2 text-left">Modelo em uso</th>
+                                    <th class="px-3 py-2 text-left">Departamento</th>
+                                    <th class="px-3 py-2 text-left">Grupo</th>
                                     <th class="px-3 py-2 text-left">Status</th>
                                     <th class="px-3 py-2 text-left">Última comunicação</th>
                                     <th class="px-3 py-2 text-right">Ações</th>
@@ -179,6 +205,8 @@
                                                 $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
                                                 $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
                                                 $deviceModels = $modelsByEmpresa->get((int) $device->empresa_id, collect());
+                                                $deviceDepartments = $departmentsByEmpresa->get((int) $device->empresa_id, collect());
+                                                $deviceGroups = $groupsByEmpresa->get((int) $device->empresa_id, collect());
                                             @endphp
                                             <span>
                                                 {{ $empresaNome ?? 'Empresa nao vinculada' }}
@@ -192,6 +220,22 @@
                                                 <option value="">Usar configuracao geral da empresa</option>
                                                 @foreach ($deviceModels as $model)
                                                     <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id', $device->configuration?->web_screen_model_id) === (string) $model->id)>{{ $model->nome }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            <select form="update-device-{{ $device->id }}" name="product_department_id" class="w-full rounded-md border-gray-300 shadow-sm">
+                                                <option value="">Todos</option>
+                                                @foreach ($deviceDepartments as $department)
+                                                    <option value="{{ $department->id }}" @selected((string) old('product_department_id', $device->configuration?->product_department_id) === (string) $department->id)>{{ $department->nome }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            <select form="update-device-{{ $device->id }}" name="product_group_id" class="w-full rounded-md border-gray-300 shadow-sm">
+                                                <option value="">Todos</option>
+                                                @foreach ($deviceGroups as $group)
+                                                    <option value="{{ $group->id }}" data-department-id="{{ $group->departamento_id }}" @selected((string) old('product_group_id', $device->configuration?->product_group_id) === (string) $group->id)>{{ $group->nome }}</option>
                                                 @endforeach
                                             </select>
                                         </td>
@@ -223,7 +267,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
+                                        <td colspan="11" class="px-3 py-8 text-center text-gray-500">Nenhuma TV cadastrada encontrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -237,4 +281,58 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bindGroupFilter = (departmentSelect, groupSelect) => {
+                if (!(departmentSelect instanceof HTMLSelectElement) || !(groupSelect instanceof HTMLSelectElement)) {
+                    return;
+                }
+
+                const applyFilter = () => {
+                    const selectedDepartmentId = String(departmentSelect.value || '');
+                    const currentGroupValue = String(groupSelect.value || '');
+                    let hasVisibleSelectedGroup = currentGroupValue === '';
+
+                    Array.from(groupSelect.options).forEach((option) => {
+                        if (option.value === '') {
+                            option.hidden = false;
+                            return;
+                        }
+
+                        const optionDepartmentId = String(option.getAttribute('data-department-id') || '');
+                        const shouldShow = selectedDepartmentId === '' || optionDepartmentId === selectedDepartmentId;
+                        option.hidden = !shouldShow;
+
+                        if (shouldShow && option.value === currentGroupValue) {
+                            hasVisibleSelectedGroup = true;
+                        }
+                    });
+
+                    if (!hasVisibleSelectedGroup) {
+                        groupSelect.value = '';
+                    }
+                };
+
+                departmentSelect.addEventListener('change', applyFilter);
+                applyFilter();
+            };
+
+            bindGroupFilter(
+                document.getElementById('product_department_id'),
+                document.getElementById('product_group_id')
+            );
+
+            document.querySelectorAll('form[id^="update-device-"]').forEach((form) => {
+                if (!(form instanceof HTMLFormElement)) {
+                    return;
+                }
+
+                bindGroupFilter(
+                    form.querySelector('select[name="product_department_id"]'),
+                    form.querySelector('select[name="product_group_id"]')
+                );
+            });
+        });
+    </script>
 </x-app-layout>

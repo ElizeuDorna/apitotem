@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\DeviceActivation;
 use App\Models\DeviceConfiguration;
+use App\Models\Departamento;
 use App\Models\Empresa;
+use App\Models\Grupo;
 use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
@@ -83,6 +85,18 @@ class DeviceActivationController extends Controller
             ->get(['id', 'empresa_id', 'nome'])
             ->groupBy('empresa_id');
 
+        $departmentsByEmpresa = Departamento::query()
+            ->whereIn('empresa_id', $visibleEmpresaIds)
+            ->orderBy('nome')
+            ->get(['id', 'empresa_id', 'nome'])
+            ->groupBy('empresa_id');
+
+        $groupsByEmpresa = Grupo::query()
+            ->whereIn('empresa_id', $visibleEmpresaIds)
+            ->orderBy('nome')
+            ->get(['id', 'empresa_id', 'departamento_id', 'nome'])
+            ->groupBy('empresa_id');
+
         $activationEmpresa = (! $user->isDefaultAdmin() || $empresaIdAtiva)
             ? $this->resolveEmpresa($user)
             : null;
@@ -103,7 +117,21 @@ class DeviceActivationController extends Controller
                     ->orderBy('nome')
                     ->get(['id', 'nome'])
                 : collect(),
+            'activationDepartments' => $activationEmpresa
+                ? Departamento::query()
+                    ->where('empresa_id', $activationEmpresa->id)
+                    ->orderBy('nome')
+                    ->get(['id', 'nome'])
+                : collect(),
+            'activationGroups' => $activationEmpresa
+                ? Grupo::query()
+                    ->where('empresa_id', $activationEmpresa->id)
+                    ->orderBy('nome')
+                    ->get(['id', 'departamento_id', 'nome'])
+                : collect(),
             'modelsByEmpresa' => $modelsByEmpresa,
+            'departmentsByEmpresa' => $departmentsByEmpresa,
+            'groupsByEmpresa' => $groupsByEmpresa,
             'devices' => $devices,
         ]);
     }
@@ -135,10 +163,14 @@ class DeviceActivationController extends Controller
             'nome_tv' => ['required', 'string', 'max:120'],
             'local' => ['nullable', 'string', 'max:120'],
             'web_screen_model_id' => ['nullable', 'integer'],
+            'product_department_id' => ['nullable', 'integer'],
+            'product_group_id' => ['nullable', 'integer'],
         ]);
 
         $empresa = $this->resolveEmpresa($user);
         $webScreenModelId = $this->resolveModelIdForEmpresa((int) $empresa->id, $validated['web_screen_model_id'] ?? null);
+        $productDepartmentId = $this->resolveDepartmentIdForEmpresa((int) $empresa->id, $validated['product_department_id'] ?? null);
+        $productGroupId = $this->resolveGroupIdForEmpresa((int) $empresa->id, $validated['product_group_id'] ?? null, $productDepartmentId);
         $activationCode = strtoupper((string) $validated['code']);
 
         $activation = DeviceActivation::query()
@@ -179,6 +211,8 @@ class DeviceActivationController extends Controller
             ['device_id' => $device->id],
             [
                 'web_screen_model_id' => $webScreenModelId,
+                'product_department_id' => $productDepartmentId,
+                'product_group_id' => $productGroupId,
                 'web_config_payload' => $existingConfiguration?->web_config_payload,
                 'atualizar_produtos_segundos' => $existingConfiguration?->atualizar_produtos_segundos ?? 30,
                 'volume' => $existingConfiguration?->volume ?? 50,
@@ -208,10 +242,14 @@ class DeviceActivationController extends Controller
             'local' => ['nullable', 'string', 'max:120'],
             'ativo' => ['nullable', 'boolean'],
             'web_screen_model_id' => ['nullable', 'integer'],
+            'product_department_id' => ['nullable', 'integer'],
+            'product_group_id' => ['nullable', 'integer'],
         ]);
 
         $empresaId = EmpresaContext::requireEmpresaId($user);
         $webScreenModelId = $this->resolveModelIdForEmpresa((int) $device->empresa_id, $validated['web_screen_model_id'] ?? null);
+        $productDepartmentId = $this->resolveDepartmentIdForEmpresa((int) $device->empresa_id, $validated['product_department_id'] ?? null);
+        $productGroupId = $this->resolveGroupIdForEmpresa((int) $device->empresa_id, $validated['product_group_id'] ?? null, $productDepartmentId);
 
         $device->update([
             'nome' => $validated['nome'],
@@ -226,6 +264,8 @@ class DeviceActivationController extends Controller
             ['device_id' => $device->id],
             [
                 'web_screen_model_id' => $webScreenModelId,
+                'product_department_id' => $productDepartmentId,
+                'product_group_id' => $productGroupId,
                 'web_config_payload' => $existingConfiguration?->web_config_payload,
                 'atualizar_produtos_segundos' => $existingConfiguration?->atualizar_produtos_segundos ?? 30,
                 'volume' => $existingConfiguration?->volume ?? 50,
@@ -350,5 +390,54 @@ class DeviceActivationController extends Controller
         }
 
         return $normalizedModelId;
+    }
+
+    private function resolveDepartmentIdForEmpresa(int $empresaId, mixed $departmentId): ?int
+    {
+        $normalizedDepartmentId = (int) $departmentId;
+        if ($normalizedDepartmentId <= 0) {
+            return null;
+        }
+
+        $exists = Departamento::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id', $normalizedDepartmentId)
+            ->exists();
+
+        if (! $exists) {
+            throw ValidationException::withMessages([
+                'product_department_id' => 'Departamento inválido para a empresa selecionada.',
+            ]);
+        }
+
+        return $normalizedDepartmentId;
+    }
+
+    private function resolveGroupIdForEmpresa(int $empresaId, mixed $groupId, ?int $departmentId = null): ?int
+    {
+        $normalizedGroupId = (int) $groupId;
+        if ($normalizedGroupId <= 0) {
+            return null;
+        }
+
+        $groupQuery = Grupo::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id', $normalizedGroupId);
+
+        if ($departmentId) {
+            $groupQuery->where('departamento_id', $departmentId);
+        }
+
+        $group = $groupQuery->first(['id']);
+
+        if (! $group) {
+            throw ValidationException::withMessages([
+                'product_group_id' => $departmentId
+                    ? 'Grupo inválido para o departamento selecionado.'
+                    : 'Grupo inválido para a empresa selecionada.',
+            ]);
+        }
+
+        return (int) $group->id;
     }
 }
