@@ -857,6 +857,86 @@
                 }
             }
         },
+        "/api/empresas/busca": {
+            "get": {
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Busca empresa publica por CPF ou CNPJ",
+                "operationId": "95e6f6dac0a7b7f1c4e0e41ea82409fe",
+                "parameters": [
+                    {
+                        "name": "documento",
+                        "in": "query",
+                        "description": "CPF ou CNPJ da empresa, com ou sem mascara",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "11.222.333/0001-81"
+                        }
+                    },
+                    {
+                        "name": "cnpj_cpf",
+                        "in": "query",
+                        "description": "Alias de documento",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "11222333000181"
+                        }
+                    },
+                    {
+                        "name": "cnpj",
+                        "in": "query",
+                        "description": "Alias para busca por CNPJ",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "11222333000181"
+                        }
+                    },
+                    {
+                        "name": "cpf",
+                        "in": "query",
+                        "description": "Alias para busca por CPF",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "11144477735"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Empresa encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Empresa encontrada com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "codigo": "1",
+                                        "nome": "Mercado Exemplo",
+                                        "razaosocial": "Mercado Exemplo LTDA",
+                                        "cnpj_cpf": "11222333000181",
+                                        "email": "contato@mercadoexemplo.com",
+                                        "fone": "11999998888"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Empresa nao encontrada"
+                    },
+                    "422": {
+                        "description": "Documento invalido"
+                    }
+                }
+            }
+        },
         "/api/empresas/{id}": {
             "put": {
                 "tags": [
@@ -1726,7 +1806,7 @@
                 "tags": [
                     "TV"
                 ],
-                "summary": "Retorna bootstrap da TV com dados de device, configuração e template",
+                "summary": "Retorna bootstrap da TV com dados de device e configuração",
                 "operationId": "8033a85db8791fc4a6a26359814a9a35",
                 "responses": {
                     "200": {
@@ -1750,25 +1830,10 @@
                                     },
                                     "configuracao": {
                                         "id": 1,
-                                        "template_id": 2,
                                         "atualizar_produtos_segundos": 30,
                                         "volume": 10,
                                         "orientacao": "landscape"
-                                    },
-                                    "template": {
-                                        "id": 2,
-                                        "nome": "Template Principal",
-                                        "tipo_layout": "split"
-                                    },
-                                    "items": [
-                                        {
-                                            "id": 11,
-                                            "tipo": "video",
-                                            "ordem": 1,
-                                            "conteudo": "https://exemplo.com/video.mp4",
-                                            "config_json": null
-                                        }
-                                    ]
+                                    }
                                 }
                             }
                         }
@@ -1789,7 +1854,7 @@
                 "tags": [
                     "TV"
                 ],
-                "summary": "Retorna mídias do template da TV (vídeos, imagens, banners)",
+                "summary": "Retorna mídias extras da TV",
                 "operationId": "5f675de7bbbf665224a9a65dfff9119f",
                 "responses": {
                     "200": {
