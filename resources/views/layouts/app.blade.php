@@ -54,6 +54,12 @@
         class="panel-auth-body bg-slate-100 font-sans antialiased text-slate-900"
         :data-panel-theme="panelTheme"
     >
+        @php
+            $layoutAuthUser = auth()->user();
+            $layoutEmpresaAtiva = $layoutAuthUser ? \App\Support\EmpresaContext::activeEmpresa($layoutAuthUser) : null;
+            $layoutExigeEmpresaAtiva = $layoutAuthUser ? \App\Support\EmpresaContext::requiresSelection($layoutAuthUser) : false;
+        @endphp
+
         <div class="panel-auth-shell min-h-screen bg-slate-100">
             @include('layouts.navigation')
 
@@ -65,6 +71,15 @@
                         </div>
                     </header>
                 @endisset
+
+                @if ($layoutExigeEmpresaAtiva && $layoutEmpresaAtiva)
+                    <div class="px-3 pt-4 sm:px-4 lg:px-6">
+                        <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-900 shadow-sm">
+                            <span class="font-semibold">Empresa selecionada:</span>
+                            <span class="ml-1">{{ $layoutEmpresaAtiva->nome }}</span>
+                        </div>
+                    </div>
+                @endif
 
                 <main class="panel-auth-main px-3 py-6 sm:px-4 lg:px-6">
                     <div class="lg:pl-4 [&>div.py-6]:!pt-0 [&>div.py-8]:!pt-0 [&>div.py-10]:!pt-0 [&>div.py-6]:!mt-0 [&>div.py-8]:!mt-0 [&>div.py-10]:!mt-0 [&>div>div.mx-auto]:!ml-0 [&>div>div.mx-auto]:!mr-auto">

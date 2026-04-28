@@ -35,7 +35,6 @@
             <div class="border-b border-emerald-900 bg-emerald-950/70 px-3 py-2.5">
                 <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300">Empresa ativa</p>
                 <p class="mt-1 text-[11px] font-semibold text-white">{{ $empresaAtivaNav->nome }}</p>
-                <p class="mt-1 text-[10px] leading-4 text-emerald-200/80">As alterações do painel serão aplicadas somente nesta empresa até você trocar a seleção.</p>
             </div>
         @endif
 
