@@ -60,6 +60,41 @@ class EmpresaController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/empresas/cnpj_cpf/{documento}',
+        tags: ['Empresas'],
+        summary: 'Busca empresa publica por CPF ou CNPJ',
+        parameters: [
+            new OA\Parameter(
+                name: 'documento',
+                in: 'path',
+                required: true,
+                description: 'CPF ou CNPJ da empresa, preferencialmente sem mascara',
+                schema: new OA\Schema(type: 'string', example: '11222333000181')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Empresa encontrada',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Empresa encontrada com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'codigo' => '1',
+                        'nome' => 'Mercado Exemplo',
+                        'razaosocial' => 'Mercado Exemplo LTDA',
+                        'cnpj_cpf' => '11222333000181',
+                        'email' => 'contato@mercadoexemplo.com',
+                        'fone' => '11999998888',
+                    ],
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Empresa nao encontrada'),
+            new OA\Response(response: 422, description: 'Documento invalido')
+        ]
+    )]
+    #[OA\Get(
         path: '/api/empresas/busca',
         tags: ['Empresas'],
         summary: 'Busca empresa publica por CPF ou CNPJ',
@@ -115,10 +150,11 @@ class EmpresaController extends Controller
             new OA\Response(response: 422, description: 'Documento invalido')
         ]
     )]
-    public function buscarPorDocumento(Request $request)
+    public function buscarPorDocumento(Request $request, ?string $documento = null)
     {
         $documentoInformado = (string) (
-            $request->query('documento')
+            $documento
+            ?? $request->query('documento')
             ?? $request->query('cnpj_cpf')
             ?? $request->query('cnpj')
             ?? $request->query('cpf')

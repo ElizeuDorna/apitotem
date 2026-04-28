@@ -857,6 +857,56 @@
                 }
             }
         },
+        "/api/empresas/cnpj_cpf/{documento}": {
+            "get": {
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Busca empresa publica por CPF ou CNPJ",
+                "operationId": "5c96114ab0cee5bbfaaa212dc7c22226",
+                "parameters": [
+                    {
+                        "name": "documento",
+                        "in": "path",
+                        "description": "CPF ou CNPJ da empresa, preferencialmente sem mascara",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "11222333000181"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Empresa encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Empresa encontrada com sucesso",
+                                    "dados": {
+                                        "id": 1,
+                                        "codigo": "1",
+                                        "nome": "Mercado Exemplo",
+                                        "razaosocial": "Mercado Exemplo LTDA",
+                                        "cnpj_cpf": "11222333000181",
+                                        "email": "contato@mercadoexemplo.com",
+                                        "fone": "11999998888"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Empresa nao encontrada"
+                    },
+                    "422": {
+                        "description": "Documento invalido"
+                    }
+                }
+            }
+        },
         "/api/empresas/busca": {
             "get": {
                 "tags": [

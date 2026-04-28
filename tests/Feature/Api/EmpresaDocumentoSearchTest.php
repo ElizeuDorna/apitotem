@@ -10,7 +10,35 @@ class EmpresaDocumentoSearchTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_busca_empresa_por_cnpj_formatado(): void
+    public function test_busca_empresa_por_cnpj_no_path(): void
+    {
+        $empresa = Empresa::query()->create([
+            'codigo' => '1001',
+            'nome' => 'Mercado Busca',
+            'fantasia' => 'Mercado Busca',
+            'razaosocial' => 'Mercado Busca LTDA',
+            'cnpj_cpf' => '11222333000181',
+            'urlimagem' => '',
+            'email' => 'busca@example.com',
+            'fone' => '11999999999',
+        ]);
+
+        $response = $this->getJson('/api/empresas/cnpj_cpf/11222333000181');
+
+        $response
+            ->assertOk()
+            ->assertJson([
+                'sucesso' => true,
+                'mensagem' => 'Empresa encontrada com sucesso',
+                'dados' => [
+                    'id' => $empresa->id,
+                    'cnpj_cpf' => '11222333000181',
+                    'nome' => 'Mercado Busca',
+                ],
+            ]);
+    }
+
+    public function test_busca_empresa_por_cnpj_formatado_na_query_permanece_compativel(): void
     {
         $empresa = Empresa::query()->create([
             'codigo' => '1001',

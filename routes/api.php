@@ -55,6 +55,7 @@ Route::middleware('device.auth')->prefix('tv')->group(function () {
 });
 
 // Rotas de Empresa
+Route::get('empresas/cnpj_cpf/{documento}', [EmpresaController::class, 'buscarPorDocumento']);
 Route::get('empresas/busca', [EmpresaController::class, 'buscarPorDocumento']);
 Route::apiResource('empresas', EmpresaController::class)->except(['show']);
 
