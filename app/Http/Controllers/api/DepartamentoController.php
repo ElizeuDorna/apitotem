@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\DepartamentoResource;
 use App\Models\Departamento;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
 
 class DepartamentoController extends Controller
@@ -77,10 +78,22 @@ class DepartamentoController extends Controller
     {
         $empresa = $request->attributes->get('empresa');
 
+        if ($request->filled('nome')) {
+            $request->merge([
+                'nome' => trim((string) $request->input('nome')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'nome' => 'required|string|max:255'
+            'nome' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('departamentos', 'nome')->where(fn ($query) => $query->where('empresa_id', $empresa->id)),
+            ]
         ], [
-            'nome.required' => 'Nome do departamento é obrigatório.'
+            'nome.required' => 'Nome do departamento é obrigatório.',
+            'nome.unique' => 'Já existe um departamento com este nome para esta empresa.',
         ]);
 
         $departamento = Departamento::create([
@@ -176,10 +189,25 @@ class DepartamentoController extends Controller
             ], 404);
         }
 
+        if ($request->filled('nome')) {
+            $request->merge([
+                'nome' => trim((string) $request->input('nome')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'nome' => 'sometimes|required|string|max:255'
+            'nome' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('departamentos', 'nome')
+                    ->where(fn ($query) => $query->where('empresa_id', $empresa->id))
+                    ->ignore($departamento->id),
+            ]
         ], [
-            'nome.required' => 'Nome do departamento é obrigatório.'
+            'nome.required' => 'Nome do departamento é obrigatório.',
+            'nome.unique' => 'Já existe um departamento com este nome para esta empresa.',
         ]);
 
         $departamento->update([

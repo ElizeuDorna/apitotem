@@ -6,6 +6,7 @@ use App\Http\Resources\Api\GrupoResource;
 use App\Models\Departamento;
 use App\Models\Grupo;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
 
 class GrupoController extends Controller
@@ -100,14 +101,26 @@ class GrupoController extends Controller
     {
         $empresa = $request->attributes->get('empresa');
 
+        if ($request->filled('nome')) {
+            $request->merge([
+                'nome' => trim((string) $request->input('nome')),
+            ]);
+        }
+
         $validated = $request->validate([
             'departamento_id' => 'required|integer|exists:departamentos,id',
-            'nome' => 'required|string|max:255'
+            'nome' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('grupos', 'nome')->where(fn ($query) => $query->where('empresa_id', $empresa->id)),
+            ]
         ], [
             'departamento_id.required' => 'Departamento é obrigatório.',
             'departamento_id.integer' => 'Departamento deve ser um número inteiro.',
             'departamento_id.exists' => 'Departamento não encontrado.',
-            'nome.required' => 'Nome do grupo é obrigatório.'
+            'nome.required' => 'Nome do grupo é obrigatório.',
+            'nome.unique' => 'Já existe um grupo com este nome para esta empresa.',
         ]);
 
         $departamento = Departamento::findOrFail($validated['departamento_id']);
@@ -239,11 +252,26 @@ class GrupoController extends Controller
             ], 404);
         }
 
+        if ($request->filled('nome')) {
+            $request->merge([
+                'nome' => trim((string) $request->input('nome')),
+            ]);
+        }
+
         $validated = $request->validate([
             'departamento_id' => "sometimes|integer|exists:departamentos,id",
-            'nome' => 'sometimes|string|max:255'
+            'nome' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('grupos', 'nome')
+                    ->where(fn ($query) => $query->where('empresa_id', $empresa->id))
+                    ->ignore($grupo->id),
+            ]
         ], [
-            'departamento_id.exists' => 'Departamento não encontrado.'
+            'departamento_id.exists' => 'Departamento não encontrado.',
+            'nome.unique' => 'Já existe um grupo com este nome para esta empresa.',
         ]);
 
         if (isset($validated['departamento_id'])) {
