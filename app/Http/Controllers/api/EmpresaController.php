@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Rules\CpfCnpjValido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\QueryException;
 use OpenApi\Attributes as OA;
 
@@ -55,6 +56,109 @@ class EmpresaController extends Controller
             'sucesso' => true,
             'mensagem' => 'Empresas listadas com sucesso',
             'dados' => $empresas
+        ], 200);
+    }
+
+    #[OA\Get(
+        path: '/api/empresas/busca',
+        tags: ['Empresas'],
+        summary: 'Busca empresa publica por CPF ou CNPJ',
+        parameters: [
+            new OA\Parameter(
+                name: 'documento',
+                in: 'query',
+                required: false,
+                description: 'CPF ou CNPJ da empresa, com ou sem mascara',
+                schema: new OA\Schema(type: 'string', example: '11.222.333/0001-81')
+            ),
+            new OA\Parameter(
+                name: 'cnpj_cpf',
+                in: 'query',
+                required: false,
+                description: 'Alias de documento',
+                schema: new OA\Schema(type: 'string', example: '11222333000181')
+            ),
+            new OA\Parameter(
+                name: 'cnpj',
+                in: 'query',
+                required: false,
+                description: 'Alias para busca por CNPJ',
+                schema: new OA\Schema(type: 'string', example: '11222333000181')
+            ),
+            new OA\Parameter(
+                name: 'cpf',
+                in: 'query',
+                required: false,
+                description: 'Alias para busca por CPF',
+                schema: new OA\Schema(type: 'string', example: '11144477735')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Empresa encontrada',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Empresa encontrada com sucesso',
+                    'dados' => [
+                        'id' => 1,
+                        'codigo' => '1',
+                        'nome' => 'Mercado Exemplo',
+                        'razaosocial' => 'Mercado Exemplo LTDA',
+                        'cnpj_cpf' => '11222333000181',
+                        'email' => 'contato@mercadoexemplo.com',
+                        'fone' => '11999998888',
+                    ],
+                ])
+            ),
+            new OA\Response(response: 404, description: 'Empresa nao encontrada'),
+            new OA\Response(response: 422, description: 'Documento invalido')
+        ]
+    )]
+    public function buscarPorDocumento(Request $request)
+    {
+        $documentoInformado = (string) (
+            $request->query('documento')
+            ?? $request->query('cnpj_cpf')
+            ?? $request->query('cnpj')
+            ?? $request->query('cpf')
+            ?? ''
+        );
+
+        $validator = Validator::make([
+            'documento' => $documentoInformado,
+        ], [
+            'documento' => ['required', 'string', 'max:18', new CpfCnpjValido()],
+        ], [
+            'documento.required' => 'Informe um CPF ou CNPJ para busca.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'sucesso' => false,
+                'mensagem' => 'Documento invalido.',
+                'erros' => $validator->errors(),
+            ], 422);
+        }
+
+        $documentoNormalizado = preg_replace('/\D/', '', $documentoInformado) ?? '';
+
+        $empresa = Empresa::query()
+            ->where('cnpj_cpf', $documentoNormalizado)
+            ->first();
+
+        if (! $empresa) {
+            return response()->json([
+                'sucesso' => false,
+                'mensagem' => 'Empresa nao encontrada para o documento informado.',
+                'dados' => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'sucesso' => true,
+            'mensagem' => 'Empresa encontrada com sucesso',
+            'dados' => $empresa,
         ], 200);
     }
 
