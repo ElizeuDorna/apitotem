@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Rules\CpfCnpjValido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\QueryException;
 use OpenApi\Attributes as OA;
@@ -255,11 +256,18 @@ class EmpresaController extends Controller
             'cnpj_cpf' => ['required', 'string', 'max:14', 'unique:empresa,cnpj_cpf', new CpfCnpjValido()],
             'email' => 'required|email|max:255|unique:empresa,email',
             'fone' => 'required|string|max:20',
+            'senha_integracao_api' => 'nullable|string|min:6|max:120',
             'endereco' => 'nullable|string|max:255',
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
             'cep' => 'nullable|string|max:10',
         ]);
+
+        if (! empty($validated['senha_integracao_api'])) {
+            $validated['senha_integracao_api'] = Hash::make($validated['senha_integracao_api']);
+        } else {
+            unset($validated['senha_integracao_api']);
+        }
 
         $validated['fantasia'] = $validated['nome'];
         $validated['urlimagem'] = '';
@@ -367,11 +375,20 @@ class EmpresaController extends Controller
             'cnpj_cpf' => ['sometimes', 'required', 'string', 'max:14', 'unique:empresa,cnpj_cpf,' . $empresa->id, new CpfCnpjValido()],
             'email' => 'sometimes|required|email|max:255|unique:empresa,email,' . $empresa->id,
             'fone' => 'sometimes|required|string|max:20',
+            'senha_integracao_api' => 'nullable|string|min:6|max:120',
             'endereco' => 'nullable|string|max:255',
             'bairro' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:20',
             'cep' => 'nullable|string|max:10',
         ]);
+
+        if (array_key_exists('senha_integracao_api', $validated)) {
+            if (! empty($validated['senha_integracao_api'])) {
+                $validated['senha_integracao_api'] = Hash::make($validated['senha_integracao_api']);
+            } else {
+                unset($validated['senha_integracao_api']);
+            }
+        }
 
         if (array_key_exists('nome', $validated)) {
             $validated['fantasia'] = $validated['nome'];

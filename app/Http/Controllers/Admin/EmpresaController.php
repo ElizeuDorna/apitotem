@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
@@ -138,6 +139,7 @@ class EmpresaController extends Controller
             'cnpj_cpf' => ['required', 'string', 'max:18', 'unique:empresa,cnpj_cpf', new CpfCnpjValido()],
             'email' => 'required|email|max:255|unique:empresa,email',
             'fone' => 'required|string|max:20',
+            'senha_integracao_api' => 'nullable|string|min:6|max:120',
             'nivel_acesso' => 'nullable|integer|in:1,2',
             'revenda_id' => 'nullable|integer|exists:empresa,id',
             'endereco' => 'nullable|string|max:255',
@@ -147,6 +149,12 @@ class EmpresaController extends Controller
             'public_page_enabled' => 'nullable|boolean',
             'public_page_slug' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('empresa', 'public_page_slug')],
         ]);
+
+        if (! empty($validated['senha_integracao_api'])) {
+            $validated['senha_integracao_api'] = Hash::make($validated['senha_integracao_api']);
+        } else {
+            unset($validated['senha_integracao_api']);
+        }
 
         $user = Auth::user();
         $empresaVinculada = $user->empresa;
@@ -232,6 +240,7 @@ class EmpresaController extends Controller
             'cnpj_cpf' => ['required', 'string', 'max:18', 'unique:empresa,cnpj_cpf,' . $empresa->id, new CpfCnpjValido()],
             'email' => 'required|email|max:255|unique:empresa,email,' . $empresa->id,
             'fone' => 'required|string|max:20',
+            'senha_integracao_api' => 'nullable|string|min:6|max:120',
             'nivel_acesso' => 'nullable|integer|in:1,2',
             'revenda_id' => 'nullable|integer|exists:empresa,id',
             'endereco' => 'nullable|string|max:255',
@@ -241,6 +250,14 @@ class EmpresaController extends Controller
             'public_page_enabled' => 'nullable|boolean',
             'public_page_slug' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('empresa', 'public_page_slug')->ignore($empresa->id)],
         ]);
+
+        if (array_key_exists('senha_integracao_api', $validated)) {
+            if (! empty($validated['senha_integracao_api'])) {
+                $validated['senha_integracao_api'] = Hash::make($validated['senha_integracao_api']);
+            } else {
+                unset($validated['senha_integracao_api']);
+            }
+        }
 
         $user = Auth::user();
         $empresaVinculada = $user->empresa;

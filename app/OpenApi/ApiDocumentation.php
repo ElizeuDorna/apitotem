@@ -149,6 +149,7 @@ class ConfiguracaoPayloadSchema
         new OA\Property(property: 'cnpj_cpf', type: 'string', maxLength: 14, example: '12345678000199'),
         new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 255, example: 'contato@mercadoexemplo.com'),
         new OA\Property(property: 'fone', type: 'string', maxLength: 20, example: '11999998888'),
+        new OA\Property(property: 'senha_integracao_api', type: 'string', minLength: 6, maxLength: 120, nullable: true, example: 'minhaSenhaApi123', description: 'Opcional. Use apenas quando a empresa for acessar a API por integracao. O valor e salvo com hash no backend.'),
         new OA\Property(property: 'endereco', type: 'string', maxLength: 255, example: 'Rua Central', nullable: true),
         new OA\Property(property: 'bairro', type: 'string', maxLength: 100, example: 'Centro', nullable: true),
         new OA\Property(property: 'numero', type: 'string', maxLength: 20, example: '100', nullable: true),
@@ -161,6 +162,7 @@ class ConfiguracaoPayloadSchema
         'cnpj_cpf' => '12345678000199',
         'email' => 'contato@mercadoexemplo.com',
         'fone' => '11999998888',
+        'senha_integracao_api' => 'minhaSenhaApi123',
         'endereco' => 'Rua Central',
         'bairro' => 'Centro',
         'numero' => '100',
@@ -174,15 +176,25 @@ class EmpresaPayloadSchema
 #[OA\Schema(
     schema: 'EmpresaLoginPayload',
     anyOf: [
+        new OA\Schema(required: ['cnpj_cpf', 'senha']),
+        new OA\Schema(required: ['cnpj', 'senha']),
         new OA\Schema(required: ['token']),
         new OA\Schema(required: ['api_token']),
     ],
-    description: 'O login pode validar o token da empresa de tres formas: body com campo token, body com campo api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.',
+    description: 'Payload de autenticacao para acesso externo a API publica. O login pode ser feito com cnpj_cpf ou cnpj junto com senha da integracao API. Tambem pode validar um token existente via body com token, body com api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.',
     properties: [
+        new OA\Property(property: 'cnpj_cpf', type: 'string', maxLength: 18, example: '12345678000199'),
+        new OA\Property(property: 'cnpj', type: 'string', maxLength: 18, example: '12345678000199'),
+        new OA\Property(property: 'senha', type: 'string', minLength: 6, maxLength: 120, example: 'minhaSenhaApi123', description: 'Senha da integracao API da empresa.'),
+        new OA\Property(property: 'chave', type: 'string', minLength: 6, maxLength: 120, example: 'minhaSenhaApi123', nullable: true),
         new OA\Property(property: 'token', type: 'string', example: 'TOKEN_DA_EMPRESA'),
         new OA\Property(property: 'api_token', type: 'string', example: 'TOKEN_DA_EMPRESA')
     ],
-    type: 'object'
+    type: 'object',
+    example: [
+        'cnpj_cpf' => '12345678000199',
+        'senha' => 'minhaSenhaApi123'
+    ]
 )]
 class EmpresaLoginPayloadSchema
 {

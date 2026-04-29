@@ -27,6 +27,7 @@ class Empresa extends Model
         'cnpj_cpf',
         'email',
         'fone',
+        'senha_integracao_api',
         'api_token',
         'nivel_acesso',
         'revenda_id',
@@ -42,6 +43,7 @@ class Empresa extends Model
 
     protected $hidden = [
         'password',
+        'senha_integracao_api',
         'api_token',
     ];
 

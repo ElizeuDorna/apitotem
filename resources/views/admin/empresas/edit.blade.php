@@ -63,9 +63,16 @@
             </div>
         </div>
 
+        <div>
+            <label class="block font-semibold">SENHA INTEGRACAO API (OPCIONAL)</label>
+            <input type="password" name="senha_integracao_api" value="" class="w-full border rounded px-2 py-1 @error('senha_integracao_api') border-red-500 @enderror" autocomplete="new-password" />
+            <p class="mt-1 text-sm text-gray-600">Preencha somente se quiser definir ou trocar a senha de integracao da API. Deixe em branco para manter a senha atual.</p>
+            @error('senha_integracao_api')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+        </div>
+
         <div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            A empresa nao usa mais senha para a API.
-            Gerencie o token em "Token da API". Ao regenerar, o token anterior e invalidado imediatamente.
+            O token da API continua disponivel para uso com Bearer token.
+            Se desejar autenticar a empresa na API com CNPJ/CPF + senha, configure a senha no campo "Senha Integracao API".
         </div>
 
         @if($isDefaultAdmin ?? false)

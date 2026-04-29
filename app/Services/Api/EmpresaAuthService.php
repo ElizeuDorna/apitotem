@@ -43,11 +43,13 @@ class EmpresaAuthService
     {
         $empresa = $this->findByDocumento($documento);
 
-        if (! $empresa || ! $empresa->password) {
+        if (! $empresa) {
             return null;
         }
 
-        if (! Hash::check($senha, (string) $empresa->password)) {
+        $passwordHash = $this->resolvePasswordHash($empresa);
+
+        if (! $passwordHash || ! Hash::check($senha, $passwordHash)) {
             return null;
         }
 
@@ -61,6 +63,23 @@ class EmpresaAuthService
         }
 
         return $empresa;
+    }
+
+    private function resolvePasswordHash(Empresa $empresa): ?string
+    {
+        $integrationPasswordHash = $empresa->getAttribute('senha_integracao_api');
+
+        if (is_string($integrationPasswordHash) && $integrationPasswordHash !== '') {
+            return $integrationPasswordHash;
+        }
+
+        $legacyPasswordHash = $empresa->getAttribute('password');
+
+        if (is_string($legacyPasswordHash) && $legacyPasswordHash !== '') {
+            return $legacyPasswordHash;
+        }
+
+        return null;
     }
 
     public function ensureApiToken(Empresa $empresa): Empresa

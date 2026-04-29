@@ -62,9 +62,16 @@
             </div>
         </div>
 
+        <div>
+            <label class="block font-semibold">SENHA INTEGRACAO API (OPCIONAL)</label>
+            <input type="password" name="senha_integracao_api" value="{{ old('senha_integracao_api') }}" class="w-full border rounded px-2 py-1 @error('senha_integracao_api') border-red-500 @enderror" autocomplete="new-password" />
+            <p class="mt-1 text-sm text-gray-600">Preencha somente se esta empresa for usar integracao com a API. Essa sera a senha usada no login da API com CNPJ/CPF + senha.</p>
+            @error('senha_integracao_api')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+        </div>
+
         <div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            O token da API e gerado automaticamente ao criar a empresa.
-            Use a tela "Token da API" para visualizar ou regenerar o token quando necessario.
+            O token da API continua sendo gerado automaticamente para a empresa.
+            A senha de integracao da API e opcional e so deve ser configurada quando a empresa for usar login da API com CNPJ/CPF + senha.
         </div>
 
         @if($isDefaultAdmin ?? false)

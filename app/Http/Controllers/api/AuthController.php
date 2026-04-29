@@ -16,8 +16,8 @@ class AuthController extends Controller
     #[OA\Post(
         path: '/api/login',
         tags: ['Auth'],
-        summary: 'Valida o token da empresa e mantém compatibilidade temporária com login legado',
-        description: 'Formas recomendadas de uso: 1) enviar {"token":"TOKEN_DA_EMPRESA"} no body; 2) enviar {"api_token":"TOKEN_DA_EMPRESA"} no body; 3) enviar o header Authorization: Bearer TOKEN_DA_EMPRESA. Apos validar, reutilize o mesmo token no header Authorization das rotas protegidas.',
+        summary: 'Autentica empresa para acesso externo a API publica ou valida token existente',
+        description: 'Este endpoint e destinado ao acesso externo da API publica, como apps desktop e outras integracoes. Forma principal de uso: enviar cnpj_cpf ou cnpj junto com senha da integracao API cadastrada na empresa. Formas alternativas: enviar {"token":"TOKEN_DA_EMPRESA"} no body, enviar {"api_token":"TOKEN_DA_EMPRESA"} no body, ou enviar o header Authorization: Bearer TOKEN_DA_EMPRESA. Apos autenticar, reutilize o token retornado no header Authorization das rotas protegidas.',
         parameters: [
             new OA\Parameter(
                 name: 'Authorization',
@@ -34,6 +34,22 @@ class AuthController extends Controller
                     mediaType: 'application/json',
                     schema: new OA\Schema(ref: '#/components/schemas/EmpresaLoginPayload'),
                     examples: [
+                        new OA\Examples(
+                            example: 'cnpj_cpf_senha',
+                            summary: 'Login principal com cnpj_cpf e senha da integracao API',
+                            value: [
+                                'cnpj_cpf' => '12345678000199',
+                                'senha' => 'minhaSenhaApi123',
+                            ]
+                        ),
+                        new OA\Examples(
+                            example: 'cnpj_senha',
+                            summary: 'Login com alias cnpj e senha',
+                            value: [
+                                'cnpj' => '12345678000199',
+                                'senha' => 'minhaSenhaApi123',
+                            ]
+                        ),
                         new OA\Examples(
                             example: 'token',
                             summary: 'Login com campo token',

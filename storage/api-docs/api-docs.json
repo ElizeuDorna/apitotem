@@ -61,8 +61,8 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Valida o token da empresa e mantém compatibilidade temporária com login legado",
-                "description": "Formas recomendadas de uso: 1) enviar {\"token\":\"TOKEN_DA_EMPRESA\"} no body; 2) enviar {\"api_token\":\"TOKEN_DA_EMPRESA\"} no body; 3) enviar o header Authorization: Bearer TOKEN_DA_EMPRESA. Apos validar, reutilize o mesmo token no header Authorization das rotas protegidas.",
+                "summary": "Autentica empresa para acesso externo a API publica ou valida token existente",
+                "description": "Este endpoint e destinado ao acesso externo da API publica, como apps desktop e outras integracoes. Forma principal de uso: enviar cnpj_cpf ou cnpj junto com senha da integracao API cadastrada na empresa. Formas alternativas: enviar {\"token\":\"TOKEN_DA_EMPRESA\"} no body, enviar {\"api_token\":\"TOKEN_DA_EMPRESA\"} no body, ou enviar o header Authorization: Bearer TOKEN_DA_EMPRESA. Apos autenticar, reutilize o token retornado no header Authorization das rotas protegidas.",
                 "operationId": "dcf90ce65219b0ad51fc32e9f7f69843",
                 "parameters": [
                     {
@@ -84,6 +84,20 @@
                                 "$ref": "#/components/schemas/EmpresaLoginPayload"
                             },
                             "examples": {
+                                "cnpj_cpf_senha": {
+                                    "summary": "Login principal com cnpj_cpf e senha da integracao API",
+                                    "value": {
+                                        "cnpj_cpf": "12345678000199",
+                                        "senha": "minhaSenhaApi123"
+                                    }
+                                },
+                                "cnpj_senha": {
+                                    "summary": "Login com alias cnpj e senha",
+                                    "value": {
+                                        "cnpj": "12345678000199",
+                                        "senha": "minhaSenhaApi123"
+                                    }
+                                },
                                 "token": {
                                     "summary": "Login com campo token",
                                     "value": {
@@ -2241,6 +2255,14 @@
                         "example": "11999998888",
                         "maxLength": 20
                     },
+                    "senha_integracao_api": {
+                        "description": "Opcional. Use apenas quando a empresa for acessar a API por integracao. O valor e salvo com hash no backend.",
+                        "type": "string",
+                        "example": "minhaSenhaApi123",
+                        "nullable": true,
+                        "maxLength": 120,
+                        "minLength": 6
+                    },
                     "endereco": {
                         "type": "string",
                         "example": "Rua Central",
@@ -2273,6 +2295,7 @@
                     "cnpj_cpf": "12345678000199",
                     "email": "contato@mercadoexemplo.com",
                     "fone": "11999998888",
+                    "senha_integracao_api": "minhaSenhaApi123",
                     "endereco": "Rua Central",
                     "bairro": "Centro",
                     "numero": "100",
@@ -2280,8 +2303,32 @@
                 }
             },
             "EmpresaLoginPayload": {
-                "description": "O login pode validar o token da empresa de tres formas: body com campo token, body com campo api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.",
+                "description": "Payload de autenticacao para acesso externo a API publica. O login pode ser feito com cnpj_cpf ou cnpj junto com senha da integracao API. Tambem pode validar um token existente via body com token, body com api_token, ou header Authorization: Bearer TOKEN_DA_EMPRESA.",
                 "properties": {
+                    "cnpj_cpf": {
+                        "type": "string",
+                        "example": "12345678000199",
+                        "maxLength": 18
+                    },
+                    "cnpj": {
+                        "type": "string",
+                        "example": "12345678000199",
+                        "maxLength": 18
+                    },
+                    "senha": {
+                        "description": "Senha da integracao API da empresa.",
+                        "type": "string",
+                        "example": "minhaSenhaApi123",
+                        "maxLength": 120,
+                        "minLength": 6
+                    },
+                    "chave": {
+                        "type": "string",
+                        "example": "minhaSenhaApi123",
+                        "nullable": true,
+                        "maxLength": 120,
+                        "minLength": 6
+                    },
                     "token": {
                         "type": "string",
                         "example": "TOKEN_DA_EMPRESA"
@@ -2292,7 +2339,23 @@
                     }
                 },
                 "type": "object",
+                "example": {
+                    "cnpj_cpf": "12345678000199",
+                    "senha": "minhaSenhaApi123"
+                },
                 "anyOf": [
+                    {
+                        "required": [
+                            "cnpj_cpf",
+                            "senha"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "cnpj",
+                            "senha"
+                        ]
+                    },
                     {
                         "required": [
                             "token"
