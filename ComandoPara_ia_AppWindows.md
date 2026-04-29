@@ -1,62 +1,26 @@
-Este fluxo e somente para acesso externo a API publica pelo app desktop Windows Forms.
+# INSTRUCAO PARA A IA DO APP WINDOWS
 
-Nao e o login do painel administrativo web.
-Nao e para uso interno do painel.
+Voce deve considerar o comportamento atual da API exatamente assim:
 
-Este app Windows Forms ja existe e ja possui outros formularios e endpoints funcionando.
+## 1. Primeiro faz login para pegar o token
 
-Nao recriar o projeto do zero.
-Nao mudar fluxos que ja estao funcionando.
-Fazer apenas o ajuste do fluxo de login da API publica da empresa.
+Antes de acessar produtos, o app deve fazer login neste endpoint:
 
-O backend foi ajustado assim:
+```http
+POST /api/login
+Content-Type: application/json
+```
 
-- a empresa pode existir sem usar integracao com API
-- por isso o campo `senha_integracao_api` e opcional no cadastro e na edicao da empresa
-- essa senha e usada somente para integracao externa com a API publica
-- no backend ela e salva com hash
-- no login da API publica o app deve enviar `cnpj_cpf` e `senha`
-- a API compara a `senha` enviada com o hash salvo em `senha_integracao_api`
-
-O que precisa ser ajustado no app desktop existente:
-
-1. Revisar o formulario de login atual
-
-- o formulario deve pedir `cnpj_cpf`
-- o formulario deve pedir `senha`
-- essa senha e a senha de integracao da API publica da empresa
-
-2. Ajustar a chamada de login
-
-Endpoint correto da API publica:
-
-- `POST /api/login`
-
-Payload correto:
+Body principal:
 
 ```json
 {
-	"cnpj_cpf": "19131243000197",
-	"senha": "novaSenhaIntegracao456"
+	"cnpj_cpf": "12345678000199",
+	"senha": "minhaSenhaApi123"
 }
 ```
 
-Exemplo em C#:
-
-```csharp
-var loginPayload = new
-{
-		cnpj_cpf = txtCnpjCpf.Text,
-		senha = txtSenha.Text
-};
-
-var response = await httpClient.PostAsJsonAsync("/api/login", loginPayload);
-var content = await response.Content.ReadAsStringAsync();
-```
-
-3. Tratar o retorno do login
-
-Resposta de sucesso esperada:
+Resposta esperada:
 
 ```json
 {
@@ -64,60 +28,108 @@ Resposta de sucesso esperada:
 	"token": "TOKEN_DA_EMPRESA",
 	"empresa": {
 		"id": 1,
-		"nome": "Mercado Com API",
-		"cnpj_cpf": "19131243000197"
+		"nome": "Empresa Exemplo",
+		"cnpj_cpf": "12345678000199"
 	}
 }
 ```
 
-Resposta de erro esperada:
+Depois do login, o app deve salvar o valor retornado em `token`.
 
-```json
-{
-	"sucesso": false,
-	"mensagem": "Token ou credenciais invalidos."
-}
-```
+## 2. Todas as rotas de produtos usam Bearer token
 
-4. Guardar e reutilizar o token
-
-Depois do login com sucesso, guardar o token retornado e usar nas outras rotas protegidas da API publica com:
+O app deve enviar este header:
 
 ```http
 Authorization: Bearer TOKEN_DA_EMPRESA
+Accept: application/json
 ```
 
-Exemplo de configuracao do `HttpClient` depois do login:
+## 3. Comportamento atual do endpoint de produtos
 
-```csharp
-using System.Net.Http.Headers;
+O endpoint abaixo funciona como `criar ou atualizar` por `CODIGO`, sempre dentro da empresa autenticada pelo token:
 
-httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+```http
+POST /api/produtos
+Authorization: Bearer TOKEN_DA_EMPRESA
+Content-Type: application/json
+Accept: application/json
 ```
 
-5. Ajustar os textos da interface
+Regra real da API:
 
-Deixar claro no app:
+- se o `CODIGO` nao existir para aquela empresa, a API cria o produto
+- se o `CODIGO` ja existir para aquela empresa, a API atualiza o produto existente
+- a busca e feita por `empresa_id + CODIGO`
+- uma empresa nao altera produto de outra empresa, mesmo se o `CODIGO` for igual
 
-- a senha usada no login e a senha de integracao da API publica
-- essa senha e configurada no campo `senha_integracao_api` da empresa
-- se a empresa nao tiver configurado `senha_integracao_api`, o login da API publica nao vai funcionar
+## 4. Exemplo de envio para criar ou atualizar
 
-6. Se existir formulario de cadastro ou edicao da empresa no app, ajustar apenas este ponto
+```json
+{
+	"CODIGO": "78901",
+	"NOME": "Coca-Cola 2L",
+	"PRECO": 9.99,
+	"OFERTA": 8.99,
+	"IMG": "https://exemplo.com/imagens/coca-2l.jpg",
+	"departamento_id": 1,
+	"grupo_id": 10
+}
+```
 
-- mostrar o campo `senha_integracao_api`
-- indicar que ele e opcional
-- explicar que ele so deve ser preenchido se a empresa for usar integracao externa com a API publica
+Se enviar esse body e o produto `78901` ainda nao existir para a empresa autenticada, a API cria.
 
-O que a IA deve entregar:
+Se enviar esse mesmo `CODIGO` de novo para a mesma empresa, a API atualiza os dados.
 
-- ajuste no formulario de login existente
-- ajuste na chamada existente para usar `POST /api/login`
-- envio correto de `cnpj_cpf` e `senha`
-- tratamento correto do token retornado
-- aplicacao do Bearer token nas rotas protegidas da API publica que ja existem no app
-- ajuste dos textos da interface referentes a `senha_integracao_api`
+## 5. Endpoints reais de produtos
 
-Nao quero criacao de novo projeto.
-Nao quero reestruturacao completa.
-Quero somente a correcao do fluxo de login da API publica e dos textos ligados a essa integracao.
+Listar produtos:
+
+```http
+GET /api/produtos
+Authorization: Bearer TOKEN_DA_EMPRESA
+```
+
+Buscar um produto pelo codigo:
+
+```http
+GET /api/produtos/{CODIGO}
+Authorization: Bearer TOKEN_DA_EMPRESA
+```
+
+Criar ou atualizar pelo CODIGO:
+
+```http
+POST /api/produtos
+Authorization: Bearer TOKEN_DA_EMPRESA
+Content-Type: application/json
+```
+
+Atualizar explicitamente pela rota:
+
+```http
+PUT /api/produtos/{CODIGO}
+Authorization: Bearer TOKEN_DA_EMPRESA
+Content-Type: application/json
+```
+
+Excluir:
+
+```http
+DELETE /api/produtos/{CODIGO}
+Authorization: Bearer TOKEN_DA_EMPRESA
+```
+
+## 6. O que a IA do app deve fazer
+
+No cadastro e na edicao de produto do desktop, voce pode usar o mesmo endpoint `POST /api/produtos` com o `CODIGO` do produto.
+
+Resumo para a IA:
+
+1. primeiro faz `POST /api/login`
+2. pega o `token`
+3. salva o token
+4. envia `Authorization: Bearer TOKEN_DA_EMPRESA`
+5. para cadastrar ou atualizar produto, usa `POST /api/produtos`
+6. se o `CODIGO` existir na empresa, a API atualiza
+7. se o `CODIGO` nao existir na empresa, a API cria

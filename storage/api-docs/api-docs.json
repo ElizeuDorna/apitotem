@@ -1414,7 +1414,7 @@
                 "tags": [
                     "Produtos"
                 ],
-                "summary": "Cria um produto",
+                "summary": "Cria ou atualiza um produto pelo CODIGO na empresa autenticada",
                 "operationId": "0f94cb8e97d212f1b83331b15ecc3862",
                 "requestBody": {
                     "required": true,
@@ -1425,7 +1425,7 @@
                             },
                             "examples": {
                                 "produto": {
-                                    "summary": "Criar produto com código, preço e vínculos",
+                                    "summary": "Cria se o CODIGO nao existir; atualiza se o CODIGO ja existir na empresa autenticada",
                                     "value": {
                                         "CODIGO": "78901",
                                         "NOME": "Coca-Cola 2L",
@@ -1442,7 +1442,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Criado",
+                        "description": "Criado quando o CODIGO ainda nao existe para a empresa autenticada",
                         "content": {
                             "application/json": {
                                 "schema": {},
@@ -1456,6 +1456,34 @@
                                         "preco": 9.99,
                                         "oferta": 8.99,
                                         "imagem": "https://exemplo.com/imagens/coca-2l.jpg",
+                                        "grupo": {
+                                            "id": 10,
+                                            "nome": "Refrigerantes"
+                                        },
+                                        "departamento": {
+                                            "id": 1,
+                                            "nome": "Bebidas"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Atualizado quando o CODIGO ja existe para a empresa autenticada",
+                        "content": {
+                            "application/json": {
+                                "schema": {},
+                                "example": {
+                                    "sucesso": true,
+                                    "mensagem": "Produto atualizado com sucesso",
+                                    "dados": {
+                                        "id": 100,
+                                        "codigo": "78901",
+                                        "nome": "Coca-Cola 2L Zero",
+                                        "preco": 10.49,
+                                        "oferta": 9.49,
+                                        "imagem": "https://exemplo.com/imagens/coca-2l-zero.jpg",
                                         "grupo": {
                                             "id": 10,
                                             "nome": "Refrigerantes"

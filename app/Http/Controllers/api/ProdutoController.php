@@ -70,7 +70,7 @@ class ProdutoController extends Controller
     #[OA\Post(
         path: '/api/produtos',
         tags: ['Produtos'],
-        summary: 'Cria um produto',
+        summary: 'Cria ou atualiza um produto pelo CODIGO na empresa autenticada',
         security: [['CompanyBearer' => []]],
         requestBody: new OA\RequestBody(
             required: true,
@@ -81,7 +81,7 @@ class ProdutoController extends Controller
                     examples: [
                         new OA\Examples(
                             example: 'produto',
-                            summary: 'Criar produto com código, preço e vínculos',
+                            summary: 'Cria se o CODIGO nao existir; atualiza se o CODIGO ja existir na empresa autenticada',
                             value: [
                                 'CODIGO' => '78901',
                                 'NOME' => 'Coca-Cola 2L',
@@ -99,7 +99,7 @@ class ProdutoController extends Controller
         responses: [
             new OA\Response(
                 response: 201,
-                description: 'Criado',
+                description: 'Criado quando o CODIGO ainda nao existe para a empresa autenticada',
                 content: new OA\JsonContent(example: [
                     'sucesso' => true,
                     'mensagem' => 'Produto cadastrado com sucesso',
@@ -115,6 +115,24 @@ class ProdutoController extends Controller
                     ],
                 ])
             ),
+            new OA\Response(
+                response: 200,
+                description: 'Atualizado quando o CODIGO ja existe para a empresa autenticada',
+                content: new OA\JsonContent(example: [
+                    'sucesso' => true,
+                    'mensagem' => 'Produto atualizado com sucesso',
+                    'dados' => [
+                        'id' => 100,
+                        'codigo' => '78901',
+                        'nome' => 'Coca-Cola 2L Zero',
+                        'preco' => 10.49,
+                        'oferta' => 9.49,
+                        'imagem' => 'https://exemplo.com/imagens/coca-2l-zero.jpg',
+                        'grupo' => ['id' => 10, 'nome' => 'Refrigerantes'],
+                        'departamento' => ['id' => 1, 'nome' => 'Bebidas'],
+                    ],
+                ])
+            ),
             new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Erro de validação')
         ]
@@ -123,12 +141,20 @@ class ProdutoController extends Controller
     {
         $empresa = $request->attributes->get('empresa');
 
+        $produtoExistente = null;
+
+        if ($request->filled('CODIGO')) {
+            $produtoExistente = Produto::query()
+                ->where('empresa_id', $empresa->id)
+                ->where('CODIGO', (string) $request->input('CODIGO'))
+                ->first();
+        }
+
         $validatedData = $request->validate([
             'CODIGO' => [
                 'nullable',
                 'string',
                 'max:14',
-                Rule::unique('produto', 'CODIGO')->where(fn ($query) => $query->where('empresa_id', $empresa->id)),
             ],
             'NOME' => 'required|string|max:255',
             'PRECO' => 'required|numeric|min:0',
@@ -137,7 +163,6 @@ class ProdutoController extends Controller
             'departamento_id' => 'required|integer|exists:departamentos,id',
             'grupo_id' => 'required|integer|exists:grupos,id',
         ], [
-            'CODIGO.unique' => 'Este código já existe para esta empresa.',
             'NOME.required' => 'O campo NOME é obrigatório.',
             'PRECO.required' => 'O campo PREÇO é obrigatório.',
         ]);
@@ -169,6 +194,16 @@ class ProdutoController extends Controller
         $validatedData['empresa_id'] = $empresa->id;
 
         try {
+            if ($produtoExistente) {
+                $produtoExistente->update($validatedData);
+
+                return response()->json([
+                    'sucesso' => true,
+                    'mensagem' => 'Produto atualizado com sucesso',
+                    'dados' => new ProdutoResource($produtoExistente->fresh()->load(['departamento:id,nome', 'grupo:id,nome,departamento_id'])),
+                ], 200);
+            }
+
             $produto = Produto::create($validatedData)->load(['departamento:id,nome', 'grupo:id,nome,departamento_id']);
 
             return response()->json([
