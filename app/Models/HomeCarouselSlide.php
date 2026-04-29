@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Support\ImageStorage;
 
 class HomeCarouselSlide extends Model
 {
@@ -41,7 +42,7 @@ class HomeCarouselSlide extends Model
         }
 
         if ($this->image_source_type === 'upload' && $this->image_path) {
-            return asset('storage/'.$this->image_path);
+            return asset(ltrim(ImageStorage::publicUrl((string) $this->image_path), '/'));
         }
 
         return null;

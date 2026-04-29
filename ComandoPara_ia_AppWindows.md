@@ -4,7 +4,7 @@ Voce deve considerar o comportamento atual da API exatamente assim:
 
 ## 1. Primeiro faz login para pegar o token
 
-Antes de acessar produtos, o app deve fazer login neste endpoint:
+Antes de acessar produtos ou enviar imagem, o app deve fazer login neste endpoint:
 
 ```http
 POST /api/login
@@ -36,7 +36,7 @@ Resposta esperada:
 
 Depois do login, o app deve salvar o valor retornado em `token`.
 
-## 2. Todas as rotas de produtos usam Bearer token
+## 2. Todas as rotas protegidas usam Bearer token
 
 O app deve enviar este header:
 
@@ -45,7 +45,7 @@ Authorization: Bearer TOKEN_DA_EMPRESA
 Accept: application/json
 ```
 
-## 3. Comportamento atual do endpoint de produtos
+## 3. Produtos: criar ou atualizar pelo mesmo endpoint
 
 O endpoint abaixo funciona como `criar ou atualizar` por `CODIGO`, sempre dentro da empresa autenticada pelo token:
 
@@ -63,7 +63,7 @@ Regra real da API:
 - a busca e feita por `empresa_id + CODIGO`
 - uma empresa nao altera produto de outra empresa, mesmo se o `CODIGO` for igual
 
-## 4. Exemplo de envio para criar ou atualizar
+Exemplo:
 
 ```json
 {
@@ -71,15 +71,51 @@ Regra real da API:
 	"NOME": "Coca-Cola 2L",
 	"PRECO": 9.99,
 	"OFERTA": 8.99,
-	"IMG": "https://exemplo.com/imagens/coca-2l.jpg",
+	"IMG": "/storage-images/empresas/12345678000199/galeria/12345678901234.png",
 	"departamento_id": 1,
 	"grupo_id": 10
 }
 ```
 
-Se enviar esse body e o produto `78901` ainda nao existir para a empresa autenticada, a API cria.
+## 4. Upload de imagem da galeria via desktop
 
-Se enviar esse mesmo `CODIGO` de novo para a mesma empresa, a API atualiza os dados.
+Agora a API possui endpoint proprio para upload de imagem da empresa:
+
+```http
+POST /api/galeria-imagem/upload
+Authorization: Bearer TOKEN_DA_EMPRESA
+Content-Type: multipart/form-data
+Accept: application/json
+```
+
+Campos do envio:
+
+- `image`: arquivo da imagem
+- `name`: nome opcional para a galeria
+
+Exemplo de resposta:
+
+```json
+{
+	"sucesso": true,
+	"criado": true,
+	"mensagem": "Imagem enviada com sucesso.",
+	"dados": {
+		"id": 10,
+		"code": "12345678901234",
+		"empresa_id": 1,
+		"name": "Banner API",
+		"source_type": "upload",
+		"url": "/storage-images/empresas/12345678000199/galeria/12345678901234.png"
+	}
+}
+```
+
+Se a mesma imagem ja tiver sido enviada antes para a mesma empresa, a API pode reutilizar o item existente e retornar `criado: false`.
+
+Use a `url` retornada no campo `IMG` do produto.
+
+Essa mesma imagem fica registrada na galeria da empresa no portal web, evitando novo upload manual.
 
 ## 5. Endpoints reais de produtos
 
@@ -120,16 +156,15 @@ DELETE /api/produtos/{CODIGO}
 Authorization: Bearer TOKEN_DA_EMPRESA
 ```
 
-## 6. O que a IA do app deve fazer
-
-No cadastro e na edicao de produto do desktop, voce pode usar o mesmo endpoint `POST /api/produtos` com o `CODIGO` do produto.
-
-Resumo para a IA:
+## 6. Resumo para a IA
 
 1. primeiro faz `POST /api/login`
 2. pega o `token`
 3. salva o token
 4. envia `Authorization: Bearer TOKEN_DA_EMPRESA`
-5. para cadastrar ou atualizar produto, usa `POST /api/produtos`
-6. se o `CODIGO` existir na empresa, a API atualiza
-7. se o `CODIGO` nao existir na empresa, a API cria
+5. para enviar imagem, usa `POST /api/galeria-imagem/upload`
+6. pega a `dados.url` retornada pela API
+7. usa essa URL no campo `IMG` do produto
+8. para cadastrar ou atualizar produto, usa `POST /api/produtos`
+9. se o `CODIGO` existir na empresa, a API atualiza
+10. se o `CODIGO` nao existir na empresa, a API cria

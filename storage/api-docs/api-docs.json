@@ -1102,6 +1102,58 @@
                 }
             }
         },
+        "/api/galeria-imagem/upload": {
+            "post": {
+                "tags": [
+                    "Galeria Imagem"
+                ],
+                "summary": "Envia imagem da empresa para a galeria da API",
+                "operationId": "1c0d5c0e62857422e3963b70e0da9010",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "image"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Banner Promocional",
+                                        "maxLength": 255
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Imagem enviada com sucesso"
+                    },
+                    "200": {
+                        "description": "Imagem já existia para a empresa e foi reutilizada"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
         "/api/grupos": {
             "get": {
                 "tags": [
@@ -2502,6 +2554,10 @@
         {
             "name": "Empresas",
             "description": "Empresas"
+        },
+        {
+            "name": "Galeria Imagem",
+            "description": "Galeria Imagem"
         },
         {
             "name": "Grupos",

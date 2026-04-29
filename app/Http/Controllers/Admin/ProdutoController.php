@@ -8,6 +8,7 @@ use App\Models\Produto;
 use App\Models\Departamento;
 use App\Models\Grupo;
 use App\Support\EmpresaContext;
+use App\Support\ImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -130,7 +131,7 @@ class ProdutoController extends Controller
                 'max:500',
                 function ($attribute, $value, $fail) {
                     if (! $this->isValidProdutoImagePathOrUrl($value)) {
-                        $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/.');
+                        $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/ ou /storage-images/.');
                     }
                 },
             ],
@@ -245,7 +246,7 @@ class ProdutoController extends Controller
                 'max:500',
                 function ($attribute, $value, $fail) {
                     if (! $this->isValidProdutoImagePathOrUrl($value)) {
-                        $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/.');
+                        $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/ ou /storage-images/.');
                     }
                 },
             ],
@@ -367,10 +368,6 @@ class ProdutoController extends Controller
             return true;
         }
 
-        if (str_starts_with($normalized, '/storage/')) {
-            return true;
-        }
-
-        return filter_var($normalized, FILTER_VALIDATE_URL) !== false;
+        return ImageStorage::isValidImagePathOrUrl($normalized);
     }
 }

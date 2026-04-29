@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HomeCarouselSlide;
+use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -123,7 +124,7 @@ class HomeCarouselController extends Controller
         }
 
         if ($homeCarousel->image_source_type === 'upload' && $homeCarousel->image_path) {
-            Storage::disk('public')->delete($homeCarousel->image_path);
+            Storage::disk(ImageStorage::disk())->delete($homeCarousel->image_path);
         }
 
         $homeCarousel->delete();
@@ -188,7 +189,7 @@ class HomeCarouselController extends Controller
             $payload['image_url'] = $validated['image_url'] ?? null;
 
             if ($slide && $slide->image_source_type === 'upload' && $slide->image_path) {
-                Storage::disk('public')->delete($slide->image_path);
+                Storage::disk(ImageStorage::disk())->delete($slide->image_path);
             }
 
             $payload['image_path'] = null;
@@ -201,10 +202,10 @@ class HomeCarouselController extends Controller
 
         if ($request->hasFile('image_file')) {
             if ($slide && $slide->image_path) {
-                Storage::disk('public')->delete($slide->image_path);
+                Storage::disk(ImageStorage::disk())->delete($slide->image_path);
             }
 
-            $payload['image_path'] = $request->file('image_file')->store('home-carousel', 'public');
+            $payload['image_path'] = $request->file('image_file')->store('home-carousel', ImageStorage::disk());
         }
 
         return $payload;

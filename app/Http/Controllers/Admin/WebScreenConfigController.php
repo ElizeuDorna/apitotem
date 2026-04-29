@@ -11,6 +11,7 @@ use App\Models\Grupo;
 use App\Models\User;
 use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
+use App\Support\ImageStorage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -1222,8 +1223,8 @@ class WebScreenConfigController extends Controller
 
         if ($shouldProcessGeneralConfig && $request->hasFile('rightSidebarLogoUpload') && Schema::hasColumn('configuracoes', 'rightSidebarLogoUrl')) {
             $currentLogoPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->rightSidebarLogoUrl ?? ''));
-            if ($currentLogoPath !== '' && Storage::disk('public')->exists($currentLogoPath)) {
-                Storage::disk('public')->delete($currentLogoPath);
+            if ($currentLogoPath !== '' && Storage::disk(ImageStorage::disk())->exists($currentLogoPath)) {
+                Storage::disk(ImageStorage::disk())->delete($currentLogoPath);
             }
 
             $logoPath = $this->storeRightSidebarLogo($request);
@@ -1232,8 +1233,8 @@ class WebScreenConfigController extends Controller
 
         if ($shouldProcessGeneralConfig && $request->hasFile('leftVerticalLogoUpload') && Schema::hasColumn('configuracoes', 'leftVerticalLogoUrl')) {
             $currentLeftLogoPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->leftVerticalLogoUrl ?? ''));
-            if ($currentLeftLogoPath !== '' && Storage::disk('public')->exists($currentLeftLogoPath)) {
-                Storage::disk('public')->delete($currentLeftLogoPath);
+            if ($currentLeftLogoPath !== '' && Storage::disk(ImageStorage::disk())->exists($currentLeftLogoPath)) {
+                Storage::disk(ImageStorage::disk())->delete($currentLeftLogoPath);
             }
 
             $leftLogoPath = $this->storeLeftVerticalLogo($request);
@@ -1244,8 +1245,8 @@ class WebScreenConfigController extends Controller
             && $request->hasFile('offerSlideBackgroundImageUpload')
             && Schema::hasColumn('configuracoes', 'offerSlideBackgroundImageUrl')) {
             $currentOfferSlideBackgroundPath = $this->extractStoragePathFromPublicUrl((string) ($currentConfig->offerSlideBackgroundImageUrl ?? ''));
-            if ($currentOfferSlideBackgroundPath !== '' && Storage::disk('public')->exists($currentOfferSlideBackgroundPath)) {
-                Storage::disk('public')->delete($currentOfferSlideBackgroundPath);
+            if ($currentOfferSlideBackgroundPath !== '' && Storage::disk(ImageStorage::disk())->exists($currentOfferSlideBackgroundPath)) {
+                Storage::disk(ImageStorage::disk())->delete($currentOfferSlideBackgroundPath);
             }
 
             $offerSlideBackgroundPath = $this->storeOfferSlideBackgroundImage($request);
@@ -1978,7 +1979,7 @@ class WebScreenConfigController extends Controller
         $extension = strtolower((string) $upload->getClientOriginalExtension());
         $fileName = $normalizedCode.'_empresa_'.time().($extension ? '.'.$extension : '');
 
-        return $upload->storeAs('empresas/'.$document.'/galeria', $fileName, 'public');
+        return $upload->storeAs('empresas/'.$document.'/galeria', $fileName, ImageStorage::disk());
     }
 
     private function storeRightSidebarLogo(Request $request): string
@@ -1988,7 +1989,7 @@ class WebScreenConfigController extends Controller
         $extension = strtolower((string) $upload->getClientOriginalExtension());
         $fileName = 'tv_logo_'.time().($extension ? '.'.$extension : '');
 
-        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
+        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, ImageStorage::disk());
     }
 
     private function storeLeftVerticalLogo(Request $request): string
@@ -1998,7 +1999,7 @@ class WebScreenConfigController extends Controller
         $extension = strtolower((string) $upload->getClientOriginalExtension());
         $fileName = 'tv_left_logo_'.time().($extension ? '.'.$extension : '');
 
-        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
+        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, ImageStorage::disk());
     }
 
     private function storeOfferSlideBackgroundImage(Request $request): string
@@ -2008,7 +2009,7 @@ class WebScreenConfigController extends Controller
         $extension = strtolower((string) $upload->getClientOriginalExtension());
         $fileName = 'offer_slide_bg_'.time().($extension ? '.'.$extension : '');
 
-        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, 'public');
+        return $upload->storeAs('empresas/'.$document.'/tv', $fileName, ImageStorage::disk());
     }
 
     private function listCompanyGalleryImages(): array
@@ -2017,9 +2018,9 @@ class WebScreenConfigController extends Controller
 
         $files = collect($documents)
             ->map(fn (string $document) => 'empresas/'.$document.'/galeria')
-            ->flatMap(fn (string $directory) => Storage::disk('public')->exists($directory) ? Storage::disk('public')->files($directory) : [])
+            ->flatMap(fn (string $directory) => Storage::disk(ImageStorage::disk())->exists($directory) ? Storage::disk(ImageStorage::disk())->files($directory) : [])
             ->unique()
-            ->sortByDesc(fn (string $path) => Storage::disk('public')->lastModified($path))
+            ->sortByDesc(fn (string $path) => Storage::disk(ImageStorage::disk())->lastModified($path))
             ->values();
 
         return $files
@@ -2035,7 +2036,7 @@ class WebScreenConfigController extends Controller
     {
         $relativePath = ltrim($path, '/');
 
-        return '/storage/'.$relativePath;
+        return ImageStorage::publicUrl($relativePath);
     }
 
     private function extractStoragePathFromPublicUrl(string $url): string
@@ -2046,15 +2047,7 @@ class WebScreenConfigController extends Controller
             return '';
         }
 
-        if (str_starts_with($value, '/storage/')) {
-            return ltrim(substr($value, 9), '/');
-        }
-
-        if (str_starts_with($value, 'storage/')) {
-            return ltrim(substr($value, 8), '/');
-        }
-
-        return '';
+        return ImageStorage::extractRelativePathFromPublicUrl($value);
     }
 
     private function normalizeImageUrlsList(string $raw): string
@@ -2075,15 +2068,7 @@ class WebScreenConfigController extends Controller
             return '';
         }
 
-        if (preg_match('#^https?://localhost/storage/(.+)$#i', $line, $matches)) {
-            return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
-        }
-
-        if (str_starts_with($line, 'storage/')) {
-            return '/'.ltrim($line, '/');
-        }
-
-        return $line;
+        return ImageStorage::normalizePublicUrl($line);
     }
 
     private function normalizeHexColor(string $raw, string $default): string

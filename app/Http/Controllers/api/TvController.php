@@ -12,6 +12,7 @@ use App\Models\DeviceActivation;
 use App\Models\GlobalImageGallery;
 use App\Models\Empresa;
 use App\Models\Produto;
+use App\Support\ImageStorage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
@@ -825,15 +826,7 @@ class TvController extends Controller
             ->map(fn (string $line) => trim($line))
             ->filter(fn (string $line) => $line !== '')
             ->map(function (string $line) {
-                if (preg_match('#^https?://localhost/storage/(.+)$#i', $line, $matches)) {
-                    return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
-                }
-
-                if (str_starts_with($line, 'storage/')) {
-                    return '/'.ltrim($line, '/');
-                }
-
-                return $line;
+                return ImageStorage::normalizePublicUrl($line);
             })
             ->values();
 
@@ -926,13 +919,21 @@ class TvController extends Controller
             return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
         }
 
+        if (preg_match('#^https?://localhost/storage-images/(.+)$#i', $value, $matches)) {
+            return ImageStorage::publicUrl((string) ($matches[1] ?? ''));
+        }
+
         if (preg_match('#^storage/#i', $value)) {
+            return '/'.ltrim($value, '/');
+        }
+
+        if (preg_match('#^storage-images/#i', $value)) {
             return '/'.ltrim($value, '/');
         }
 
         if (preg_match('#^https?://#i', $value)) {
             $path = (string) parse_url($value, PHP_URL_PATH);
-            if ($path !== '' && preg_match('#^/storage/#i', $path)) {
+            if ($path !== '' && preg_match('#^/(storage|storage-images)/#i', $path)) {
                 return $path;
             }
         }
@@ -966,7 +967,7 @@ class TvController extends Controller
 
     private function publicStorageUrl(string $path): string
     {
-        return '/storage/'.ltrim($path, '/');
+        return ImageStorage::publicUrl($path);
     }
 
     private function normalizeCompanyLogoUrl(string $raw): string
@@ -981,23 +982,17 @@ class TvController extends Controller
             return $value;
         }
 
-        if (preg_match('#^https?://localhost/storage/(.+)$#i', $value, $matches)) {
-            return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
-        }
+        $normalizedInternal = ImageStorage::normalizePublicUrl($value);
 
-        if (str_starts_with($value, '/storage/')) {
-            return $value;
-        }
-
-        if (str_starts_with($value, 'storage/')) {
-            return '/'.ltrim($value, '/');
+        if (ImageStorage::isInternalPublicPath($normalizedInternal)) {
+            return $normalizedInternal;
         }
 
         if (str_starts_with($value, '/')) {
             return $value;
         }
 
-        return '/storage/'.ltrim($value, '/');
+        return ImageStorage::publicUrl($value);
     }
 
     private function generateUniqueActivationCode(): string

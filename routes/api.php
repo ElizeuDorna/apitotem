@@ -8,6 +8,7 @@ use App\Http\Controllers\api\DepartamentoController;
 use App\Http\Controllers\api\GrupoController;
 use App\Http\Controllers\api\ConfiguracaoController;
 use App\Http\Controllers\api\EmpresaController;
+use App\Http\Controllers\api\GaleriaImagemController;
 use App\Http\Controllers\api\TvController;
 
 Route::get('/', function () {
@@ -21,6 +22,7 @@ Route::get('/', function () {
             'POST /api/produtos' => 'Cadastrar novo produto',
             'PUT /api/produtos/{CODIGO}' => 'Atualizar um produto',
             'DELETE /api/produtos/{CODIGO}' => 'Deletar um produto',
+            'POST /api/galeria-imagem/upload' => 'Enviar imagem da empresa para a galeria da API',
             'GET /api/departamentos' => 'Listar departamentos da empresa autenticada',
             'GET /api/grupos' => 'Listar grupos da empresa autenticada',
             'GET /api/configuracoes' => 'Obter configuração da empresa autenticada',
@@ -61,6 +63,7 @@ Route::apiResource('empresas', EmpresaController::class)->except(['show']);
 
 Route::middleware('identify.company')->group(function () {
     Route::apiResource('produtos', ProdutoController::class);
+    Route::post('galeria-imagem/upload', [GaleriaImagemController::class, 'upload']);
     Route::apiResource('departamentos', DepartamentoController::class);
     Route::apiResource('grupos', GrupoController::class);
 

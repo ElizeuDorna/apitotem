@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\GlobalImageGallery;
 use App\Models\GlobalImageGalleryItem;
 use App\Models\Produto;
+use App\Support\ImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -185,7 +186,7 @@ class GlobalImageGalleryController extends Controller
 
         foreach ($globalImageGallery->items as $item) {
             if ($item->source_type === 'upload' && $item->file_path) {
-                Storage::disk('public')->delete($item->file_path);
+                Storage::disk(ImageStorage::disk())->delete($item->file_path);
             }
         }
 
@@ -264,7 +265,7 @@ class GlobalImageGalleryController extends Controller
 
             if ($sourceType === 'link') {
                 if ($existing && $existing->source_type === 'upload' && $existing->file_path) {
-                    Storage::disk('public')->delete($existing->file_path);
+                    Storage::disk(ImageStorage::disk())->delete($existing->file_path);
                 }
 
                 $gallery->items()->updateOrCreate(
@@ -293,10 +294,10 @@ class GlobalImageGalleryController extends Controller
 
             $extension = strtolower((string) $upload->getClientOriginalExtension());
             $fileName = $gallery->code.'_'.$slot.'.'.$extension;
-            $path = $upload->storeAs('galeria-geral', $fileName, 'public');
+            $path = $upload->storeAs('galeria-geral', $fileName, ImageStorage::disk());
 
             if ($existing && $existing->source_type === 'upload' && $existing->file_path && $existing->file_path !== $path) {
-                Storage::disk('public')->delete($existing->file_path);
+                Storage::disk(ImageStorage::disk())->delete($existing->file_path);
             }
 
             $gallery->items()->updateOrCreate(
@@ -323,8 +324,8 @@ class GlobalImageGalleryController extends Controller
             $extension = pathinfo($oldPath, PATHINFO_EXTENSION);
             $newPath = 'galeria-geral/'.$newCode.'_'.$item->slot.($extension ? '.'.$extension : '');
 
-            if (Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->move($oldPath, $newPath);
+            if (Storage::disk(ImageStorage::disk())->exists($oldPath)) {
+                Storage::disk(ImageStorage::disk())->move($oldPath, $newPath);
                 $item->update(['file_path' => $newPath]);
             }
         }
@@ -333,7 +334,7 @@ class GlobalImageGalleryController extends Controller
     private function deleteItemFileIfNeeded(GlobalImageGalleryItem $item): void
     {
         if ($item->source_type === 'upload' && $item->file_path) {
-            Storage::disk('public')->delete($item->file_path);
+            Storage::disk(ImageStorage::disk())->delete($item->file_path);
         }
     }
 
@@ -369,6 +370,6 @@ class GlobalImageGalleryController extends Controller
 
     private function publicStorageUrl(string $path): string
     {
-        return '/storage/'.ltrim($path, '/');
+        return ImageStorage::publicUrl($path);
     }
 }

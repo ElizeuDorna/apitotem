@@ -7,6 +7,7 @@ use App\Http\Resources\Api\ProdutoResource;
 use App\Models\Departamento;
 use App\Models\Grupo;
 use App\Models\Produto;
+use App\Support\ImageStorage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
@@ -159,7 +160,16 @@ class ProdutoController extends Controller
             'NOME' => 'required|string|max:255',
             'PRECO' => 'required|numeric|min:0',
             'OFERTA' => 'nullable|numeric|min:0',
-            'IMG' => 'nullable|url|max:500',
+            'IMG' => [
+                'nullable',
+                'string',
+                'max:500',
+                function ($attribute, $value, $fail) {
+                    if (! ImageStorage::isValidImagePathOrUrl((string) $value)) {
+                        $fail('O campo IMG deve ser uma URL valida ou um caminho interno iniciando com /storage/ ou /storage-images/.');
+                    }
+                },
+            ],
             'departamento_id' => 'required|integer|exists:departamentos,id',
             'grupo_id' => 'required|integer|exists:grupos,id',
         ], [
@@ -356,7 +366,16 @@ class ProdutoController extends Controller
             'NOME' => 'sometimes|required|string|max:255',
             'PRECO' => 'sometimes|required|numeric|min:0',
             'OFERTA' => 'nullable|numeric|min:0',
-            'IMG' => 'nullable|url|max:500',
+            'IMG' => [
+                'nullable',
+                'string',
+                'max:500',
+                function ($attribute, $value, $fail) {
+                    if (! ImageStorage::isValidImagePathOrUrl((string) $value)) {
+                        $fail('O campo IMG deve ser uma URL valida ou um caminho interno iniciando com /storage/ ou /storage-images/.');
+                    }
+                },
+            ],
             'departamento_id' => 'sometimes|required|integer|exists:departamentos,id',
             'grupo_id' => 'sometimes|required|integer|exists:grupos,id',
         ], [

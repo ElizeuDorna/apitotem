@@ -11,11 +11,16 @@ class GaleriaNova extends Model
 
     protected $fillable = [
         'code',
+        'empresa_id',
         'name',
         'source_type',
         'external_url',
         'file_path',
         'image_hash',
         'created_by',
+    ];
+
+    protected $casts = [
+        'empresa_id' => 'integer',
     ];
 }

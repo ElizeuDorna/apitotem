@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HomeCarouselSlide;
+use App\Support\ImageStorage;
 use App\Support\RevendaPublicPageContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -120,7 +121,7 @@ class RevendaPublicPageSlideController extends Controller
         $this->authorizeSlide($revendaPublicPageSlide, $empresa->id);
 
         if ($revendaPublicPageSlide->image_source_type === 'upload' && $revendaPublicPageSlide->image_path) {
-            Storage::disk('public')->delete($revendaPublicPageSlide->image_path);
+            Storage::disk(ImageStorage::disk())->delete($revendaPublicPageSlide->image_path);
         }
 
         $revendaPublicPageSlide->delete();
@@ -197,7 +198,7 @@ class RevendaPublicPageSlideController extends Controller
             $payload['image_path'] = null;
 
             if ($slide && $slide->image_source_type === 'upload' && $slide->image_path) {
-                Storage::disk('public')->delete($slide->image_path);
+                Storage::disk(ImageStorage::disk())->delete($slide->image_path);
             }
 
             return $payload;
@@ -207,10 +208,10 @@ class RevendaPublicPageSlideController extends Controller
 
         if ($request->hasFile('image_file')) {
             if ($slide && $slide->image_path) {
-                Storage::disk('public')->delete($slide->image_path);
+                Storage::disk(ImageStorage::disk())->delete($slide->image_path);
             }
 
-            $payload['image_path'] = $request->file('image_file')->store('home-carousel', 'public');
+            $payload['image_path'] = $request->file('image_file')->store('home-carousel', ImageStorage::disk());
         }
 
         return $payload;

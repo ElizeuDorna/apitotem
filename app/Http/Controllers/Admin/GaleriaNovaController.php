@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\GaleriaNova;
+use App\Support\EmpresaContext;
+use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +19,15 @@ class GaleriaNovaController extends Controller
     {
         $this->authorizeGaleriaNovaAccess();
 
+        $empresaId = $this->resolveCurrentEmpresaId();
+
         $galleries = GaleriaNova::query()
+            ->when($empresaId !== null, function ($query) use ($empresaId) {
+                $query->where(function ($subQuery) use ($empresaId) {
+                    $subQuery->where('empresa_id', $empresaId)
+                        ->orWhereNull('empresa_id');
+                });
+            })
             ->orderByDesc('id')
             ->paginate(18);
 
@@ -45,10 +56,13 @@ class GaleriaNovaController extends Controller
 
         if ($uploadImage) {
             $uploadedHash = hash_file('sha256', (string) $uploadImage->getRealPath());
+            $empresaId = $this->resolveCurrentEmpresaId();
 
             $alreadyExists = GaleriaNova::query()
                 ->where('source_type', 'upload')
                 ->where('image_hash', $uploadedHash)
+                ->when($empresaId !== null, fn ($query) => $query->where('empresa_id', $empresaId))
+                ->when($empresaId === null, fn ($query) => $query->whereNull('empresa_id'))
                 ->exists();
 
             if ($alreadyExists) {
@@ -60,6 +74,7 @@ class GaleriaNovaController extends Controller
 
         $gallery = GaleriaNova::create([
             'code' => $this->generateUniqueCode(),
+            'empresa_id' => $this->resolveCurrentEmpresaId(),
             'name' => (string) $validated['name'],
             'source_type' => $uploadImage ? 'upload' : 'link',
             'external_url' => $uploadImage ? null : $externalUrl,
@@ -71,7 +86,8 @@ class GaleriaNovaController extends Controller
         if ($uploadImage) {
             $extension = strtolower((string) $uploadImage->getClientOriginalExtension());
             $fileName = $gallery->code.($extension !== '' ? '.'.$extension : '');
-            $path = $uploadImage->storeAs('galeria-nova', $fileName, 'public');
+            $document = $this->resolveStorageDocument($gallery->empresa_id);
+            $path = $uploadImage->storeAs('empresas/'.$document.'/galeria', $fileName, ImageStorage::disk());
 
             $gallery->update([
                 'file_path' => $path,
@@ -88,8 +104,12 @@ class GaleriaNovaController extends Controller
     {
         $this->authorizeGaleriaNovaAccess();
 
+        if (! $this->canManageGalleryItem($galeriaNova)) {
+            abort(403);
+        }
+
         if ($galeriaNova->source_type === 'upload' && $galeriaNova->file_path) {
-            Storage::disk('public')->delete((string) $galeriaNova->file_path);
+            Storage::disk(ImageStorage::disk())->delete((string) $galeriaNova->file_path);
         }
 
         $galeriaNova->delete();
@@ -137,9 +157,49 @@ class GaleriaNovaController extends Controller
         }
 
         if ($item->source_type === 'upload' && ! empty($item->file_path)) {
-            return '/storage/'.ltrim((string) $item->file_path, '/');
+            return ImageStorage::publicUrl((string) $item->file_path);
         }
 
         return null;
+    }
+
+    private function resolveCurrentEmpresaId(): ?int
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return null;
+        }
+
+        return EmpresaContext::resolveEmpresaIdForUser($user);
+    }
+
+    private function resolveStorageDocument(?int $empresaId): string
+    {
+        if (! $empresaId) {
+            return 'global';
+        }
+
+        $empresa = Empresa::query()->find($empresaId);
+        $document = preg_replace('/\D/', '', (string) ($empresa?->cnpj_cpf ?? ''));
+
+        return $document !== '' ? $document : (string) $empresaId;
+    }
+
+    private function canManageGalleryItem(GaleriaNova $gallery): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isDefaultAdmin()) {
+            return true;
+        }
+
+        $empresaId = $this->resolveCurrentEmpresaId();
+
+        return $empresaId !== null && (int) $gallery->empresa_id === (int) $empresaId;
     }
 }
