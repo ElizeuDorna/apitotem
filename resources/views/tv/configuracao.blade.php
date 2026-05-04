@@ -26,16 +26,9 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                        <label for="apiEndpoint" class="mb-1 block text-sm text-slate-300">Endpoint de Produtos</label>
-                        <input id="apiEndpoint" type="text" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none" value="/api/tv/produtos">
-                    </div>
-
-                    <div>
-                        <label for="refreshSeconds" class="mb-1 block text-sm text-slate-300">Atualização (segundos)</label>
-                        <input id="refreshSeconds" type="number" min="5" max="3600" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none" value="30">
-                    </div>
+                <div>
+                    <label for="refreshSeconds" class="mb-1 block text-sm text-slate-300">Atualização (segundos)</label>
+                    <input id="refreshSeconds" type="number" min="5" max="3600" class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none" value="30">
                 </div>
 
                 <div>
@@ -65,11 +58,11 @@
         (function () {
             const form = document.getElementById('tvConfigForm');
             const tokenInput = document.getElementById('deviceToken');
-            const endpointInput = document.getElementById('apiEndpoint');
             const refreshInput = document.getElementById('refreshSeconds');
             const statusText = document.getElementById('configStatus');
+            const TV_PRODUCTS_ENDPOINT = '/api/tv/produtos';
 
-            if (!form || !tokenInput || !endpointInput || !refreshInput) {
+            if (!form || !tokenInput || !refreshInput) {
                 return;
             }
 
@@ -100,7 +93,7 @@
                 event.stopImmediatePropagation();
 
                 const token = String(tokenInput.value || '').trim();
-                const endpoint = String(endpointInput.value || '').trim() || '/api/tv/produtos';
+                const endpoint = TV_PRODUCTS_ENDPOINT;
                 const refresh = Number(refreshInput.value || 30);
 
                 if (!token) {
