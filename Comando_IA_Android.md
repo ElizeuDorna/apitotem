@@ -773,6 +773,63 @@ No estado atual do controller, a API responde estrutura vazia:
 - se a API responder `forceReconfigure=true`, o app deve voltar para o fluxo de ativacao
 - erros de rede nao devem limpar automaticamente o token salvo
 
+## Endpoints CRUD da API (produtos, departamentos e grupos)
+
+Esses endpoints existem no backend e ficam no grupo com middleware `identify.company`.
+
+Headers obrigatorios:
+
+```http
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer TOKEN_DA_EMPRESA
+```
+
+Observacao importante:
+
+- o token da TV (dispositivo) nao substitui o token da empresa nessas rotas
+- para app Android de painel interno/administrativo, usar autenticacao de empresa
+
+### Produtos
+
+```http
+GET /api/produtos
+POST /api/produtos
+GET /api/produtos/{id}
+PUT /api/produtos/{id}
+PATCH /api/produtos/{id}
+DELETE /api/produtos/{id}
+```
+
+### Departamentos
+
+```http
+GET /api/departamentos
+POST /api/departamentos
+GET /api/departamentos/{id}
+PUT /api/departamentos/{id}
+PATCH /api/departamentos/{id}
+DELETE /api/departamentos/{id}
+```
+
+### Grupos
+
+```http
+GET /api/grupos
+POST /api/grupos
+GET /api/grupos/{id}
+PUT /api/grupos/{id}
+PATCH /api/grupos/{id}
+DELETE /api/grupos/{id}
+```
+
+Exemplos de uso no app:
+
+- listar catalogo: `GET /api/produtos`
+- cadastrar item: `POST /api/produtos`
+- atualizar preco/descricao: `PUT` ou `PATCH /api/produtos/{id}`
+- organizar estrutura: `GET/POST/PUT/DELETE` em `departamentos` e `grupos`
+
 ---
 
 ## Configuracoes do projeto Android
