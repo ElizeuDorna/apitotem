@@ -88,6 +88,54 @@
                                 </div>
                             @endif
 
+                            @if (!($panelSidebarFontFeatureReady ?? false))
+                                <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                    Recurso de fonte da lateral ainda indisponivel neste ambiente. Execute as migrations pendentes para habilitar.
+                                </div>
+                            @endif
+
+                            @php($panelSidebarFontFamily = old('panelSidebarFontFamily', $config->panelSidebarFontFamily ?? ''))
+                            @php($panelSidebarFontSize = old('panelSidebarFontSize', $config->panelSidebarFontSize ?? '11'))
+
+                            <div id="fonte-lateral" class="rounded-xl border border-slate-200 bg-white p-4">
+                                <h4 class="mb-3 text-sm font-semibold text-slate-800">Fonte da lateral esquerda</h4>
+
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label for="panelSidebarFontFamily" class="mb-1 block text-sm font-semibold">Familia da fonte</label>
+                                        <select id="panelSidebarFontFamily" name="panelSidebarFontFamily" class="w-full rounded border px-3 py-2 text-sm">
+                                            <option value="">Padrao do sistema</option>
+                                            <option value="figtree" @selected($panelSidebarFontFamily === 'figtree')>Figtree</option>
+                                            <option value="inter" @selected($panelSidebarFontFamily === 'inter')>Inter</option>
+                                            <option value="roboto" @selected($panelSidebarFontFamily === 'roboto')>Roboto</option>
+                                            <option value="lato" @selected($panelSidebarFontFamily === 'lato')>Lato</option>
+                                            <option value="montserrat" @selected($panelSidebarFontFamily === 'montserrat')>Montserrat</option>
+                                            <option value="poppins" @selected($panelSidebarFontFamily === 'poppins')>Poppins</option>
+                                            <option value="open-sans" @selected($panelSidebarFontFamily === 'open-sans')>Open Sans</option>
+                                            <option value="source-sans-pro" @selected($panelSidebarFontFamily === 'source-sans-pro')>Source Sans Pro</option>
+                                            <option value="system-ui" @selected($panelSidebarFontFamily === 'system-ui')>System UI</option>
+                                        </select>
+                                        @error('panelSidebarFontFamily')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div>
+                                        <label for="panelSidebarFontSize" class="mb-1 block text-sm font-semibold">Tamanho da fonte (px)</label>
+                                        <input
+                                            id="panelSidebarFontSize"
+                                            type="number"
+                                            name="panelSidebarFontSize"
+                                            min="10"
+                                            max="20"
+                                            step="0.5"
+                                            value="{{ $panelSidebarFontSize }}"
+                                            class="w-full rounded border px-3 py-2 text-sm"
+                                        />
+                                        <p class="mt-1 text-xs text-slate-500">Faixa recomendada: 10 a 20.</p>
+                                        @error('panelSidebarFontSize')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            </div>
+
                             @php($panelBrandIconPreviewUrl = old('panelBrandIconUrl', $config->panelBrandIconUrl ?? ''))
 
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

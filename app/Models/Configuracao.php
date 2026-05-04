@@ -37,6 +37,8 @@ class Configuracao extends Model
         'rightSidebarLogoUrl',
         'leftVerticalLogoUrl',
         'panelBrandIconUrl',
+        'panelSidebarFontFamily',
+        'panelSidebarFontSize',
         'leftVerticalLogoWidth',
         'leftVerticalLogoHeight',
         'leftVerticalLogoWidthWindows',

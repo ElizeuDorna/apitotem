@@ -19,7 +19,21 @@
         $panelBrandIconUrl = is_string($panelBrandIconUrl ?? null) ? trim($panelBrandIconUrl) : '';
     @endphp
 
-    <aside class="panel-sidebar fixed inset-y-0 left-0 z-40 flex h-screen w-56 flex-col overflow-hidden border-r border-slate-800 bg-slate-950 text-white shadow-2xl">
+    @php
+        $sidebarInlineStyles = [];
+        $panelSidebarFontFamilyCss = is_string($panelSidebarFontFamilyCss ?? null) ? trim($panelSidebarFontFamilyCss) : '';
+        $panelSidebarFontSizeCss = is_string($panelSidebarFontSizeCss ?? null) ? trim($panelSidebarFontSizeCss) : '';
+
+        if ($panelSidebarFontFamilyCss !== '') {
+            $sidebarInlineStyles[] = '--panel-sidebar-font-family: '.$panelSidebarFontFamilyCss;
+        }
+
+        if ($panelSidebarFontSizeCss !== '') {
+            $sidebarInlineStyles[] = '--panel-sidebar-font-size: '.$panelSidebarFontSizeCss;
+        }
+    @endphp
+
+    <aside class="panel-sidebar fixed inset-y-0 left-0 z-40 flex h-screen w-56 flex-col overflow-hidden border-r border-slate-800 bg-slate-950 text-white shadow-2xl" @if($sidebarInlineStyles !== []) style="{{ implode(';', $sidebarInlineStyles) }}" @endif>
         <div class="border-b border-slate-800 px-3 py-3">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3 rounded-2xl transition">
                 <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800 text-white shadow-lg shadow-slate-950/30">

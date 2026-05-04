@@ -20,11 +20,24 @@ class ConfigAdminController extends Controller
 {
     private const APK_DISK = 'public';
     private const APK_PATH = 'apk/install.apk';
+    private const SIDEBAR_FONT_FAMILY_OPTIONS = [
+        'figtree',
+        'inter',
+        'roboto',
+        'lato',
+        'montserrat',
+        'poppins',
+        'open-sans',
+        'source-sans-pro',
+        'system-ui',
+    ];
 
     public function edit()
     {
         $empresaId = $this->resolveEmpresaId();
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
+        $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
+            && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
 
         $config = Configuracao::firstOrCreate([
             'empresa_id' => $empresaId,
@@ -40,6 +53,7 @@ class ConfigAdminController extends Controller
         return view('admin.configadmin', compact(
             'config',
             'panelBrandIconFeatureReady',
+            'panelSidebarFontFeatureReady',
             'apkExists',
             'apkSizeBytes',
             'apkLastModified',
@@ -54,21 +68,18 @@ class ConfigAdminController extends Controller
         $canManagePanelBranding = (bool) ($currentUser?->isDefaultAdmin()
             || $currentUser?->hasMenuAccess(User::MENU_CONFIGURACAO));
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
+        $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
+            && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
 
         if (! $canManagePanelBranding) {
             abort(403);
         }
 
-        if (! $panelBrandIconFeatureReady) {
-            return redirect()
-                ->back()
-                ->with('warning', 'Upload de icone indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.')
-                ->withInput();
-        }
-
         $validated = $request->validate([
             'panelBrandIconFile' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg,ico|max:2048',
             'removePanelBrandIcon' => 'nullable|boolean',
+            'panelSidebarFontFamily' => 'nullable|string|in:'.implode(',', self::SIDEBAR_FONT_FAMILY_OPTIONS),
+            'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
         ]);
 
         $config = Configuracao::firstOrCreate([
@@ -77,24 +88,45 @@ class ConfigAdminController extends Controller
 
         $payload = [];
         $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
+        $warningMessages = [];
 
-        if ($shouldRemoveIcon) {
-            $this->deletePanelBrandIcon($config->panelBrandIconUrl);
-            $payload['panelBrandIconUrl'] = null;
+        if ($panelSidebarFontFeatureReady) {
+            $sidebarFontFamily = trim((string) ($validated['panelSidebarFontFamily'] ?? ''));
+            $payload['panelSidebarFontFamily'] = $sidebarFontFamily !== '' ? $sidebarFontFamily : null;
+
+            $sidebarFontSize = $validated['panelSidebarFontSize'] ?? null;
+            $payload['panelSidebarFontSize'] = $sidebarFontSize !== null ? (float) $sidebarFontSize : null;
+        } elseif ($request->filled('panelSidebarFontFamily') || $request->filled('panelSidebarFontSize')) {
+            $warningMessages[] = 'Configuracao de fonte da lateral indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
-        if ($request->hasFile('panelBrandIconFile')) {
-            $this->deletePanelBrandIcon($config->panelBrandIconUrl);
-            $payload['panelBrandIconUrl'] = $this->storePanelBrandIcon($request->file('panelBrandIconFile'), $empresaId);
+        if ($panelBrandIconFeatureReady) {
+            if ($shouldRemoveIcon) {
+                $this->deletePanelBrandIcon($config->panelBrandIconUrl);
+                $payload['panelBrandIconUrl'] = null;
+            }
+
+            if ($request->hasFile('panelBrandIconFile')) {
+                $this->deletePanelBrandIcon($config->panelBrandIconUrl);
+                $payload['panelBrandIconUrl'] = $this->storePanelBrandIcon($request->file('panelBrandIconFile'), $empresaId);
+            }
+        } elseif ($shouldRemoveIcon || $request->hasFile('panelBrandIconFile')) {
+            $warningMessages[] = 'Upload de icone indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
         if ($payload !== []) {
             Configuracao::updateOrCreate(['empresa_id' => $empresaId], $payload);
         }
 
-        return redirect()
+        $redirect = redirect()
             ->back()
             ->with('success', 'Configuracao do admin atualizada com sucesso.');
+
+        if ($warningMessages !== []) {
+            $redirect->with('warning', implode(' ', $warningMessages));
+        }
+
+        return $redirect;
     }
 
     private function resolveEmpresaId(): int

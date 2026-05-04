@@ -5,13 +5,49 @@
             $layoutAuthUser = auth()->user();
             $layoutEmpresaId = $layoutAuthUser ? \App\Support\EmpresaContext::resolveEmpresaIdForUser($layoutAuthUser) : null;
             $panelBrandIconUrl = '';
+            $panelSidebarFontFamilyCss = '';
+            $panelSidebarFontSizeCss = '';
 
             $hasPanelBrandIconColumn = \Illuminate\Support\Facades\Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
+            $hasPanelSidebarFontFamilyColumn = \Illuminate\Support\Facades\Schema::hasColumn('configuracoes', 'panelSidebarFontFamily');
+            $hasPanelSidebarFontSizeColumn = \Illuminate\Support\Facades\Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
 
             if ($layoutEmpresaId && $hasPanelBrandIconColumn) {
                 $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
                     ->where('empresa_id', (int) $layoutEmpresaId)
                     ->value('panelBrandIconUrl') ?? '');
+            }
+
+            $sidebarFontFamilyMap = [
+                'figtree' => 'Figtree, ui-sans-serif, system-ui, sans-serif',
+                'inter' => 'Inter, ui-sans-serif, system-ui, sans-serif',
+                'roboto' => 'Roboto, ui-sans-serif, system-ui, sans-serif',
+                'lato' => 'Lato, ui-sans-serif, system-ui, sans-serif',
+                'montserrat' => 'Montserrat, ui-sans-serif, system-ui, sans-serif',
+                'poppins' => 'Poppins, ui-sans-serif, system-ui, sans-serif',
+                'open-sans' => '"Open Sans", ui-sans-serif, system-ui, sans-serif',
+                'source-sans-pro' => '"Source Sans Pro", ui-sans-serif, system-ui, sans-serif',
+                'system-ui' => 'system-ui, -apple-system, "Segoe UI", sans-serif',
+            ];
+
+            if ($layoutEmpresaId && ($hasPanelSidebarFontFamilyColumn || $hasPanelSidebarFontSizeColumn)) {
+                $sidebarConfig = \App\Models\Configuracao::query()
+                    ->where('empresa_id', (int) $layoutEmpresaId)
+                    ->first();
+
+                if ($sidebarConfig) {
+                    if ($hasPanelSidebarFontFamilyColumn) {
+                        $fontFamilyKey = (string) ($sidebarConfig->panelSidebarFontFamily ?? '');
+                        $panelSidebarFontFamilyCss = $sidebarFontFamilyMap[$fontFamilyKey] ?? '';
+                    }
+
+                    if ($hasPanelSidebarFontSizeColumn) {
+                        $fontSize = (float) ($sidebarConfig->panelSidebarFontSize ?? 0);
+                        if ($fontSize >= 10 && $fontSize <= 20) {
+                            $panelSidebarFontSizeCss = number_format($fontSize, 1, '.', '').'px';
+                        }
+                    }
+                }
             }
         @endphp
 
@@ -75,7 +111,11 @@
         @endphp
 
         <div class="panel-auth-shell min-h-screen bg-slate-100">
-            @include('layouts.navigation', ['panelBrandIconUrl' => $panelBrandIconUrl])
+            @include('layouts.navigation', [
+                'panelBrandIconUrl' => $panelBrandIconUrl,
+                'panelSidebarFontFamilyCss' => $panelSidebarFontFamilyCss,
+                'panelSidebarFontSizeCss' => $panelSidebarFontSizeCss,
+            ])
 
             <div class="panel-auth-content ml-64 min-w-0">
                 @isset($header)
