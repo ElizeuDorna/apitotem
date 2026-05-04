@@ -66,7 +66,7 @@ class ConfigAdminController extends Controller
         $empresaId = $this->resolveEmpresaId();
         $currentUser = Auth::user();
         $canManagePanelBranding = (bool) ($currentUser?->isDefaultAdmin()
-            || $currentUser?->hasMenuAccess(User::MENU_CONFIGURACAO));
+            || $currentUser?->hasMenuAccess(User::MENU_CONFIG_ADMIN));
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');

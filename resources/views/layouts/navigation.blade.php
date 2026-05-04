@@ -113,10 +113,13 @@
                     <span>{{ __('Financeiro') }}</span>
                 </a>
 
-                @if (Auth::user()->hasMenuAccess('configuracao'))
+                @if (Auth::user()->hasMenuAccess('config_admin'))
                     <a href="{{ route('admin.configadmin.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configadmin') ? $desktopNavActive : '' }}">
                         <span>{{ __('Config Admin') }}</span>
                     </a>
+                @endif
+
+                @if (Auth::user()->hasMenuAccess('configuracao'))
                     <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
                         <span>{{ __('Config Totem Web') }}</span>
                     </a>
@@ -152,9 +155,6 @@
                 @if (Auth::user()->isDefaultAdmin())
                     <a href="{{ route('admin.home-carousel.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/home-carousel*') ? $desktopNavActive : '' }}">
                         <span>{{ __('Carrossel Inicial') }}</span>
-                    </a>
-                    <a href="{{ route('admin.configadmin.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configadmin') ? $desktopNavActive : '' }}">
-                        <span>{{ __('Config Admin') }}</span>
                     </a>
                     <a href="{{ route('admin.revenda-public-page.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/revenda/frente-publica*') ? $desktopNavActive : '' }}">
                         <span>{{ __('Frente Publica Revenda') }}</span>

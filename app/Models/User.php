@@ -26,6 +26,8 @@ class User extends Authenticatable
 
     public const MENU_GRUPOS = 'grupos';
 
+    public const MENU_CONFIG_ADMIN = 'config_admin';
+
     public const MENU_CONFIGURACAO = 'configuracao';
 
     public const MENU_TOKEN_API = 'token_api';
@@ -101,6 +103,7 @@ class User extends Authenticatable
             self::MENU_EMPRESAS => 'Empresas',
             self::MENU_DEPARTAMENTOS => 'Departamentos',
             self::MENU_GRUPOS => 'Grupos',
+            self::MENU_CONFIG_ADMIN => 'Config Admin',
             self::MENU_CONFIGURACAO => 'Configuração',
             self::MENU_TOKEN_API => 'Gerar Token API',
             self::MENU_ATIVAR_TV => 'Ativar TV',
