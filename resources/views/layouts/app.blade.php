@@ -6,7 +6,9 @@
             $layoutEmpresaId = $layoutAuthUser ? \App\Support\EmpresaContext::resolveEmpresaIdForUser($layoutAuthUser) : null;
             $panelBrandIconUrl = '';
 
-            if ($layoutEmpresaId) {
+            $hasPanelBrandIconColumn = \Illuminate\Support\Facades\Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
+
+            if ($layoutEmpresaId && $hasPanelBrandIconColumn) {
                 $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
                     ->where('empresa_id', (int) $layoutEmpresaId)
                     ->value('panelBrandIconUrl') ?? '');
