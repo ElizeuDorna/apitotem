@@ -3,6 +3,7 @@
 # /public/build — mantido no git para deploy sem Node.js no servidor
 /public/hot
 /public/storage
+/public/storage-images
 /storage/framework/*
 /storage/debugbar/*
 /storage/*.key
