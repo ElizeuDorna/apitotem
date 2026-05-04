@@ -149,7 +149,7 @@
             </div>
         </div>
 
-        @if(auth()->user()?->isDefaultAdmin())
+        @if(auth()->user()?->isDefaultAdmin() || auth()->user()?->hasMenuAccess('configuracao'))
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <h3 class="mb-3 text-base font-semibold text-slate-800">Identidade do Painel</h3>
 

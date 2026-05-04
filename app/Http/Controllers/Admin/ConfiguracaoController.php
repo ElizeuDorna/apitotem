@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
 use App\Models\Empresa;
+use App\Models\User;
 use App\Support\ImageStorage;
 use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
@@ -36,7 +37,9 @@ class ConfiguracaoController extends Controller
     public function update(Request $request)
     {
         $empresaId = $this->resolveEmpresaId();
-        $canManagePanelBranding = (bool) Auth::user()?->isDefaultAdmin();
+        $currentUser = Auth::user();
+        $canManagePanelBranding = (bool) ($currentUser?->isDefaultAdmin()
+            || $currentUser?->hasMenuAccess(User::MENU_CONFIGURACAO));
 
         if (! $canManagePanelBranding && ($request->hasFile('panelBrandIconFile') || $request->boolean('removePanelBrandIcon'))) {
             abort(403);
