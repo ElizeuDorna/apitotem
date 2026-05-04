@@ -1,0 +1,25 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-Dmzxu922.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CWNHUZev.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/tv-configuracao.js": {
+    "file": "assets/tv-configuracao-BgTmV5oI.js",
+    "name": "tv-configuracao",
+    "src": "resources/js/tv-configuracao.js",
+    "isEntry": true
+  },
+  "resources/js/tv-produtos.js": {
+    "file": "assets/tv-produtos-DOmVq4RK.js",
+    "name": "tv-produtos",
+    "src": "resources/js/tv-produtos.js",
+    "isEntry": true
+  }
+}
