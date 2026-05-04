@@ -139,8 +139,8 @@
                     <a href="{{ route('admin.home-carousel.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/home-carousel*') ? $desktopNavActive : '' }}">
                         <span>{{ __('Carrossel Inicial') }}</span>
                     </a>
-                    <a href="{{ route('admin.apk-upload.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/apk-upload*') ? $desktopNavActive : '' }}">
-                        <span>{{ __('Upload APK') }}</span>
+                    <a href="{{ route('admin.configadmin.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configadmin') ? $desktopNavActive : '' }}">
+                        <span>{{ __('Config Admin') }}</span>
                     </a>
                     <a href="{{ route('admin.revenda-public-page.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/revenda/frente-publica*') ? $desktopNavActive : '' }}">
                         <span>{{ __('Frente Publica Revenda') }}</span>

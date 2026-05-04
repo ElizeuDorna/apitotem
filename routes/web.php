@@ -135,9 +135,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('admin/home-carousel', \App\Http\Controllers\Admin\HomeCarouselController::class, ['as' => 'admin'])
         ->parameters(['home-carousel' => 'homeCarousel'])
         ->except(['show']);
-    Route::get('/admin/apk-upload', [\App\Http\Controllers\Admin\ApkUploadController::class, 'index'])
+    Route::redirect('/admin/apk-upload', '/admin/configadmin')
         ->name('admin.apk-upload.index');
-    Route::post('/admin/apk-upload', [\App\Http\Controllers\Admin\ApkUploadController::class, 'store'])
+    Route::post('/admin/apk-upload', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'storeApk'])
         ->name('admin.apk-upload.store');
     Route::get('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'edit'])
         ->name('admin.revenda-public-page.edit');
