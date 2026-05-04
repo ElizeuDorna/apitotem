@@ -150,7 +150,7 @@
         </div>
 
         @if(auth()->user()?->isDefaultAdmin() || auth()->user()?->hasMenuAccess('configuracao'))
-            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div id="identidade-painel" class="rounded-lg border border-slate-200 bg-slate-50 p-4 scroll-mt-24">
                 <h3 class="mb-3 text-base font-semibold text-slate-800">Identidade do Painel</h3>
 
                 @php($panelBrandIconPreviewUrl = old('panelBrandIconUrl', $config->panelBrandIconUrl ?? ''))

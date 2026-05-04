@@ -168,6 +168,16 @@
                     <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]" x-text="panelTheme === 'dark' ? 'Dark' : 'Light'"></span>
                 </button>
 
+                @if ($navUser->isDefaultAdmin() || $navUser->hasMenuAccess('configuracao'))
+                    <a
+                        href="{{ url('/admin/configuracao#identidade-painel') }}"
+                        class="mb-3 inline-flex w-full items-center justify-between rounded-lg border border-indigo-800 bg-indigo-900/60 px-2.5 py-2 text-[11px] font-medium text-indigo-100 transition hover:bg-indigo-800"
+                    >
+                        <span>Upload Ícone Painel</span>
+                        <span class="rounded-full bg-indigo-400/20 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]">Brand</span>
+                    </a>
+                @endif
+
                 <div class="text-xs font-semibold text-white">{{ $navUser->name }}</div>
                 <div class="mt-1 truncate text-[9px] text-slate-400">{{ $navUser->email }}</div>
 
