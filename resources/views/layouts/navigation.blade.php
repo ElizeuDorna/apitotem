@@ -16,13 +16,18 @@
     @php
         $desktopNavBase = 'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white';
         $desktopNavActive = 'bg-slate-800 text-white ring-1 ring-slate-700';
+        $panelBrandIconUrl = is_string($panelBrandIconUrl ?? null) ? trim($panelBrandIconUrl) : '';
     @endphp
 
     <aside class="panel-sidebar fixed inset-y-0 left-0 z-40 flex h-screen w-56 flex-col overflow-hidden border-r border-slate-800 bg-slate-950 text-white shadow-2xl">
         <div class="border-b border-slate-800 px-3 py-3">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3 rounded-2xl transition">
                 <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800 text-white shadow-lg shadow-slate-950/30">
-                    <x-application-logo class="block h-5 w-auto fill-current text-white" />
+                    @if ($panelBrandIconUrl !== '')
+                        <img src="{{ $panelBrandIconUrl }}" alt="Ícone do painel" class="block h-5 w-5 object-contain" />
+                    @else
+                        <x-application-logo class="block h-5 w-auto fill-current text-white" />
+                    @endif
                 </div>
                 <div>
                     <div class="text-[11px] font-black uppercase tracking-[0.14em] text-white">Totem</div>

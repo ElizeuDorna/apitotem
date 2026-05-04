@@ -1,9 +1,22 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
+        @php
+            $layoutAuthUser = auth()->user();
+            $layoutEmpresaId = $layoutAuthUser ? \App\Support\EmpresaContext::resolveEmpresaIdForUser($layoutAuthUser) : null;
+            $panelBrandIconUrl = '';
+
+            if ($layoutEmpresaId) {
+                $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
+                    ->where('empresa_id', (int) $layoutEmpresaId)
+                    ->value('panelBrandIconUrl') ?? '');
+            }
+        @endphp
+
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="icon" href="{{ $panelBrandIconUrl !== '' ? $panelBrandIconUrl : asset('favicon.ico') }}">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -55,13 +68,12 @@
         :data-panel-theme="panelTheme"
     >
         @php
-            $layoutAuthUser = auth()->user();
             $layoutEmpresaAtiva = $layoutAuthUser ? \App\Support\EmpresaContext::activeEmpresa($layoutAuthUser) : null;
             $layoutExigeEmpresaAtiva = $layoutAuthUser ? \App\Support\EmpresaContext::requiresSelection($layoutAuthUser) : false;
         @endphp
 
         <div class="panel-auth-shell min-h-screen bg-slate-100">
-            @include('layouts.navigation')
+            @include('layouts.navigation', ['panelBrandIconUrl' => $panelBrandIconUrl])
 
             <div class="panel-auth-content ml-64 min-w-0">
                 @isset($header)

@@ -36,6 +36,7 @@ class Configuracao extends Model
         'rightSidebarLogoPositionAndroid',
         'rightSidebarLogoUrl',
         'leftVerticalLogoUrl',
+        'panelBrandIconUrl',
         'leftVerticalLogoWidth',
         'leftVerticalLogoHeight',
         'leftVerticalLogoWidthWindows',

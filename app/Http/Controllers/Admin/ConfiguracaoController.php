@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
+use App\Models\Empresa;
+use App\Support\ImageStorage;
 use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ConfiguracaoController extends Controller
 {
@@ -32,6 +36,11 @@ class ConfiguracaoController extends Controller
     public function update(Request $request)
     {
         $empresaId = $this->resolveEmpresaId();
+        $canManagePanelBranding = (bool) Auth::user()?->isDefaultAdmin();
+
+        if (! $canManagePanelBranding && ($request->hasFile('panelBrandIconFile') || $request->boolean('removePanelBrandIcon'))) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'apiUrl' => 'nullable|string|max:500',
@@ -54,12 +63,32 @@ class ConfiguracaoController extends Controller
             'pageSize' => 'nullable|integer|min:1|max:100',
             'paginationInterval' => 'nullable|integer|min:1|max:60',
             'apiRefreshInterval' => 'nullable|integer|min:5|max:3600',
+            'panelBrandIconFile' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg,ico|max:2048',
+            'removePanelBrandIcon' => 'nullable|boolean',
         ]);
 
-        Configuracao::updateOrCreate(
-            ['empresa_id' => $empresaId],
-            $validated
-        );
+        $config = Configuracao::firstOrCreate([
+            'empresa_id' => $empresaId,
+        ], []);
+
+        $payload = $validated;
+        unset($payload['panelBrandIconFile'], $payload['removePanelBrandIcon']);
+
+        if ($canManagePanelBranding) {
+            $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
+
+            if ($shouldRemoveIcon) {
+                $this->deletePanelBrandIcon($config->panelBrandIconUrl);
+                $payload['panelBrandIconUrl'] = null;
+            }
+
+            if ($request->hasFile('panelBrandIconFile')) {
+                $this->deletePanelBrandIcon($config->panelBrandIconUrl);
+                $payload['panelBrandIconUrl'] = $this->storePanelBrandIcon($request->file('panelBrandIconFile'), $empresaId);
+            }
+        }
+
+        Configuracao::updateOrCreate(['empresa_id' => $empresaId], $payload);
 
         return redirect()
             ->back()
@@ -71,5 +100,42 @@ class ConfiguracaoController extends Controller
         $user = Auth::user();
 
         return (int) EmpresaContext::requireEmpresaId($user);
+    }
+
+    private function storePanelBrandIcon($upload, int $empresaId): string
+    {
+        $document = $this->resolveEmpresaDocument($empresaId);
+        $extension = strtolower((string) $upload->getClientOriginalExtension());
+        $extension = $extension !== '' ? $extension : 'png';
+
+        $baseName = pathinfo((string) $upload->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeBaseName = Str::slug((string) $baseName);
+        if ($safeBaseName === '') {
+            $safeBaseName = 'icone-painel';
+        }
+
+        $fileName = sprintf('%s-%s.%s', $safeBaseName, Str::lower(Str::random(8)), $extension);
+        $path = $upload->storeAs('empresas/'.$document.'/branding', $fileName, ImageStorage::disk());
+
+        return ImageStorage::publicUrl($path);
+    }
+
+    private function deletePanelBrandIcon(?string $iconUrl): void
+    {
+        $relativePath = ImageStorage::extractRelativePathFromPublicUrl((string) $iconUrl);
+
+        if ($relativePath === '') {
+            return;
+        }
+
+        Storage::disk(ImageStorage::disk())->delete($relativePath);
+    }
+
+    private function resolveEmpresaDocument(int $empresaId): string
+    {
+        $rawDocument = (string) Empresa::query()->whereKey($empresaId)->value('cnpj_cpf');
+        $normalizedDocument = preg_replace('/\D/', '', $rawDocument) ?? '';
+
+        return $normalizedDocument !== '' ? $normalizedDocument : 'empresa-'.$empresaId;
     }
 }
