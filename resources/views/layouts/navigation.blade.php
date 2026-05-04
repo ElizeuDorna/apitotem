@@ -100,8 +100,8 @@
                 </a>
 
                 @if (Auth::user()->hasMenuAccess('configuracao'))
-                    <a href="/admin/configuracao" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao') ? $desktopNavActive : '' }}">
-                        <span>{{ __('Config Android') }}</span>
+                    <a href="{{ route('admin.configadmin.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configadmin') ? $desktopNavActive : '' }}">
+                        <span>{{ __('Config Admin') }}</span>
                     </a>
                     <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
                         <span>{{ __('Config Totem Web') }}</span>
@@ -170,7 +170,7 @@
 
                 @if ($navUser->isDefaultAdmin() || $navUser->hasMenuAccess('configuracao'))
                     <a
-                        href="{{ url('/admin/configuracao#identidade-painel') }}"
+                        href="{{ route('admin.configadmin.edit') }}#identidade-painel"
                         class="mb-3 inline-flex w-full items-center justify-between rounded-lg border border-indigo-800 bg-indigo-900/60 px-2.5 py-2 text-[11px] font-medium text-indigo-100 transition hover:bg-indigo-800"
                     >
                         <span>Upload Ícone Painel</span>

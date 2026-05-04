@@ -14,6 +14,10 @@
         <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">{{ session('success') }}</div>
     @endif
 
+    @if(session('warning'))
+        <div class="mb-4 p-3 bg-amber-100 text-amber-900 rounded">{{ session('warning') }}</div>
+    @endif
+
     <form method="POST" action="{{ url('/admin/configuracao') }}" enctype="multipart/form-data" class="space-y-6">
         @csrf
 
@@ -152,6 +156,12 @@
         @if(auth()->user()?->isDefaultAdmin() || auth()->user()?->hasMenuAccess('configuracao'))
             <div id="identidade-painel" class="rounded-lg border border-slate-200 bg-slate-50 p-4 scroll-mt-24">
                 <h3 class="mb-3 text-base font-semibold text-slate-800">Identidade do Painel</h3>
+
+                @if(!($panelBrandIconFeatureReady ?? false))
+                    <div class="mb-3 rounded border border-amber-300 bg-amber-100 px-3 py-2 text-sm text-amber-900">
+                        Recurso de upload de ícone aguardando migration no servidor. Execute: <strong>php artisan migrate</strong>
+                    </div>
+                @endif
 
                 @php($panelBrandIconPreviewUrl = old('panelBrandIconUrl', $config->panelBrandIconUrl ?? ''))
 

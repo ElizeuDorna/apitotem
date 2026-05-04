@@ -158,9 +158,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('revenda.empresa.selecionada')->group(function () {
 
     // Admin CRUDs - protegidas por autenticação
-    Route::get('/admin/configuracao', [\App\Http\Controllers\Admin\ConfiguracaoController::class, 'edit'])
+    Route::get('/admin/configadmin', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'edit'])
+        ->name('admin.configadmin.edit')
         ->middleware('menu.access:configuracao');
-    Route::post('/admin/configuracao', [\App\Http\Controllers\Admin\ConfiguracaoController::class, 'update'])
+    Route::post('/admin/configadmin', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'update'])
+        ->name('admin.configadmin.update')
         ->middleware('menu.access:configuracao');
         Route::get('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'edit'])
             ->name('admin.web-screen-config.edit')
