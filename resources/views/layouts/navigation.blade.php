@@ -159,15 +159,6 @@
 
         <div class="border-t border-slate-800 px-3 py-2.5">
             <div class="rounded-xl border border-slate-800 bg-slate-900 p-2.5">
-                <button
-                    type="button"
-                    class="panel-theme-toggle inline-flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-2 text-[11px] font-medium text-white transition hover:bg-slate-700"
-                    @click="togglePanelTheme()"
-                >
-                    <span x-text="panelTheme === 'dark' ? 'Tema escuro ativo' : 'Tema claro ativo'"></span>
-                    <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]" x-text="panelTheme === 'dark' ? 'Dark' : 'Light'"></span>
-                </button>
-
                 <div class="text-xs font-semibold text-white">{{ $navUser->name }}</div>
                 <div class="mt-1 truncate text-[9px] text-slate-400">{{ $navUser->email }}</div>
 

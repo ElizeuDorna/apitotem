@@ -17,6 +17,19 @@
                         <div class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ session('warning') }}</div>
                     @endif
 
+                    <div id="tema-painel" class="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-6 scroll-mt-24">
+                        <h3 class="mb-2 text-base font-semibold text-slate-800">Tema do Painel</h3>
+                        <p class="mb-3 text-sm text-slate-600">Alterne entre tema claro e escuro do painel administrativo.</p>
+                        <button
+                            type="button"
+                            class="inline-flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                            @click="togglePanelTheme()"
+                        >
+                            <span x-text="panelTheme === 'dark' ? 'Tema escuro ativo' : 'Tema claro ativo'"></span>
+                            <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs uppercase tracking-[0.12em]" x-text="panelTheme === 'dark' ? 'Dark' : 'Light'"></span>
+                        </button>
+                    </div>
+
                     @if (auth()->user()?->isDefaultAdmin())
                     <div id="upload-apk" class="rounded-lg border border-slate-200 bg-slate-50 p-4 scroll-mt-24 mb-6">
                         <h3 class="mb-3 text-base font-semibold text-slate-800">Upload APK Android</h3>
