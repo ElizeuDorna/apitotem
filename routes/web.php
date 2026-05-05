@@ -98,7 +98,7 @@ Route::get('/dashboard', function () {
     $tvsOnline = (clone $tvsBaseQuery)
         ->where('ativo', true)
         ->whereNotNull('last_seen_at')
-        ->where('last_seen_at', '>=', now()->subMinutes(5))
+        ->where('last_seen_at', '>=', now()->subMinutes(2))
         ->count();
 
     $produtosTotal = Produto::query()

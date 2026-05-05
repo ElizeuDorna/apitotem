@@ -286,6 +286,9 @@ class TvController extends Controller
             ], 401);
         }
 
+        $device->last_seen_at = now();
+        $device->save();
+
         $empresaId = (int) $device->empresa_id;
         $configuration = $this->resolveDeviceConfiguration($device->id);
         $screenConfig = $this->resolveEffectiveScreenConfig($device, $configuration);
