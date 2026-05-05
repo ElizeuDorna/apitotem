@@ -9,6 +9,7 @@ use App\Models\DeviceConfiguration;
 use App\Models\Departamento;
 use App\Models\Empresa;
 use App\Models\Grupo;
+use App\Models\User;
 use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
@@ -101,6 +102,29 @@ class DeviceActivationController extends Controller
             ? $this->resolveEmpresa($user)
             : null;
 
+        $adminDefaultModels = $user->isDefaultAdmin()
+            ? WebScreenModel::query()
+                ->where('is_admin_default', true)
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'is_admin_default'])
+            : collect();
+
+        $activationModels = collect();
+        if ($activationEmpresa) {
+            $activationModels = WebScreenModel::query()
+                ->where('empresa_id', $activationEmpresa->id)
+                ->where('is_admin_default', false)
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'is_admin_default']);
+
+            if ($user->isDefaultAdmin()) {
+                $activationModels = $activationModels
+                    ->concat($adminDefaultModels)
+                    ->unique('id')
+                    ->values();
+            }
+        }
+
         return view('admin.activate-tv', [
             'isDefaultAdmin' => $user->isDefaultAdmin(),
             'canShowAllDevices' => $canShowAllDevices,
@@ -110,13 +134,8 @@ class DeviceActivationController extends Controller
             'empresaAtiva' => $empresaAtiva,
             'empresaVinculada' => $empresaVinculada,
             'activatedToken' => session('activated_token'),
-            'activationModels' => $activationEmpresa
-                ? WebScreenModel::query()
-                    ->where('empresa_id', $activationEmpresa->id)
-                    ->where('is_admin_default', false)
-                    ->orderBy('nome')
-                    ->get(['id', 'nome'])
-                : collect(),
+            'activationModels' => $activationModels,
+            'adminDefaultModels' => $adminDefaultModels,
             'activationDepartments' => $activationEmpresa
                 ? Departamento::query()
                     ->where('empresa_id', $activationEmpresa->id)
@@ -168,7 +187,7 @@ class DeviceActivationController extends Controller
         ]);
 
         $empresa = $this->resolveEmpresa($user);
-        $webScreenModelId = $this->resolveModelIdForEmpresa((int) $empresa->id, $validated['web_screen_model_id'] ?? null);
+        $webScreenModelId = $this->resolveModelIdForEmpresa((int) $empresa->id, $validated['web_screen_model_id'] ?? null, $user);
         $productDepartmentId = $this->resolveDepartmentIdForEmpresa((int) $empresa->id, $validated['product_department_id'] ?? null);
         $productGroupId = $this->resolveGroupIdForEmpresa((int) $empresa->id, $validated['product_group_id'] ?? null, $productDepartmentId);
         $activationCode = strtoupper((string) $validated['code']);
@@ -247,7 +266,7 @@ class DeviceActivationController extends Controller
         ]);
 
         $empresaId = EmpresaContext::requireEmpresaId($user);
-        $webScreenModelId = $this->resolveModelIdForEmpresa((int) $device->empresa_id, $validated['web_screen_model_id'] ?? null);
+        $webScreenModelId = $this->resolveModelIdForEmpresa((int) $device->empresa_id, $validated['web_screen_model_id'] ?? null, $user);
         $productDepartmentId = $this->resolveDepartmentIdForEmpresa((int) $device->empresa_id, $validated['product_department_id'] ?? null);
         $productGroupId = $this->resolveGroupIdForEmpresa((int) $device->empresa_id, $validated['product_group_id'] ?? null, $productDepartmentId);
 
@@ -371,17 +390,25 @@ class DeviceActivationController extends Controller
         return 'Código inválido, expirado ou já utilizado.';
     }
 
-    private function resolveModelIdForEmpresa(int $empresaId, mixed $modelId): ?int
+    private function resolveModelIdForEmpresa(int $empresaId, mixed $modelId, User $user): ?int
     {
         $normalizedModelId = (int) $modelId;
         if ($normalizedModelId <= 0) {
             return null;
         }
 
-        $exists = WebScreenModel::query()
+        $query = WebScreenModel::query()
             ->where('empresa_id', $empresaId)
-            ->where('id', $normalizedModelId)
-            ->exists();
+            ->where('id', $normalizedModelId);
+
+        if ($user->isDefaultAdmin()) {
+            $query->orWhere(function ($or) use ($normalizedModelId) {
+                $or->where('id', $normalizedModelId)
+                    ->where('is_admin_default', true);
+            });
+        }
+
+        $exists = $query->exists();
 
         if (! $exists) {
             throw ValidationException::withMessages([

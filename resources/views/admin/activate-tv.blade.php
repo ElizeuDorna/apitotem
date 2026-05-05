@@ -70,7 +70,7 @@
                             <select id="web_screen_model_id" name="web_screen_model_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Usar configuracao geral da empresa</option>
                                 @foreach ($activationModels as $model)
-                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id') === (string) $model->id)>{{ $model->nome }}</option>
+                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id') === (string) $model->id)>{{ $model->nome }}{{ ($isDefaultAdmin && (bool) ($model->is_admin_default ?? false)) ? ' (Padrao do admin)' : '' }}</option>
                                 @endforeach
                             </select>
                             <p class="mt-1 text-xs text-gray-500">O dispositivo vai carregar o modelo escolhido aqui.</p>
@@ -183,9 +183,12 @@
                                     $empresaNome = $device->empresa?->NOME ?? $device->empresa?->nome ?? null;
                                     $empresaCnpj = $device->empresa?->CNPJ_CPF ?? $device->empresa?->cnpj_cpf ?? null;
                                     $deviceModels = $modelsByEmpresa->get((int) $device->empresa_id, collect());
+                                    $deviceAllModels = $isDefaultAdmin
+                                        ? $deviceModels->concat($adminDefaultModels ?? collect())->unique('id')->values()
+                                        : $deviceModels;
                                     $deviceDepartments = $departmentsByEmpresa->get((int) $device->empresa_id, collect());
                                     $deviceGroups = $groupsByEmpresa->get((int) $device->empresa_id, collect());
-                                    $selectedModel = $deviceModels->firstWhere('id', (int) ($device->configuration?->web_screen_model_id ?? 0));
+                                    $selectedModel = $deviceAllModels->firstWhere('id', (int) ($device->configuration?->web_screen_model_id ?? 0));
                                     $selectedDepartment = $deviceDepartments->firstWhere('id', (int) ($device->configuration?->product_department_id ?? 0));
                                     $selectedGroup = $deviceGroups->firstWhere('id', (int) ($device->configuration?->product_group_id ?? 0));
                                 @endphp
@@ -252,8 +255,8 @@
                                                             <label class="block text-sm font-medium text-slate-700">Modelo em uso</label>
                                                             <select name="web_screen_model_id" class="mt-1 w-full rounded-md border-gray-300 shadow-sm">
                                                                 <option value="">Usar configuracao geral da empresa</option>
-                                                                @foreach ($deviceModels as $model)
-                                                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id', $device->configuration?->web_screen_model_id) === (string) $model->id)>{{ $model->nome }}</option>
+                                                                @foreach ($deviceAllModels as $model)
+                                                                    <option value="{{ $model->id }}" @selected((string) old('web_screen_model_id', $device->configuration?->web_screen_model_id) === (string) $model->id)>{{ $model->nome }}{{ ($isDefaultAdmin && (bool) ($model->is_admin_default ?? false)) ? ' (Padrao do admin)' : '' }}</option>
                                                                 @endforeach
                                                             </select>
                                                         </div>
