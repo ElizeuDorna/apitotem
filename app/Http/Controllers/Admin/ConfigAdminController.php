@@ -34,16 +34,12 @@ class ConfigAdminController extends Controller
 
     public function edit()
     {
-        $empresaId = $this->resolveEmpresaId();
+        $empresaId = $this->resolveEmpresaIdOrNull();
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
 
-        $config = Configuracao::firstOrCreate([
-            'empresa_id' => $empresaId,
-        ], []);
-
-        $config = $config->fresh();
+        $config = $this->findOrCreateConfig($empresaId)->fresh();
 
         $apkExists = Storage::disk(self::APK_DISK)->exists(self::APK_PATH);
         $apkSizeBytes = $apkExists ? (int) Storage::disk(self::APK_DISK)->size(self::APK_PATH) : null;
@@ -63,7 +59,7 @@ class ConfigAdminController extends Controller
 
     public function update(Request $request)
     {
-        $empresaId = $this->resolveEmpresaId();
+        $empresaId = $this->resolveEmpresaIdOrNull();
         $currentUser = Auth::user();
         $canManagePanelBranding = (bool) ($currentUser?->isDefaultAdmin()
             || $currentUser?->hasMenuAccess(User::MENU_CONFIG_ADMIN));
@@ -82,9 +78,7 @@ class ConfigAdminController extends Controller
             'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
         ]);
 
-        $config = Configuracao::firstOrCreate([
-            'empresa_id' => $empresaId,
-        ], []);
+        $config = $this->findOrCreateConfig($empresaId);
 
         $payload = [];
         $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
@@ -115,7 +109,7 @@ class ConfigAdminController extends Controller
         }
 
         if ($payload !== []) {
-            Configuracao::updateOrCreate(['empresa_id' => $empresaId], $payload);
+            $config->fill($payload)->save();
         }
 
         $redirect = redirect()
@@ -129,14 +123,39 @@ class ConfigAdminController extends Controller
         return $redirect;
     }
 
-    private function resolveEmpresaId(): int
+    private function resolveEmpresaIdOrNull(): ?int
     {
         $user = Auth::user();
+
+        if ($user && $user->isDefaultAdmin()) {
+            return EmpresaContext::resolveEmpresaIdForUser($user);
+        }
 
         return (int) EmpresaContext::requireEmpresaId($user);
     }
 
-    private function storePanelBrandIcon($upload, int $empresaId): string
+    private function findOrCreateConfig(?int $empresaId): Configuracao
+    {
+        $query = Configuracao::query();
+
+        if ($empresaId !== null) {
+            $query->where('empresa_id', $empresaId);
+        } else {
+            $query->whereNull('empresa_id');
+        }
+
+        $config = $query->first();
+
+        if (! $config) {
+            $config = new Configuracao();
+            $config->empresa_id = $empresaId;
+            $config->save();
+        }
+
+        return $config;
+    }
+
+    private function storePanelBrandIcon($upload, ?int $empresaId): string
     {
         $document = $this->resolveEmpresaDocument($empresaId);
         $extension = strtolower((string) $upload->getClientOriginalExtension());
@@ -183,8 +202,12 @@ class ConfigAdminController extends Controller
             ->with('success', 'APK enviado com sucesso e publicado em /install.apk');
     }
 
-    private function resolveEmpresaDocument(int $empresaId): string
+    private function resolveEmpresaDocument(?int $empresaId): string
     {
+        if ($empresaId === null) {
+            return 'admin-global';
+        }
+
         $rawDocument = (string) Empresa::query()->whereKey($empresaId)->value('cnpj_cpf');
         $normalizedDocument = preg_replace('/\D/', '', $rawDocument) ?? '';
 

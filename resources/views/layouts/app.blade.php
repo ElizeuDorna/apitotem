@@ -12,10 +12,19 @@
             $hasPanelSidebarFontFamilyColumn = \Illuminate\Support\Facades\Schema::hasColumn('configuracoes', 'panelSidebarFontFamily');
             $hasPanelSidebarFontSizeColumn = \Illuminate\Support\Facades\Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
 
-            if ($layoutEmpresaId && $hasPanelBrandIconColumn) {
-                $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
-                    ->where('empresa_id', (int) $layoutEmpresaId)
-                    ->value('panelBrandIconUrl') ?? '');
+            $layoutIsDefaultAdmin = $layoutAuthUser && $layoutAuthUser->isDefaultAdmin();
+            $layoutUseGlobalConfig = ! $layoutEmpresaId && $layoutIsDefaultAdmin;
+
+            if ($hasPanelBrandIconColumn) {
+                if ($layoutEmpresaId) {
+                    $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
+                        ->where('empresa_id', (int) $layoutEmpresaId)
+                        ->value('panelBrandIconUrl') ?? '');
+                } elseif ($layoutUseGlobalConfig) {
+                    $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
+                        ->whereNull('empresa_id')
+                        ->value('panelBrandIconUrl') ?? '');
+                }
             }
 
             $sidebarFontFamilyMap = [
@@ -30,9 +39,9 @@
                 'system-ui' => 'system-ui, -apple-system, "Segoe UI", sans-serif',
             ];
 
-            if ($layoutEmpresaId && ($hasPanelSidebarFontFamilyColumn || $hasPanelSidebarFontSizeColumn)) {
+            if (($layoutEmpresaId || $layoutUseGlobalConfig) && ($hasPanelSidebarFontFamilyColumn || $hasPanelSidebarFontSizeColumn)) {
                 $sidebarConfig = \App\Models\Configuracao::query()
-                    ->where('empresa_id', (int) $layoutEmpresaId)
+                    ->when($layoutEmpresaId, fn ($q) => $q->where('empresa_id', (int) $layoutEmpresaId), fn ($q) => $q->whereNull('empresa_id'))
                     ->first();
 
                 if ($sidebarConfig) {
