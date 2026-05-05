@@ -135,11 +135,11 @@
                     </header>
                 @endisset
 
-                @if ($layoutExigeEmpresaAtiva && $layoutEmpresaAtiva)
+                @if ($layoutEmpresaAtiva)
                     <div class="px-3 pt-4 sm:px-4 lg:px-6">
                         <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-900 shadow-sm">
                             <span class="font-semibold">Empresa selecionada:</span>
-                            <span class="ml-1">{{ $layoutEmpresaAtiva->nome }}</span>
+                            <span class="ml-1">{{ $layoutEmpresaAtiva->nome_fantasia ?: $layoutEmpresaAtiva->nome ?: $layoutEmpresaAtiva->NOME }}</span>
                         </div>
                     </div>
                 @endif
