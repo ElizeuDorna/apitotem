@@ -12,6 +12,7 @@ class GaleriaNova extends Model
     protected $fillable = [
         'code',
         'empresa_id',
+        'is_public',
         'name',
         'source_type',
         'external_url',

@@ -25,7 +25,8 @@ class GaleriaNovaController extends Controller
             ->when($empresaId !== null, function ($query) use ($empresaId) {
                 $query->where(function ($subQuery) use ($empresaId) {
                     $subQuery->where('empresa_id', $empresaId)
-                        ->orWhereNull('empresa_id');
+                        ->orWhereNull('empresa_id')
+                        ->orWhere('is_public', true);
                 });
             })
             ->orderByDesc('id')
@@ -42,6 +43,7 @@ class GaleriaNovaController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'external_url' => ['nullable', 'url', 'max:1000'],
             'upload_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'is_public' => ['nullable', 'boolean'],
         ]);
 
         $externalUrl = trim((string) ($validated['external_url'] ?? ''));
@@ -75,6 +77,7 @@ class GaleriaNovaController extends Controller
         $gallery = GaleriaNova::create([
             'code' => $this->generateUniqueCode(),
             'empresa_id' => $this->resolveCurrentEmpresaId(),
+            'is_public' => (bool) ($validated['is_public'] ?? false),
             'name' => (string) $validated['name'],
             'source_type' => $uploadImage ? 'upload' : 'link',
             'external_url' => $uploadImage ? null : $externalUrl,
