@@ -67,7 +67,7 @@
         <div>
             <label class="block font-semibold">IMAGEM (URL)</label>
             <div class="mt-1 flex items-stretch gap-2 md:max-w-xl">
-                <input type="text" name="IMG" value="{{ old('IMG') }}" class="w-full border rounded px-2 py-1" placeholder="https://... ou /storage/..." />
+                <input type="text" id="produtoImagemInput" name="IMG" value="{{ old('IMG') }}" class="w-full border rounded px-2 py-1" placeholder="https://... ou /storage/..." />
                 <a
                     href="{{ route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_produto' => 1]) }}"
                     target="_blank"
@@ -81,6 +81,20 @@
                 </a>
             </div>
             @error('IMG')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+
+            <div class="mt-4">
+                <div id="produtoImagemPreview" class="hidden">
+                    <p class="text-sm font-medium text-gray-700 mb-2">Preview da Imagem</p>
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="h-48 w-auto mx-auto rounded object-cover" />
+                        <div class="mt-3 text-center">
+                            <button type="button" id="produtoImagemLimparBtn" class="text-sm font-medium text-red-600 hover:text-red-800">
+                                Limpar imagem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div>
@@ -117,8 +131,28 @@
 
 <script>
 const gruposDisponiveis = @json($grupos->map(fn($grupo) => ['id' => $grupo->id, 'nome' => $grupo->nome, 'departamento_id' => $grupo->departamento_id])->values());
-const produtoImagemInput = document.querySelector('input[name="IMG"]');
+const produtoImagemInput = document.getElementById('produtoImagemInput');
+const produtoImagemPreview = document.getElementById('produtoImagemPreview');
+const produtoImagemPreviewImg = document.getElementById('produtoImagemPreviewImg');
+const produtoImagemLimparBtn = document.getElementById('produtoImagemLimparBtn');
 const produtoImagemSelecionadaStorageKey = 'produto_imagem_url_selecionada';
+
+function atualizarPreviewImagem() {
+    const url = (produtoImagemInput?.value || '').trim();
+
+    if (!url) {
+        produtoImagemPreview.classList.add('hidden');
+        return;
+    }
+
+    produtoImagemPreviewImg.src = url;
+    produtoImagemPreviewImg.onload = () => {
+        produtoImagemPreview.classList.remove('hidden');
+    };
+    produtoImagemPreviewImg.onerror = () => {
+        produtoImagemPreview.classList.add('hidden');
+    };
+}
 
 function aplicarImagemSelecionadaNoProduto(url) {
     const normalizedUrl = String(url || '').trim();
@@ -129,8 +163,10 @@ function aplicarImagemSelecionadaNoProduto(url) {
 
     produtoImagemInput.value = normalizedUrl;
     produtoImagemInput.dispatchEvent(new Event('input', { bubbles: true }));
+    atualizarPreviewImagem();
 }
 
+// Escutar mensagens de cross-window da galeria
 window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin) {
         return;
@@ -144,12 +180,14 @@ window.addEventListener('message', (event) => {
     aplicarImagemSelecionadaNoProduto(payload.url);
 });
 
+// Verificar se há imagem selecionada no localStorage
 const imagemSelecionadaPendente = localStorage.getItem(produtoImagemSelecionadaStorageKey);
 if (imagemSelecionadaPendente) {
     aplicarImagemSelecionadaNoProduto(imagemSelecionadaPendente);
     localStorage.removeItem(produtoImagemSelecionadaStorageKey);
 }
 
+// Sincronizar imagem quando voltar da galeria
 function sincronizarImagemSelecionadaDaGaleria() {
     const imagemSelecionada = localStorage.getItem(produtoImagemSelecionadaStorageKey);
     if (!imagemSelecionada) {
@@ -168,6 +206,22 @@ window.addEventListener('storage', (event) => {
 
     sincronizarImagemSelecionadaDaGaleria();
 });
+
+// Limpar imagem
+if (produtoImagemLimparBtn) {
+    produtoImagemLimparBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        produtoImagemInput.value = '';
+        produtoImagemInput.dispatchEvent(new Event('input', { bubbles: true }));
+        produtoImagemPreview.classList.add('hidden');
+    });
+}
+
+// Atualizar preview ao digitar
+if (produtoImagemInput) {
+    produtoImagemInput.addEventListener('input', atualizarPreviewImagem);
+    atualizarPreviewImagem();
+}
 
 function updateGrupos() {
     const deptId = document.querySelector('select[name="departamento_id"]').value;
