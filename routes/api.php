@@ -22,6 +22,7 @@ Route::get('/', function () {
             'POST /api/produtos' => 'Cadastrar novo produto',
             'PUT /api/produtos/{CODIGO}' => 'Atualizar um produto',
             'DELETE /api/produtos/{CODIGO}' => 'Deletar um produto',
+            'POST /api/produtos/{CODIGO}/imagem' => 'Enviar imagem (upload/link) e vincular diretamente ao produto',
             'GET /api/galeria-imagem' => 'Listar imagens visiveis para a empresa autenticada',
             'POST /api/galeria-imagem/upload' => 'Enviar imagem da empresa para a galeria da API',
             'POST /api/galeria-imagem/link' => 'Cadastrar imagem da empresa por link externo na galeria da API',
@@ -65,6 +66,7 @@ Route::apiResource('empresas', EmpresaController::class)->except(['show']);
 
 Route::middleware('identify.company')->group(function () {
     Route::apiResource('produtos', ProdutoController::class);
+    Route::post('produtos/{produto}/imagem', [GaleriaImagemController::class, 'vincularProduto']);
     Route::get('galeria-imagem', [GaleriaImagemController::class, 'index']);
     Route::post('galeria-imagem/upload', [GaleriaImagemController::class, 'upload']);
     Route::post('galeria-imagem/link', [GaleriaImagemController::class, 'link']);

@@ -1,0 +1,137 @@
+ROTEIRO PARA IA DO DESKTOP - VINCULAR IMAGEM AO PRODUTO VIA API
+
+OBJETIVO
+- Ao salvar imagem no cadastro do produto, vincular automaticamente a imagem ao produto na API.
+- Funcionar para upload de arquivo e para link externo.
+- Usar endpoint unico para evitar fluxo em duas chamadas.
+
+ENDPOINT PRINCIPAL (USAR ESTE)
+- Metodo: POST
+- URL: /api/produtos/{CODIGO}/imagem
+- Auth: Bearer token da empresa
+
+REGRAS DO ENDPOINT
+- Enviar somente um dos campos de origem da imagem:
+  - image (arquivo)
+  - external_url (link)
+- Campos opcionais:
+  - name
+  - is_public (true/false)
+- Se CODIGO nao existir para a empresa autenticada: retorna 404.
+- Se sucesso: retorna produto atualizado + dados da imagem.
+
+FLUXO RECOMENDADO NO DESKTOP
+1. Usuario escolhe produto (CODIGO).
+2. Usuario escolhe origem da imagem:
+   - Upload de arquivo
+   - Link externo
+3. Desktop chama POST /api/produtos/{CODIGO}/imagem.
+4. Se resposta 200, atualizar UI com dados.produto.imagem.
+5. Opcional: confirmar com GET /api/produtos/{CODIGO}.
+
+EXEMPLO A - UPLOAD DE ARQUIVO
+HTTP:
+POST /api/produtos/1/imagem
+Authorization: Bearer SEU_TOKEN
+Content-Type: multipart/form-data
+
+Campos do form-data:
+- name=Banner Produto 1
+- is_public=1
+- image=<arquivo.jpg>
+
+Exemplo de resposta:
+{
+  "sucesso": true,
+  "mensagem": "Imagem vinculada ao produto com sucesso.",
+  "dados": {
+    "produto": {
+      "codigo": "1",
+      "nome": "Produto X",
+      "imagem": "/storage-images/empresas/12345678901234/galeria/12345678901234.jpg"
+    },
+    "imagem": {
+      "id": 10,
+      "code": "12345678901234",
+      "empresa_id": 7,
+      "is_public": true,
+      "name": "Banner Produto 1",
+      "source_type": "upload",
+      "url": "/storage-images/empresas/12345678901234/galeria/12345678901234.jpg"
+    }
+  }
+}
+
+EXEMPLO B - LINK EXTERNO
+HTTP:
+POST /api/produtos/1/imagem
+Authorization: Bearer SEU_TOKEN
+Content-Type: application/json
+
+Body JSON:
+{
+  "name": "Imagem via CDN",
+  "external_url": "https://cdn.exemplo.com/produto1.jpg",
+  "is_public": false
+}
+
+Exemplo de resposta:
+{
+  "sucesso": true,
+  "mensagem": "Imagem vinculada ao produto com sucesso.",
+  "dados": {
+    "produto": {
+      "codigo": "1",
+      "nome": "Produto X",
+      "imagem": "https://cdn.exemplo.com/produto1.jpg"
+    },
+    "imagem": {
+      "source_type": "link",
+      "url": "https://cdn.exemplo.com/produto1.jpg"
+    }
+  }
+}
+
+TRATAMENTO DE ERROS (OBRIGATORIO NO CLIENTE)
+- 401: token invalido ou expirado.
+- 404: produto (CODIGO) nao encontrado para a empresa.
+- 422:
+  - nao enviou image nem external_url
+  - enviou image e external_url ao mesmo tempo
+  - URL invalida
+  - arquivo invalido (extensao/tamanho)
+
+VALIDACOES NO APP DESKTOP
+- Exigir CODIGO antes do envio.
+- Exigir exatamente uma origem de imagem (arquivo OU link).
+- Se link: validar URL antes de enviar.
+- Se upload: validar extensoes permitidas (jpg, jpeg, png, webp) e tamanho maximo 4MB.
+
+CONTRATO DE CAMPOS
+- Path:
+  - produto = CODIGO do produto
+- multipart/form-data:
+  - image: arquivo (opcional, mas obrigatorio se external_url nao vier)
+  - external_url: nao enviar neste modo
+  - name: opcional
+  - is_public: opcional (1/0 ou true/false)
+- application/json:
+  - external_url: obrigatorio se nao enviar image
+  - image: nao enviar neste modo
+  - name: opcional
+  - is_public: opcional
+
+FLUXO ANTIGO (APENAS FALLBACK)
+- Nao usar como principal:
+  1) POST /api/galeria-imagem/upload OU POST /api/galeria-imagem/link
+  2) PUT /api/produtos/{CODIGO} com IMG
+- Funciona, mas exige duas chamadas e e mais sujeito a erro de sincronizacao.
+
+CHECKLIST RAPIDO PARA QA
+- Upload com is_public=true vincula no produto e retorna imagem correta.
+- Upload com is_public=false vincula no produto e retorna imagem correta.
+- Link externo vincula no produto e retorna URL correta.
+- Tentativa com image + external_url retorna 422.
+- Tentativa sem image e sem external_url retorna 422.
+- CODIGO inexistente retorna 404.
+- Token invalido retorna 401.
