@@ -79,7 +79,7 @@
             <div class="mt-2">
                 <div id="produtoImagemPreview" class="hidden">
                     <div class="inline-flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="h-16 w-16 rounded object-cover border border-gray-200" />
+                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="rounded object-cover border border-gray-200" style="height:48px;width:48px;min-width:48px;" />
                         <button type="button" id="produtoImagemLimparBtn" class="text-xs font-medium text-red-600 hover:text-red-800">
                             Limpar
                         </button>
