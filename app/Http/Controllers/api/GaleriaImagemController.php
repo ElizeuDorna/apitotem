@@ -129,6 +129,84 @@ class GaleriaImagemController extends Controller
         ], 201);
     }
 
+    #[OA\Post(
+        path: '/api/galeria-imagem/link',
+        tags: ['Galeria Imagem'],
+        summary: 'Cadastra imagem por link externo na galeria da API',
+        security: [['CompanyBearer' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: [
+                new OA\MediaType(
+                    mediaType: 'application/json',
+                    schema: new OA\Schema(
+                        required: ['external_url'],
+                        properties: [
+                            new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Banner Promocional Link'),
+                            new OA\Property(property: 'external_url', type: 'string', format: 'uri', maxLength: 1000, example: 'https://cdn.exemplo.com/banner.jpg'),
+                            new OA\Property(property: 'is_public', type: 'boolean', example: false),
+                        ]
+                    )
+                ),
+            ]
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Link cadastrado com sucesso'),
+            new OA\Response(response: 200, description: 'Link já existia para a empresa e foi reutilizado'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Erro de validação')
+        ]
+    )]
+    public function link(Request $request)
+    {
+        /** @var Empresa $empresa */
+        $empresa = $request->attributes->get('empresa');
+
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'external_url' => ['required', 'url', 'max:1000'],
+            'is_public' => ['nullable', 'boolean'],
+        ]);
+
+        $externalUrl = trim((string) $validated['external_url']);
+
+        $existing = GaleriaNova::query()
+            ->where('empresa_id', $empresa->id)
+            ->where('source_type', 'link')
+            ->where('external_url', $externalUrl)
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'sucesso' => true,
+                'criado' => false,
+                'mensagem' => 'Link ja cadastrado para a empresa.',
+                'dados' => $this->payload($existing),
+            ], 200);
+        }
+
+        $gallery = GaleriaNova::query()->create([
+            'code' => $this->generateUniqueCode(),
+            'empresa_id' => $empresa->id,
+            'is_public' => (bool) ($validated['is_public'] ?? false),
+            'name' => trim((string) ($validated['name'] ?? '')) !== ''
+                ? (string) $validated['name']
+                : 'Imagem via link',
+            'source_type' => 'link',
+            'external_url' => $externalUrl,
+            'file_path' => null,
+            'image_hash' => null,
+            'created_by' => null,
+        ]);
+
+        return response()->json([
+            'sucesso' => true,
+            'criado' => true,
+            'mensagem' => 'Link cadastrado com sucesso.',
+            'dados' => $this->payload($gallery),
+        ], 201);
+    }
+
     private function payload(GaleriaNova $gallery): array
     {
         return [

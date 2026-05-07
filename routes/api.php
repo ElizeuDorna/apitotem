@@ -24,6 +24,7 @@ Route::get('/', function () {
             'DELETE /api/produtos/{CODIGO}' => 'Deletar um produto',
             'GET /api/galeria-imagem' => 'Listar imagens visiveis para a empresa autenticada',
             'POST /api/galeria-imagem/upload' => 'Enviar imagem da empresa para a galeria da API',
+            'POST /api/galeria-imagem/link' => 'Cadastrar imagem da empresa por link externo na galeria da API',
             'GET /api/departamentos' => 'Listar departamentos da empresa autenticada',
             'GET /api/grupos' => 'Listar grupos da empresa autenticada',
             'GET /api/configuracoes' => 'Obter configuração da empresa autenticada',
@@ -66,6 +67,7 @@ Route::middleware('identify.company')->group(function () {
     Route::apiResource('produtos', ProdutoController::class);
     Route::get('galeria-imagem', [GaleriaImagemController::class, 'index']);
     Route::post('galeria-imagem/upload', [GaleriaImagemController::class, 'upload']);
+    Route::post('galeria-imagem/link', [GaleriaImagemController::class, 'link']);
     Route::apiResource('departamentos', DepartamentoController::class);
     Route::apiResource('grupos', GrupoController::class);
 
