@@ -38,6 +38,7 @@ class ConfigAdminController extends Controller
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
+        $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
 
         $config = $this->findOrCreateConfig($empresaId)->fresh();
 
@@ -50,6 +51,7 @@ class ConfigAdminController extends Controller
             'config',
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
+            'produtoFormImagePreviewFeatureReady',
             'apkExists',
             'apkSizeBytes',
             'apkLastModified',
@@ -76,6 +78,7 @@ class ConfigAdminController extends Controller
             'removePanelBrandIcon' => 'nullable|boolean',
             'panelSidebarFontFamily' => 'nullable|string|in:'.implode(',', self::SIDEBAR_FONT_FAMILY_OPTIONS),
             'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
+            'produtoFormImagePreviewSize' => 'nullable|integer|min:32|max:300',
         ]);
 
         $config = $this->findOrCreateConfig($empresaId);
@@ -92,6 +95,11 @@ class ConfigAdminController extends Controller
             $payload['panelSidebarFontSize'] = $sidebarFontSize !== null ? (float) $sidebarFontSize : null;
         } elseif ($request->filled('panelSidebarFontFamily') || $request->filled('panelSidebarFontSize')) {
             $warningMessages[] = 'Configuracao de fonte da lateral indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
+        }
+
+        $produtoFormImagePreviewSize = $validated['produtoFormImagePreviewSize'] ?? null;
+        if ($produtoFormImagePreviewSize !== null) {
+            $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
         }
 
         if ($panelBrandIconFeatureReady) {

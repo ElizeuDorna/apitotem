@@ -79,7 +79,8 @@
             <div class="mt-2">
                 <div id="produtoImagemPreview" class="hidden">
                     <div class="inline-flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="rounded object-cover border border-gray-200" style="height:48px!important;width:48px!important;min-width:48px!important;max-width:48px!important;max-height:48px!important;" />
+@php($__previewPx = (int) ($produtoFormImagePreviewSize ?? 48))
+                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="rounded object-cover border border-gray-200" style="height:{{ $__previewPx }}px!important;width:{{ $__previewPx }}px!important;min-width:{{ $__previewPx }}px!important;max-width:{{ $__previewPx }}px!important;max-height:{{ $__previewPx }}px!important;" />
                         <button type="button" id="produtoImagemLimparBtn" class="text-xs font-medium text-red-600 hover:text-red-800">
                             Limpar
                         </button>

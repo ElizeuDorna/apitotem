@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\Produto;
 use App\Models\Departamento;
@@ -85,7 +86,8 @@ class ProdutoController extends Controller
             $cnpjCpfEmpresa = (string) (Empresa::query()->find($empresaId)?->cnpj_cpf ?? $cnpjCpfEmpresa);
         }
 
-        return view('admin.produtos.create', compact('departamentos', 'grupos', 'cnpjCpfEmpresa'));
+        $produtoFormImagePreviewSize = $this->resolvePreviewSize($empresaId);
+        return view('admin.produtos.create', compact('departamentos', 'grupos', 'cnpjCpfEmpresa', 'produtoFormImagePreviewSize'));
     }
 
     /**
@@ -196,7 +198,9 @@ class ProdutoController extends Controller
 
         $departamentos = $this->departamentosQueryForUser($user)->get();
         $grupos = $this->gruposQueryForUser($user)->get();
-        return view('admin.produtos.edit', compact('produto', 'departamentos', 'grupos'));
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
+        $produtoFormImagePreviewSize = $this->resolvePreviewSize($empresaId);
+        return view('admin.produtos.edit', compact('produto', 'departamentos', 'grupos', 'produtoFormImagePreviewSize'));
     }
 
     /**
@@ -369,5 +373,19 @@ class ProdutoController extends Controller
         }
 
         return ImageStorage::isValidImagePathOrUrl($normalized);
+    }
+
+    private function resolvePreviewSize(?int $empresaId): int
+    {
+        if (! Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize')) {
+            return 48;
+        }
+
+        $config = Configuracao::query()
+            ->when($empresaId !== null, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->when($empresaId === null, fn ($q) => $q->whereNull('empresa_id'))
+            ->first();
+
+        return (int) ($config?->produtoFormImagePreviewSize ?? 48);
     }
 }

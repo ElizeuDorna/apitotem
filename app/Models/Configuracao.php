@@ -39,6 +39,7 @@ class Configuracao extends Model
         'panelBrandIconUrl',
         'panelSidebarFontFamily',
         'panelSidebarFontSize',
+        'produtoFormImagePreviewSize',
         'leftVerticalLogoWidth',
         'leftVerticalLogoHeight',
         'leftVerticalLogoWidthWindows',

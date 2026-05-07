@@ -136,6 +136,32 @@
                                 </div>
                             </div>
 
+                            @php($produtoFormImagePreviewSize = old('produtoFormImagePreviewSize', $config->produtoFormImagePreviewSize ?? 48))
+                            <div id="produto-form-preview" class="rounded-xl border border-slate-200 bg-white p-4">
+                                <h4 class="mb-3 text-sm font-semibold text-slate-800">Preview de imagem no cadastro de produto</h4>
+                                @if (!($produtoFormImagePreviewFeatureReady ?? false))
+                                    <div class="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                        Recurso indisponivel neste ambiente. Execute as migrations pendentes para habilitar.
+                                    </div>
+                                @endif
+                                <div class="max-w-xs">
+                                    <label for="produtoFormImagePreviewSize" class="mb-1 block text-sm font-semibold">Tamanho do preview (px)</label>
+                                    <input
+                                        id="produtoFormImagePreviewSize"
+                                        type="number"
+                                        name="produtoFormImagePreviewSize"
+                                        min="32"
+                                        max="300"
+                                        step="1"
+                                        value="{{ $produtoFormImagePreviewSize }}"
+                                        class="w-full rounded border px-3 py-2 text-sm"
+                                        {{ ($produtoFormImagePreviewFeatureReady ?? false) ? '' : 'disabled' }}
+                                    />
+                                    <p class="mt-1 text-xs text-slate-500">Largura e altura da miniatura. Padrao: 48px. Faixa: 32 a 300.</p>
+                                    @error('produtoFormImagePreviewSize')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
+
                             @php($panelBrandIconPreviewUrl = old('panelBrandIconUrl', $config->panelBrandIconUrl ?? ''))
 
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
