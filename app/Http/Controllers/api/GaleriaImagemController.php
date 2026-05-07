@@ -11,6 +11,36 @@ use OpenApi\Attributes as OA;
 
 class GaleriaImagemController extends Controller
 {
+    #[OA\Get(
+        path: '/api/galeria-imagem',
+        tags: ['Galeria Imagem'],
+        summary: 'Lista imagens visiveis para a empresa autenticada',
+        security: [['CompanyBearer' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista de imagens carregada com sucesso'),
+            new OA\Response(response: 401, description: 'Não autenticado')
+        ]
+    )]
+    public function index(Request $request)
+    {
+        /** @var Empresa $empresa */
+        $empresa = $request->attributes->get('empresa');
+
+        $galleries = GaleriaNova::query()
+            ->where(function ($query) use ($empresa) {
+                $query->where('empresa_id', $empresa->id)
+                    ->orWhereNull('empresa_id')
+                    ->orWhere('is_public', true);
+            })
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json([
+            'sucesso' => true,
+            'dados' => $galleries->map(fn (GaleriaNova $gallery) => $this->payload($gallery))->values(),
+        ]);
+    }
+
     #[OA\Post(
         path: '/api/galeria-imagem/upload',
         tags: ['Galeria Imagem'],
@@ -25,6 +55,7 @@ class GaleriaImagemController extends Controller
                         required: ['image'],
                         properties: [
                             new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Banner Promocional'),
+                            new OA\Property(property: 'is_public', type: 'boolean', example: false),
                             new OA\Property(property: 'image', type: 'string', format: 'binary'),
                         ]
                     )
@@ -45,6 +76,7 @@ class GaleriaImagemController extends Controller
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
+            'is_public' => ['nullable', 'boolean'],
             'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
@@ -69,6 +101,7 @@ class GaleriaImagemController extends Controller
         $gallery = GaleriaNova::query()->create([
             'code' => $this->generateUniqueCode(),
             'empresa_id' => $empresa->id,
+            'is_public' => (bool) ($validated['is_public'] ?? false),
             'name' => trim((string) ($validated['name'] ?? '')) !== ''
                 ? (string) $validated['name']
                 : pathinfo((string) $upload->getClientOriginalName(), PATHINFO_FILENAME),
@@ -102,6 +135,7 @@ class GaleriaImagemController extends Controller
             'id' => $gallery->id,
             'code' => $gallery->code,
             'empresa_id' => $gallery->empresa_id,
+            'is_public' => (bool) $gallery->is_public,
             'name' => $gallery->name,
             'source_type' => $gallery->source_type,
             'url' => $gallery->source_type === 'upload' && $gallery->file_path
