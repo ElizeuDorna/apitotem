@@ -1102,6 +1102,119 @@
                 }
             }
         },
+        "/api/produtos/{produto}/imagem": {
+            "post": {
+                "tags": [
+                    "Galeria Imagem"
+                ],
+                "summary": "Envia imagem para galeria e vincula ao produto pelo CODIGO",
+                "operationId": "3510c809c149faf7a888e5dce6d2aeaa",
+                "parameters": [
+                    {
+                        "name": "produto",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Imagem Produto X",
+                                        "maxLength": 255
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "external_url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "example": "https://cdn.exemplo.com/imagem.jpg",
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Imagem Produto X",
+                                        "maxLength": 255
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "external_url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "example": "https://cdn.exemplo.com/imagem.jpg",
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Imagem vinculada ao produto com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Produto não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/galeria-imagem": {
+            "get": {
+                "tags": [
+                    "Galeria Imagem"
+                ],
+                "summary": "Lista imagens visiveis para a empresa autenticada",
+                "operationId": "facb7e28759fdb5594bebb3ada3f0064",
+                "responses": {
+                    "200": {
+                        "description": "Lista de imagens carregada com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
         "/api/galeria-imagem/upload": {
             "post": {
                 "tags": [
@@ -1123,6 +1236,10 @@
                                         "example": "Banner Promocional",
                                         "maxLength": 255
                                     },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
                                     "image": {
                                         "type": "string",
                                         "format": "binary"
@@ -1139,6 +1256,64 @@
                     },
                     "200": {
                         "description": "Imagem já existia para a empresa e foi reutilizada"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "CompanyBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/galeria-imagem/link": {
+            "post": {
+                "tags": [
+                    "Galeria Imagem"
+                ],
+                "summary": "Cadastra imagem por link externo na galeria da API",
+                "operationId": "65b4fb9a155c39ef7db21f2d5037e800",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "external_url"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Banner Promocional Link",
+                                        "maxLength": 255
+                                    },
+                                    "external_url": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "example": "https://cdn.exemplo.com/banner.jpg",
+                                        "maxLength": 1000
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Link cadastrado com sucesso"
+                    },
+                    "200": {
+                        "description": "Link já existia para a empresa e foi reutilizado"
                     },
                     "401": {
                         "description": "Não autenticado"

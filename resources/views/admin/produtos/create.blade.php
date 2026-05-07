@@ -82,16 +82,13 @@
             </div>
             @error('IMG')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
 
-            <div class="mt-4">
+            <div class="mt-2">
                 <div id="produtoImagemPreview" class="hidden">
-                    <p class="text-sm font-medium text-gray-700 mb-2">Preview da Imagem</p>
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="h-48 w-auto mx-auto rounded object-cover" />
-                        <div class="mt-3 text-center">
-                            <button type="button" id="produtoImagemLimparBtn" class="text-sm font-medium text-red-600 hover:text-red-800">
-                                Limpar imagem
-                            </button>
-                        </div>
+                    <div class="inline-flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                        <img id="produtoImagemPreviewImg" src="" alt="Preview" class="h-16 w-16 rounded object-cover border border-gray-200" />
+                        <button type="button" id="produtoImagemLimparBtn" class="text-xs font-medium text-red-600 hover:text-red-800">
+                            Limpar
+                        </button>
                     </div>
                 </div>
             </div>
