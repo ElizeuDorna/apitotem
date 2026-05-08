@@ -224,7 +224,7 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:produtos');
         Route::resource('empresas', \App\Http\Controllers\Admin\EmpresaController::class, ['as' => 'admin'])
             ->middleware('menu.access:empresas')
-            ->except(['show']);
+            ->only(['index', 'edit']);
         Route::post('empresas/{empresa}/selecionar', [\App\Http\Controllers\Admin\EmpresaController::class, 'selecionarEmpresaAtiva'])
             ->name('admin.empresas.selecionar')
             ->middleware('menu.access:empresas');

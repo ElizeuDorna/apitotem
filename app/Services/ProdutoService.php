@@ -30,11 +30,6 @@ class ProdutoService
         }
     }
 
-    public function canCreate(User $user): bool
-    {
-        return EmpresaContext::resolveEmpresaIdForUser($user) !== null;
-    }
-
     public function productsQueryForUser(User $user): Builder
     {
         $query = Produto::query()->with(['departamento', 'grupo']);

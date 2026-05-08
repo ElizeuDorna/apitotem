@@ -1,0 +1,162 @@
+<div class="max-w-3xl mx-auto bg-white p-8 shadow" x-data="companyEditForm()">
+    @if($statusMessage)
+        <div class="mb-4 rounded border border-green-200 bg-green-50 p-3 text-green-800">{{ $statusMessage }}</div>
+    @endif
+
+    <h2 class="mb-6 text-2xl font-bold">Editar Empresa</h2>
+
+    <form wire:submit="save" class="space-y-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+                <label class="block font-semibold">CODIGO</label>
+                <input type="text" value="{{ $empresa->codigo }}" class="w-full rounded border bg-gray-100 px-2 py-1 text-gray-600" disabled />
+            </div>
+            <div>
+                <label class="block font-semibold">CNPJ/CPF</label>
+                <input type="text" wire:model.blur="cnpjCpf" x-on:input="$el.value = formatCpfCnpj($el.value); $wire.cnpjCpf = $el.value" class="w-full rounded border px-2 py-1 @error('cnpj_cpf') border-red-500 @enderror" maxlength="18" inputmode="numeric" required />
+                @error('cnpj_cpf')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        <div>
+            <label class="block font-semibold">NOME</label>
+            <input type="text" wire:model.blur="nome" class="w-full rounded border px-2 py-1 @error('nome') border-red-500 @enderror" required />
+            @error('nome')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div>
+            <label class="block font-semibold">RAZAO SOCIAL</label>
+            <input type="text" wire:model.blur="razaosocial" class="w-full rounded border px-2 py-1 @error('razaosocial') border-red-500 @enderror" required />
+            @error('razaosocial')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+                <label class="block font-semibold">EMAIL</label>
+                <input type="email" wire:model.blur="email" class="w-full rounded border px-2 py-1 @error('email') border-red-500 @enderror" required />
+                @error('email')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block font-semibold">FONE</label>
+                <input type="text" wire:model.blur="fone" x-on:input="$el.value = formatPhone($el.value); $wire.fone = $el.value" class="w-full rounded border px-2 py-1 @error('fone') border-red-500 @enderror" maxlength="15" inputmode="numeric" required />
+                @error('fone')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        <div>
+            <label class="block font-semibold">SENHA INTEGRACAO API (OPCIONAL)</label>
+            <input type="password" wire:model.blur="senhaIntegracaoApi" class="w-full rounded border px-2 py-1 @error('senha_integracao_api') border-red-500 @enderror" autocomplete="new-password" />
+            <p class="mt-1 text-sm text-gray-600">Preencha somente se quiser definir ou trocar a senha de integracao da API. Deixe em branco para manter a senha atual.</p>
+            @error('senha_integracao_api')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div class="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            O token da API continua disponivel para uso com Bearer token.
+        </div>
+
+        @if($isDefaultAdmin)
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                    <label class="block font-semibold">NIVEL DE ACESSO</label>
+                    <select wire:model.live="nivelAcesso" class="w-full rounded border px-2 py-1 @error('nivel_acesso') border-red-500 @enderror">
+                        <option value="1">Cliente Final (Nivel 1)</option>
+                        <option value="2">Revenda (Nivel 2)</option>
+                    </select>
+                    @error('nivel_acesso')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div x-show="$wire.nivelAcesso !== '2'">
+                    <label class="block font-semibold">VINCULAR A REVENDA (OPCIONAL)</label>
+                    <select wire:model.live="revendaId" class="w-full rounded border px-2 py-1 @error('revenda_id') border-red-500 @enderror">
+                        <option value="">Sem vinculo de revenda</option>
+                        @foreach($revendas as $revenda)
+                            <option value="{{ $revenda->id }}">{{ $revenda->nome ?: ($revenda->fantasia ?: ('Revenda #' . $revenda->id)) }}</option>
+                        @endforeach
+                    </select>
+                    @error('revenda_id')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            <div x-show="$wire.nivelAcesso === '2'" class="space-y-4 rounded border border-sky-200 bg-sky-50 px-4 py-4">
+                <div>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold text-sky-900">
+                        <input type="checkbox" wire:model.live="publicPageEnabled" class="rounded border-sky-300">
+                        Permitir que esta revenda personalize a propria frente publica
+                    </label>
+                    @error('public_page_enabled')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block font-semibold">SLUG PUBLICO DA REVENDA</label>
+                    <input type="text" wire:model.blur="publicPageSlug" class="w-full rounded border px-2 py-1 @error('public_page_slug') border-red-500 @enderror" placeholder="minha-revenda">
+                    <p class="mt-1 text-xs text-sky-900">O link publico ficara em /r/slug-da-revenda</p>
+                    @if($publicPageSlug !== '')
+                        <p class="mt-1 text-xs text-sky-900">Link atual: {{ url('/r/' . $publicPageSlug) }}</p>
+                    @endif
+                    @error('public_page_slug')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+        @else
+            <div>
+                <p class="text-sm text-gray-700">Nivel de acesso: {{ (int) $nivelAcesso === 2 ? 'Revenda (Nivel 2)' : 'Cliente Final (Nivel 1)' }}</p>
+            </div>
+        @endif
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+                <label class="block font-semibold">ENDERECO</label>
+                <input type="text" wire:model.blur="endereco" class="w-full rounded border px-2 py-1 @error('endereco') border-red-500 @enderror" />
+                @error('endereco')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block font-semibold">BAIRRO</label>
+                <input type="text" wire:model.blur="bairro" class="w-full rounded border px-2 py-1 @error('bairro') border-red-500 @enderror" />
+                @error('bairro')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+                <label class="block font-semibold">NUMERO</label>
+                <input type="text" wire:model.blur="numero" class="w-full rounded border px-2 py-1 @error('numero') border-red-500 @enderror" />
+                @error('numero')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block font-semibold">CEP</label>
+                <input type="text" wire:model.blur="cep" class="w-full rounded border px-2 py-1 @error('cep') border-red-500 @enderror" />
+                @error('cep')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        <div class="flex space-x-2 pt-4">
+            <button type="submit" class="rounded bg-indigo-600 px-6 py-2 text-white" wire:loading.attr="disabled">Atualizar</button>
+            <a href="{{ $returnUrl }}" wire:navigate class="rounded bg-gray-400 px-6 py-2 text-white">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@script
+<script>
+    Alpine.data('companyEditForm', () => ({
+        formatCpfCnpj(value) {
+            const digits = value.replace(/\D/g, '').slice(0, 14);
+            if (digits.length <= 11) {
+                return digits.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            }
+            return digits.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+        },
+        formatPhone(value) {
+            const digits = value.replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 10) {
+                return digits.replace(/^(\d{0,2})(\d{0,4})(\d{0,4}).*$/, (_, d1, d2, d3) => {
+                    let result = '';
+                    if (d1) result += `(${d1}`;
+                    if (d1.length === 2) result += ') ';
+                    if (d2) result += d2;
+                    if (d3) result += `-${d3}`;
+                    return result;
+                });
+            }
+            return digits.replace(/^(\d{2})(\d{5})(\d{0,4}).*$/, '($1) $2-$3');
+        },
+    }));
+</script>
+@endscript

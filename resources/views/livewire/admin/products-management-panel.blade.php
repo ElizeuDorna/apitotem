@@ -1,4 +1,4 @@
-<div class="space-y-6" x-data="{ formEnabled: false }" x-on:product-create.window="formEnabled = true">
+<div class="space-y-6" x-data="{ formEnabled: false }">
     <div class="max-w-6xl mx-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <div class="mb-6 flex items-center justify-between gap-4">
             <h2 class="text-2xl font-bold">Produtos</h2>
