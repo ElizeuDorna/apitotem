@@ -124,8 +124,10 @@ Route::get('/dashboard', function () {
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('/install.apk', [\App\Http\Controllers\Admin\ApkUploadController::class, 'download'])
-    ->name('public.apk.download');
+Route::get('/dw', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'publicIndex'])
+    ->name('downloads.public.index');
+Route::get('/dw/{downloadAsset:slug}', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'download'])
+    ->name('downloads.file');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -135,10 +137,6 @@ Route::middleware('auth')->group(function () {
     Route::resource('admin/home-carousel', \App\Http\Controllers\Admin\HomeCarouselController::class, ['as' => 'admin'])
         ->parameters(['home-carousel' => 'homeCarousel'])
         ->except(['show']);
-    Route::redirect('/admin/apk-upload', '/admin/configadmin')
-        ->name('admin.apk-upload.index');
-    Route::post('/admin/apk-upload', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'storeApk'])
-        ->name('admin.apk-upload.store');
     Route::get('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'edit'])
         ->name('admin.revenda-public-page.edit');
     Route::put('/admin/revenda/frente-publica', [\App\Http\Controllers\Admin\RevendaPublicPageController::class, 'update'])
@@ -164,6 +162,27 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/configadmin', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'update'])
         ->name('admin.configadmin.update')
         ->middleware('menu.access:config_admin');
+        Route::get('/admin/downloads', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'index'])
+            ->name('admin.downloads.index')
+            ->middleware('menu.access:downloads');
+        Route::get('/admin/downloads/novo', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'create'])
+            ->name('admin.downloads.create')
+            ->middleware('menu.access:downloads');
+        Route::post('/admin/downloads', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'store'])
+            ->name('admin.downloads.store')
+            ->middleware('menu.access:downloads');
+        Route::get('/admin/downloads/{downloadAsset:slug}/editar', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'edit'])
+            ->name('admin.downloads.edit')
+            ->middleware('menu.access:downloads');
+        Route::get('/admin/downloads/{downloadAsset:slug}/baixar', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'adminDownload'])
+            ->name('admin.downloads.download')
+            ->middleware('menu.access:downloads');
+        Route::put('/admin/downloads/{downloadAsset:slug}', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'update'])
+            ->name('admin.downloads.update')
+            ->middleware('menu.access:downloads');
+        Route::delete('/admin/downloads/{downloadAsset:slug}', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'destroy'])
+            ->name('admin.downloads.destroy')
+            ->middleware('menu.access:downloads');
         Route::get('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'edit'])
             ->name('admin.web-screen-config.edit')
             ->middleware('menu.access:configuracao');

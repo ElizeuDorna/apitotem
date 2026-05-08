@@ -18,8 +18,6 @@ use Illuminate\Validation\Rules\File;
 
 class ConfigAdminController extends Controller
 {
-    private const APK_DISK = 'public';
-    private const APK_PATH = 'apk/install.apk';
     private const SIDEBAR_FONT_FAMILY_OPTIONS = [
         'figtree',
         'inter',
@@ -42,20 +40,11 @@ class ConfigAdminController extends Controller
 
         $config = $this->findOrCreateConfig($empresaId)->fresh();
 
-        $apkExists = Storage::disk(self::APK_DISK)->exists(self::APK_PATH);
-        $apkSizeBytes = $apkExists ? (int) Storage::disk(self::APK_DISK)->size(self::APK_PATH) : null;
-        $apkLastModified = $apkExists ? (int) Storage::disk(self::APK_DISK)->lastModified(self::APK_PATH) : null;
-        $apkDownloadUrl = url('/install.apk');
-
         return view('admin.configadmin', compact(
             'config',
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
             'produtoFormImagePreviewFeatureReady',
-            'apkExists',
-            'apkSizeBytes',
-            'apkLastModified',
-            'apkDownloadUrl',
         ));
     }
 
@@ -190,24 +179,6 @@ class ConfigAdminController extends Controller
         }
 
         Storage::disk(ImageStorage::disk())->delete($relativePath);
-    }
-
-    public function storeApk(Request $request): RedirectResponse
-    {
-        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
-
-        $validated = $request->validate([
-            'apk_file' => ['required', File::types(['apk'])->max(262144)],
-        ], [
-            'apk_file.required' => 'Envie o arquivo APK.',
-            'apk_file.max' => 'O APK nao pode ultrapassar 256 MB.',
-        ]);
-
-        Storage::disk(self::APK_DISK)->putFileAs('apk', $validated['apk_file'], 'install.apk');
-
-        return redirect()
-            ->route('admin.configadmin.edit')
-            ->with('success', 'APK enviado com sucesso e publicado em /install.apk');
     }
 
     private function resolveEmpresaDocument(?int $empresaId): string

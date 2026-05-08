@@ -38,6 +38,8 @@ class User extends Authenticatable
 
     public const MENU_GALERIA_NOVA = 'galeria_nova';
 
+    public const MENU_DOWNLOADS = 'downloads';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -109,6 +111,7 @@ class User extends Authenticatable
             self::MENU_ATIVAR_TV => 'Ativar TV',
             self::MENU_GESTAO_TVS => 'Gestão de TVs',
             self::MENU_GALERIA_NOVA => 'Galeria de Imagem',
+            self::MENU_DOWNLOADS => 'Downloads',
         ];
     }
 

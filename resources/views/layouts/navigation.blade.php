@@ -119,6 +119,12 @@
                     </a>
                 @endif
 
+                @if (Auth::user()->hasMenuAccess('downloads'))
+                    <a href="{{ route('admin.downloads.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/downloads*') ? $desktopNavActive : '' }}">
+                        <span>{{ __('Download') }}</span>
+                    </a>
+                @endif
+
                 @if (Auth::user()->hasMenuAccess('configuracao'))
                     <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
                         <span>{{ __('Config Totem Web') }}</span>
