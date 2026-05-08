@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Grupo;
 use App\Models\Departamento;
+use App\Services\GrupoService;
 use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -64,21 +65,7 @@ class GrupoController extends Controller
             abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar grupo.');
         }
 
-        $validated = $request->validate([
-            'nome' => 'required|string|max:255',
-            'departamento_id' => 'required|exists:departamentos,id',
-        ]);
-
-        $departamento = Departamento::findOrFail($validated['departamento_id']);
-
-        if ($empresaId) {
-            abort_unless($departamento->empresa_id === $empresaId, 403);
-            $validated['empresa_id'] = $empresaId;
-        } else {
-            $validated['empresa_id'] = $departamento->empresa_id;
-        }
-
-        Grupo::create($validated);
+        app(GrupoService::class)->createForEmpresa($empresaId, $request->only('nome', 'departamento_id'));
 
         return redirect()->route('admin.grupos.index')->with('success', 'Grupo criado com sucesso');
     }
@@ -109,21 +96,7 @@ class GrupoController extends Controller
 
         $this->authorizeGrupoAccess($grupo);
 
-        $validated = $request->validate([
-            'nome' => 'required|string|max:255',
-            'departamento_id' => 'required|exists:departamentos,id',
-        ]);
-
-        $departamento = Departamento::findOrFail($validated['departamento_id']);
-
-        if ($empresaId) {
-            abort_unless($departamento->empresa_id === $empresaId, 403);
-            $validated['empresa_id'] = $empresaId;
-        } else {
-            $validated['empresa_id'] = $departamento->empresa_id;
-        }
-
-        $grupo->update($validated);
+        app(GrupoService::class)->updateForEmpresa($grupo, $empresaId, $request->only('nome', 'departamento_id'));
 
         return redirect()->route('admin.grupos.index')->with('success', 'Grupo atualizado com sucesso');
     }

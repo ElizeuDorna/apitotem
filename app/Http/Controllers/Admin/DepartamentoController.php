@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Departamento;
+use App\Services\DepartamentoService;
 use App\Support\EmpresaContext;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -65,20 +66,7 @@ class DepartamentoController extends Controller
             abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar departamento.');
         }
 
-        $validated = $request->validate([
-            'nome' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('departamentos', 'nome')->where(function ($query) use ($empresaId) {
-                    $query->where('empresa_id', $empresaId);
-                }),
-            ],
-        ]);
-
-        Departamento::create(array_merge($validated, [
-            'empresa_id' => $empresaId,
-        ]));
+        app(DepartamentoService::class)->createForEmpresa($empresaId, $request->only('nome'));
 
         return redirect()->route('admin.departamentos.index')->with('success', 'Departamento criado com sucesso');
     }
