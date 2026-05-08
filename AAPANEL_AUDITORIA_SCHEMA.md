@@ -20,16 +20,18 @@ cd /www/wwwroot/api
 git pull origin main
 ```
 
-## 3. Limpar caches do Laravel
+## 3. Rodar migrations e limpar caches do Laravel
 
 ```bash
-php artisan optimize:clear
+/www/server/php/84/bin/php artisan migrate --force
+/www/server/php/84/bin/php artisan optimize:clear
+/www/server/php/84/bin/php artisan optimize
 ```
 
 ## 4. Confirmar que o comando existe
 
 ```bash
-php artisan list | grep audit:schema-usage
+/www/server/php/84/bin/php artisan list | grep audit:schema-usage
 ```
 
 Se aparecer `audit:schema-usage`, o comando está disponível.
@@ -37,19 +39,19 @@ Se aparecer `audit:schema-usage`, o comando está disponível.
 ## 5. Rodar a auditoria no terminal
 
 ```bash
-php artisan audit:schema-usage
+/www/server/php/84/bin/php artisan audit:schema-usage
 ```
 
 ## 6. Rodar mostrando mais referências por item
 
 ```bash
-php artisan audit:schema-usage --limit=10
+/www/server/php/84/bin/php artisan audit:schema-usage --limit=10
 ```
 
 ## 7. Salvar relatório em arquivo JSON
 
 ```bash
-php artisan audit:schema-usage --save --limit=10
+/www/server/php/84/bin/php artisan audit:schema-usage --save --limit=10
 ```
 
 O relatório será salvo em:
@@ -61,13 +63,13 @@ storage/app/audits/
 ## 8. Mostrar saída em JSON no terminal
 
 ```bash
-php artisan audit:schema-usage --json
+/www/server/php/84/bin/php artisan audit:schema-usage --json
 ```
 
 ## 9. Incluir tabelas internas do Laravel/framework
 
 ```bash
-php artisan audit:schema-usage --include-framework --limit=10
+/www/server/php/84/bin/php artisan audit:schema-usage --include-framework --limit=10
 ```
 
 ## 10. Fluxo recomendado
@@ -77,8 +79,10 @@ Rodar nesta ordem:
 ```bash
 cd /caminho/do/projeto
 git pull origin main
-php artisan optimize:clear
-php artisan audit:schema-usage --save --limit=10
+/www/server/php/84/bin/php artisan migrate --force
+/www/server/php/84/bin/php artisan optimize:clear
+/www/server/php/84/bin/php artisan optimize
+/www/server/php/84/bin/php artisan audit:schema-usage --save --limit=10
 ```
 
 ## 11. Atenção
