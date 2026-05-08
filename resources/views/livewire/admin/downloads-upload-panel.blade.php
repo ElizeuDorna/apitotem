@@ -1,4 +1,4 @@
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ formEnabled: false }" x-on:downloads-upload-create.window="formEnabled = true">
     @if (($statusMessage ?? null) || session('status'))
         <div class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             {{ $statusMessage ?? session('status') }}
@@ -22,6 +22,10 @@
             </div>
 
             <form wire:submit="save" class="space-y-5">
+                <div x-show="!formEnabled" x-cloak class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Clique em <span class="font-semibold">Novo upload</span> para habilitar os campos de nome, descricao e arquivo.
+                </div>
+
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
                         <label for="lw-download-title" class="mb-1 block text-sm font-semibold text-slate-800">Nome para exibição</label>
@@ -29,6 +33,7 @@
                             id="lw-download-title"
                             type="text"
                             wire:model="title"
+                            x-bind:disabled="!formEnabled"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         >
                         @error('title')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -40,6 +45,7 @@
                             id="lw-download-file-{{ $uploadIteration }}"
                             type="file"
                             wire:model="file"
+                            x-bind:disabled="!formEnabled"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         >
                         <p class="mt-1 text-xs text-slate-500">Tamanho máximo de 256 MB.</p>
@@ -53,6 +59,7 @@
                         id="lw-download-description"
                         rows="4"
                         wire:model="description"
+                        x-bind:disabled="!formEnabled"
                         class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                     ></textarea>
                     @error('description')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -63,11 +70,12 @@
                         type="submit"
                         wire:loading.attr="disabled"
                         wire:target="save,file"
+                        x-bind:disabled="!formEnabled"
                         class="inline-flex items-center rounded-md border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         Salvar upload
                     </button>
-                    <p class="text-xs text-slate-500">A grade abaixo atualiza automaticamente após o envio.</p>
+                    <p class="text-xs text-slate-500">A grade abaixo atualiza automaticamente apos o envio.</p>
                 </div>
             </form>
         </div>

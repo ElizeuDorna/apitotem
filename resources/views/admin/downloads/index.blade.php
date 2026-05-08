@@ -6,9 +6,14 @@
             </h2>
 
             @if ($isDefaultAdmin)
-                <a href="#upload-download" class="inline-flex items-center rounded-md border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                <button
+                    type="button"
+                    x-data="{}"
+                    x-on:click="$dispatch('downloads-upload-create'); document.getElementById('upload-download')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                    class="inline-flex items-center rounded-md border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
                     Novo upload
-                </a>
+                </button>
             @endif
         </div>
     </x-slot>

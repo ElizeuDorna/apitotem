@@ -121,4 +121,32 @@ class DownloadAssetManagementTest extends TestCase
         Storage::disk('public')->assertExists($download->file_path);
         $this->assertSame('Primeiro piloto com Livewire.', $download->description);
     }
+
+    public function test_default_admin_delete_also_removes_file_from_storage(): void
+    {
+        $path = 'downloads/remover-arquivo.apk';
+        Storage::disk('public')->put($path, 'conteudo-para-remover');
+
+        $download = DownloadAsset::query()->create([
+            'title' => 'Arquivo para Remover',
+            'slug' => 'arquivo-para-remover',
+            'description' => 'Teste de exclusao completa.',
+            'file_path' => $path,
+            'original_name' => 'remover-arquivo.apk',
+            'mime_type' => 'application/vnd.android.package-archive',
+            'size_bytes' => Storage::disk('public')->size($path),
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.downloads.destroy', $download))
+            ->assertRedirect(route('admin.downloads.index'));
+
+        $this->assertDatabaseMissing('download_assets', ['id' => $download->id]);
+        Storage::disk('public')->assertMissing($path);
+    }
 }
