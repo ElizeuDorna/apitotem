@@ -4,10 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Departamento;
-use App\Services\DepartamentoService;
 use App\Support\EmpresaContext;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 
 class DepartamentoController extends Controller
@@ -31,46 +28,6 @@ class DepartamentoController extends Controller
         return view('admin.departamentos.index', compact('departamentos'));
     }
 
-    public function create()
-    {
-        $user = Auth::user();
-        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
-
-        if (! $user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Usuário sem empresa vinculada.');
-        }
-
-        if ($user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar departamento.');
-        }
-
-        $empresaCnpjCpf = null;
-
-        if ($empresaId) {
-            $empresaCnpjCpf = optional(EmpresaContext::activeEmpresa($user))->cnpj_cpf;
-        }
-
-        return view('admin.departamentos.create', compact('empresaCnpjCpf'));
-    }
-
-    public function store(Request $request)
-    {
-        $user = Auth::user();
-        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
-
-        if (! $user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Usuário sem empresa vinculada.');
-        }
-
-        if ($user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar departamento.');
-        }
-
-        app(DepartamentoService::class)->createForEmpresa($empresaId, $request->only('nome'));
-
-        return redirect()->route('admin.departamentos.index')->with('success', 'Departamento criado com sucesso');
-    }
-
     public function edit(Departamento $departamento)
     {
         $this->authorizeDepartamentoAccess($departamento);
@@ -78,47 +35,6 @@ class DepartamentoController extends Controller
         $departamento->loadMissing('empresa');
 
         return view('admin.departamentos.edit', compact('departamento'));
-    }
-
-    public function update(Request $request, Departamento $departamento)
-    {
-        $this->authorizeDepartamentoAccess($departamento);
-
-        $validated = $request->validate([
-            'nome' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('departamentos', 'nome')
-                    ->ignore($departamento->id)
-                    ->where(function ($query) use ($departamento) {
-                        if ($departamento->empresa_id === null) {
-                            $query->whereNull('empresa_id');
-                        } else {
-                            $query->where('empresa_id', $departamento->empresa_id);
-                        }
-                    }),
-            ],
-        ]);
-
-        $departamento->update($validated);
-
-        return redirect()->route('admin.departamentos.index')->with('success', 'Departamento atualizado com sucesso');
-    }
-
-    public function destroy(Departamento $departamento)
-    {
-        $this->authorizeDepartamentoAccess($departamento);
-
-        $nome = $departamento->nome;
-        
-        if ($departamento->produtos()->count() > 0 || $departamento->grupos()->count() > 0) {
-            return back()->withErrors(['delete' => "Não é possível deletar departamento com produtos ou grupos associados"]);
-        }
-
-        $departamento->delete();
-
-        return redirect()->route('admin.departamentos.index')->with('success', "Departamento {$nome} deletado com sucesso");
     }
 
     private function authorizeDepartamentoAccess(Departamento $departamento): void

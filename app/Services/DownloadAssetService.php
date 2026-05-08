@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DownloadAsset;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class DownloadAssetService
@@ -27,14 +28,48 @@ class DownloadAssetService
         ]);
     }
 
-    private function makeUniqueSlug(string $title): string
+    public function update(DownloadAsset $downloadAsset, string $title, ?string $description, ?UploadedFile $file): DownloadAsset
+    {
+        $slug = $this->makeUniqueSlug($title, $downloadAsset->id);
+
+        $payload = [
+            'title' => trim($title),
+            'slug' => $slug,
+            'description' => $this->normalizeNullableText($description),
+        ];
+
+        if ($file instanceof UploadedFile) {
+            $this->deleteStoredFile($downloadAsset->file_path);
+            $path = $this->storeFile($file, $slug);
+
+            $payload['file_path'] = $path;
+            $payload['original_name'] = $file->getClientOriginalName();
+            $payload['mime_type'] = $file->getClientMimeType();
+            $payload['size_bytes'] = (int) $file->getSize();
+        }
+
+        $downloadAsset->update($payload);
+
+        return $downloadAsset->refresh();
+    }
+
+    public function delete(DownloadAsset $downloadAsset): void
+    {
+        $this->deleteStoredFile($downloadAsset->file_path);
+        $downloadAsset->delete();
+    }
+
+    private function makeUniqueSlug(string $title, ?int $ignoreId = null): string
     {
         $baseSlug = Str::slug($title);
         $baseSlug = $baseSlug !== '' ? $baseSlug : 'download';
         $slug = $baseSlug;
         $suffix = 2;
 
-        while (DownloadAsset::query()->where('slug', $slug)->exists()) {
+        while (DownloadAsset::query()
+            ->when($ignoreId !== null, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->where('slug', $slug)
+            ->exists()) {
             $slug = $baseSlug.'-'.$suffix;
             $suffix++;
         }
@@ -56,5 +91,14 @@ class DownloadAssetService
         $normalized = trim((string) $value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    private function deleteStoredFile(?string $path): void
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return;
+        }
+
+        Storage::disk(self::STORAGE_DISK)->delete($path);
     }
 }

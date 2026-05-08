@@ -19,6 +19,17 @@ class DepartmentsManagementPanel extends Component
 
     protected string $paginationTheme = 'tailwind';
 
+    public function canCreate(): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return (bool) EmpresaContext::resolveEmpresaIdForUser($user);
+    }
+
     public function save(DepartamentoService $departamentoService): void
     {
         $user = Auth::user();
@@ -41,6 +52,31 @@ class DepartmentsManagementPanel extends Component
         $this->reset('nome');
         $this->resetPage();
         $this->statusMessage = 'Departamento criado com sucesso.';
+        $this->resetErrorBag('delete');
+    }
+
+    public function deleteDepartment(int $departmentId): void
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+
+        $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
+
+        $department = Departamento::query()
+            ->withCount('grupos', 'produtos')
+            ->when($empresaId, fn ($query) => $query->where('empresa_id', $empresaId))
+            ->findOrFail($departmentId);
+
+        if (($department->produtos_count ?? 0) > 0 || ($department->grupos_count ?? 0) > 0) {
+            $this->addError('delete', 'Nao e possivel deletar departamento com produtos ou grupos associados');
+            return;
+        }
+
+        $name = $department->nome;
+        $department->delete();
+
+        $this->resetErrorBag('delete');
+        $this->statusMessage = "Departamento {$name} deletado com sucesso.";
     }
 
     public function render()
@@ -68,6 +104,8 @@ class DepartmentsManagementPanel extends Component
         return view('livewire.admin.departments-management-panel', [
             'departamentos' => $departamentos,
             'empresaCnpjCpf' => $empresaCnpjCpf,
+            'canCreate' => $this->canCreate(),
+            'indexUrl' => route('admin.departamentos.index'),
         ]);
     }
 }

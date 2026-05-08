@@ -19,6 +19,12 @@
             </div>
         </div>
 
+        @unless($canCreate)
+            <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Selecione uma empresa ativa em Empresas para habilitar o cadastro de departamento.
+            </div>
+        @endunless
+
         <form wire:submit="save" class="space-y-4">
             <div x-show="!formEnabled" x-cloak class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 Clique em <span class="font-semibold">Novo departamento</span> para habilitar o cadastro.
@@ -35,7 +41,7 @@
                     id="lw-departamento-nome"
                     type="text"
                     wire:model="nome"
-                    x-bind:disabled="!formEnabled"
+                    x-bind:disabled="!formEnabled || {{ $canCreate ? 'false' : 'true' }}"
                     class="w-full rounded border border-slate-300 px-3 py-2 text-sm @error('nome') border-red-500 @enderror"
                     required
                 />
@@ -47,7 +53,7 @@
                     type="submit"
                     wire:loading.attr="disabled"
                     wire:target="save"
-                    x-bind:disabled="!formEnabled"
+                    x-bind:disabled="!formEnabled || {{ $canCreate ? 'false' : 'true' }}"
                     class="rounded bg-indigo-600 px-6 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Salvar
@@ -76,12 +82,15 @@
                         <td class="px-4 py-3 text-center text-sm text-slate-700">{{ $dept->grupos_count ?? 0 }}</td>
                         <td class="px-4 py-3 text-center text-sm text-slate-700">{{ $dept->produtos_count ?? 0 }}</td>
                         <td class="px-4 py-3 text-center">
-                            <a href="{{ route('admin.departamentos.edit', ['departamento' => $dept->id, 'return' => url()->full()]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
-                            <form action="{{ route('admin.departamentos.destroy', $dept->id) }}" method="POST" class="ml-2 inline" onsubmit="return confirm('Tem certeza?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="inline-flex items-center rounded-full border border-red-600 bg-red-500 px-2.5 py-1 text-xs font-semibold text-white">Deletar</button>
-                            </form>
+                            <a wire:navigate href="{{ route('admin.departamentos.edit', ['departamento' => $dept->id, 'return' => $indexUrl]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
+                            <button
+                                type="button"
+                                wire:click="deleteDepartment({{ $dept->id }})"
+                                wire:confirm="Tem certeza?"
+                                class="ml-2 inline-flex items-center rounded-full border border-red-600 bg-red-500 px-2.5 py-1 text-xs font-semibold text-white"
+                            >
+                                Deletar
+                            </button>
                         </td>
                     </tr>
                 @empty

@@ -1,4 +1,4 @@
-<div class="space-y-6" x-data="{ formEnabled: false }" x-on:downloads-upload-create.window="formEnabled = true">
+<div class="space-y-6" x-data="{ formEnabled: false }" x-on:downloads-upload-create.window="formEnabled = true; $wire.cancelEditing()" x-on:downloads-upload-edit.window="formEnabled = true">
     @if (($statusMessage ?? null) || session('status'))
         <div class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             {{ $statusMessage ?? session('status') }}
@@ -9,7 +9,7 @@
         <div id="upload-download" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h3 class="text-base font-semibold text-slate-900">Novo upload sem recarregar a página</h3>
+                    <h3 class="text-base font-semibold text-slate-900">{{ $editingDownloadId ? 'Editar upload sem recarregar a página' : 'Novo upload sem recarregar a página' }}</h3>
                     <p class="mt-1 text-sm text-slate-600">
                         Piloto em Livewire para validar o fluxo de upload no admin sem refresh completo.
                     </p>
@@ -25,6 +25,12 @@
                 <div x-show="!formEnabled" x-cloak class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     Clique em <span class="font-semibold">Novo upload</span> para habilitar os campos de nome, descricao e arquivo.
                 </div>
+
+                @if ($editingDownloadId)
+                    <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                        Modo edicao ativo. O arquivo e opcional; envie outro apenas se quiser substituir o atual.
+                    </div>
+                @endif
 
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
@@ -48,7 +54,7 @@
                             x-bind:disabled="!formEnabled"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                         >
-                        <p class="mt-1 text-xs text-slate-500">Tamanho máximo de 256 MB.</p>
+                        <p class="mt-1 text-xs text-slate-500">Tamanho máximo de 256 MB. {{ $editingDownloadId ? 'Opcional na edicao.' : '' }}</p>
                         @error('file')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -73,8 +79,17 @@
                         x-bind:disabled="!formEnabled"
                         class="inline-flex items-center rounded-md border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        Salvar upload
+                        {{ $editingDownloadId ? 'Atualizar upload' : 'Salvar upload' }}
                     </button>
+                    @if ($editingDownloadId)
+                        <button
+                            type="button"
+                            wire:click="cancelEditing"
+                            class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Cancelar edicao
+                        </button>
+                    @endif
                     <p class="text-xs text-slate-500">A grade abaixo atualiza automaticamente apos o envio.</p>
                 </div>
             </form>
@@ -118,12 +133,22 @@
                                 @if ($isDefaultAdmin)
                                     <td class="px-4 py-3 align-top text-sm text-slate-700">
                                         <div class="flex flex-wrap items-center gap-3">
-                                            <a href="{{ route('admin.downloads.edit', $download) }}" class="font-medium text-indigo-600 hover:text-indigo-800">Editar</a>
-                                            <form method="POST" action="{{ route('admin.downloads.destroy', $download) }}" onsubmit="return confirm('Excluir este arquivo de download?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="font-medium text-rose-600 hover:text-rose-800">Excluir</button>
-                                            </form>
+                                            <button
+                                                type="button"
+                                                wire:click="editDownload({{ $download->id }})"
+                                                x-on:click="$dispatch('downloads-upload-edit'); document.getElementById('upload-download')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                                                class="font-medium text-indigo-600 hover:text-indigo-800"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                wire:click="deleteDownload({{ $download->id }})"
+                                                wire:confirm="Excluir este arquivo de download?"
+                                                class="font-medium text-rose-600 hover:text-rose-800"
+                                            >
+                                                Excluir
+                                            </button>
                                         </div>
                                     </td>
                                 @endif

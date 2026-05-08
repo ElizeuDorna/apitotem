@@ -142,11 +142,55 @@ class DownloadAssetManagementTest extends TestCase
             'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
         ]);
 
-        $this->actingAs($admin)
-            ->delete(route('admin.downloads.destroy', $download))
-            ->assertRedirect(route('admin.downloads.index'));
+        $this->actingAs($admin);
+
+        Livewire::test(\App\Livewire\Admin\DownloadsUploadPanel::class)
+            ->call('deleteDownload', $download->id)
+            ->assertSee('Arquivo de download Arquivo para Remover removido com sucesso.');
 
         $this->assertDatabaseMissing('download_assets', ['id' => $download->id]);
         Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_default_admin_can_edit_download_asset_via_livewire_component(): void
+    {
+        Config::set('livewire.temporary_file_upload.disk', 'public');
+        File::ensureDirectoryExists(storage_path('framework/testing/disks/tmp-for-tests'));
+
+        $download = DownloadAsset::query()->create([
+            'title' => 'Arquivo Antigo',
+            'slug' => 'arquivo-antigo',
+            'description' => 'Descricao antiga.',
+            'file_path' => 'downloads/arquivo-antigo.zip',
+            'original_name' => 'arquivo-antigo.zip',
+            'mime_type' => 'application/zip',
+            'size_bytes' => 1024,
+        ]);
+
+        Storage::disk('public')->put($download->file_path, 'arquivo-antigo');
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(\App\Livewire\Admin\DownloadsUploadPanel::class)
+            ->call('editDownload', $download->id)
+            ->set('title', 'Arquivo Atualizado')
+            ->set('description', 'Descricao nova.')
+            ->set('file', UploadedFile::fake()->create('arquivo-novo.zip', 32, 'application/zip'))
+            ->call('save')
+            ->assertSet('editingDownloadId', null)
+            ->assertSee('Arquivo de download atualizado com sucesso.');
+
+        $download->refresh();
+
+        $this->assertSame('Arquivo Atualizado', $download->title);
+        $this->assertSame('Descricao nova.', $download->description);
+        $this->assertNotSame('downloads/arquivo-antigo.zip', $download->file_path);
+        Storage::disk('public')->assertMissing('downloads/arquivo-antigo.zip');
+        Storage::disk('public')->assertExists($download->file_path);
     }
 }

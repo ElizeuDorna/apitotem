@@ -15,6 +15,8 @@ class DownloadsUploadPanel extends Component
 {
     use WithFileUploads;
 
+    public ?int $editingDownloadId = null;
+
     public string $title = '';
 
     public string $description = '';
@@ -29,26 +31,80 @@ class DownloadsUploadPanel extends Component
     {
         abort_unless(Auth::user()?->isDefaultAdmin(), 403);
 
+        $editingDownload = $this->editingDownloadId
+            ? DownloadAsset::query()->findOrFail($this->editingDownloadId)
+            : null;
+
         $validated = $this->validate([
-            'title' => ['required', 'string', 'max:160', Rule::unique('download_assets', 'title')],
+            'title' => ['required', 'string', 'max:160', Rule::unique('download_assets', 'title')->ignore($editingDownload?->id)],
             'description' => ['nullable', 'string', 'max:2000'],
-            'file' => ['required', File::default()->max(262144)],
+            'file' => [($editingDownload ? 'nullable' : 'required'), File::default()->max(262144)],
         ], [
             'title.required' => 'Informe o nome do arquivo para exibição.',
             'file.required' => 'Selecione um arquivo para upload.',
             'file.max' => 'O arquivo não pode ultrapassar 256 MB.',
         ]);
 
-        $downloadAssetService->create(
-            (string) $validated['title'],
-            $validated['description'] ?? null,
-            $validated['file']
-        );
+        if ($editingDownload) {
+            $downloadAssetService->update(
+                $editingDownload,
+                (string) $validated['title'],
+                $validated['description'] ?? null,
+                $validated['file'] ?? null
+            );
 
-        $this->reset(['title', 'description', 'file']);
-        $this->uploadIteration++;
+            $this->statusMessage = 'Arquivo de download atualizado com sucesso.';
+        } else {
+            $downloadAssetService->create(
+                (string) $validated['title'],
+                $validated['description'] ?? null,
+                $validated['file']
+            );
+
+            $this->statusMessage = 'Arquivo de download criado com sucesso.';
+        }
+
+        $this->resetForm();
+        $this->resetErrorBag('delete');
+    }
+
+    public function editDownload(int $downloadId): void
+    {
+        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+
+        $download = DownloadAsset::query()->findOrFail($downloadId);
+
+        $this->editingDownloadId = $download->id;
+        $this->title = (string) $download->title;
+        $this->description = (string) ($download->description ?? '');
+        $this->file = null;
+        $this->statusMessage = null;
         $this->resetValidation();
-        $this->statusMessage = 'Arquivo de download criado com sucesso.';
+    }
+
+    public function cancelEditing(): void
+    {
+        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+
+        $this->resetForm();
+        $this->statusMessage = null;
+    }
+
+    public function deleteDownload(int $downloadId, DownloadAssetService $downloadAssetService): void
+    {
+        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+
+        $download = DownloadAsset::query()->findOrFail($downloadId);
+        $name = $download->title;
+
+        $downloadAssetService->delete($download);
+
+        if ($this->editingDownloadId === $downloadId) {
+            $this->resetForm();
+        }
+
+        $this->resetErrorBag('delete');
+        $this->statusMessage = "Arquivo de download {$name} removido com sucesso.";
     }
 
     public function render()
@@ -61,5 +117,12 @@ class DownloadsUploadPanel extends Component
             'downloads' => DownloadAsset::query()->ordered()->get(),
             'isDefaultAdmin' => (bool) $user?->isDefaultAdmin(),
         ]);
+    }
+
+    private function resetForm(): void
+    {
+        $this->reset(['editingDownloadId', 'title', 'description', 'file']);
+        $this->uploadIteration++;
+        $this->resetValidation();
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\GroupsManagementPanel;
+use App\Livewire\Admin\GroupEditForm;
 use App\Models\Departamento;
 use App\Models\Empresa;
 use App\Models\Grupo;
@@ -139,5 +140,99 @@ class GroupManagementTest extends TestCase
             ->set('departamentoId', (string) $departamentoEstrangeiro->id)
             ->call('save')
             ->assertHasErrors(['departamento_id']);
+    }
+
+    public function test_default_admin_can_update_group_via_livewire_edit_component(): void
+    {
+        $empresa = Empresa::query()->create([
+            'cnpj_cpf' => '66.666.666/0001-66',
+            'nome' => 'Empresa Grupo Edit',
+            'fantasia' => 'Empresa Grupo Edit',
+            'razaosocial' => 'Empresa Grupo Edit LTDA',
+            'urlimagem' => 'grupo-edit.png',
+            'codigo' => '1008',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'api_token' => str_repeat('h', 60),
+        ]);
+
+        $departamentoA = Departamento::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Congelados',
+        ]);
+
+        $departamentoB = Departamento::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Limpeza',
+        ]);
+
+        $grupo = Grupo::query()->create([
+            'empresa_id' => $empresa->id,
+            'departamento_id' => $departamentoA->id,
+            'nome' => 'Sorvetes',
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        Livewire::test(GroupEditForm::class, [
+            'grupo' => $grupo,
+            'returnUrl' => route('admin.grupos.index'),
+        ])
+            ->set('nome', 'Detergentes')
+            ->set('departamentoId', (string) $departamentoB->id)
+            ->call('save')
+            ->assertSee('Grupo atualizado com sucesso.');
+
+        $this->assertDatabaseHas('grupos', [
+            'id' => $grupo->id,
+            'nome' => 'Detergentes',
+            'departamento_id' => $departamentoB->id,
+        ]);
+    }
+
+    public function test_default_admin_can_delete_group_via_livewire_component(): void
+    {
+        $empresa = Empresa::query()->create([
+            'cnpj_cpf' => '88.888.888/0001-88',
+            'nome' => 'Empresa Grupo Delete',
+            'fantasia' => 'Empresa Grupo Delete',
+            'razaosocial' => 'Empresa Grupo Delete LTDA',
+            'urlimagem' => 'grupo-delete.png',
+            'codigo' => '1010',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'api_token' => str_repeat('j', 60),
+        ]);
+
+        $departamento = Departamento::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Setor Delete',
+        ]);
+
+        $grupo = Grupo::query()->create([
+            'empresa_id' => $empresa->id,
+            'departamento_id' => $departamento->id,
+            'nome' => 'Excluir Grupo',
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        Livewire::test(GroupsManagementPanel::class)
+            ->call('deleteGroup', $grupo->id)
+            ->assertSee('Grupo Excluir Grupo deletado com sucesso.');
+
+        $this->assertDatabaseMissing('grupos', [
+            'id' => $grupo->id,
+        ]);
     }
 }

@@ -165,23 +165,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/downloads', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'index'])
             ->name('admin.downloads.index')
             ->middleware('menu.access:downloads');
-        Route::get('/admin/downloads/novo', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'create'])
-            ->name('admin.downloads.create')
-            ->middleware('menu.access:downloads');
-        Route::post('/admin/downloads', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'store'])
-            ->name('admin.downloads.store')
-            ->middleware('menu.access:downloads');
-        Route::get('/admin/downloads/{downloadAsset:slug}/editar', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'edit'])
-            ->name('admin.downloads.edit')
-            ->middleware('menu.access:downloads');
         Route::get('/admin/downloads/{downloadAsset:slug}/baixar', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'adminDownload'])
             ->name('admin.downloads.download')
-            ->middleware('menu.access:downloads');
-        Route::put('/admin/downloads/{downloadAsset:slug}', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'update'])
-            ->name('admin.downloads.update')
-            ->middleware('menu.access:downloads');
-        Route::delete('/admin/downloads/{downloadAsset:slug}', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'destroy'])
-            ->name('admin.downloads.destroy')
             ->middleware('menu.access:downloads');
         Route::get('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'edit'])
             ->name('admin.web-screen-config.edit')
@@ -249,8 +234,10 @@ Route::middleware('auth')->group(function () {
             ->name('admin.empresas.limpar-selecao')
             ->middleware('menu.access:empresas');
         Route::resource('departamentos', \App\Http\Controllers\Admin\DepartamentoController::class, ['as' => 'admin'])
+            ->only(['index', 'edit'])
             ->middleware('menu.access:departamentos');
         Route::resource('grupos', \App\Http\Controllers\Admin\GrupoController::class, ['as' => 'admin'])
+            ->only(['index', 'edit'])
             ->middleware('menu.access:grupos');
 
         Route::get('financeiro', [\App\Http\Controllers\Admin\FinanceiroController::class, 'index'])

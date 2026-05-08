@@ -17,6 +17,12 @@
             <p class="text-sm text-slate-600">Piloto em Livewire para cadastrar sem recarregar a página.</p>
         </div>
 
+        @unless($canCreate)
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Selecione uma empresa ativa em Empresas para habilitar o cadastro de grupo.
+            </div>
+        @endunless
+
         @if($departamentos->isEmpty())
             <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 Cadastre um departamento antes de criar grupos.
@@ -34,7 +40,7 @@
                     id="lw-grupo-nome"
                     type="text"
                     wire:model="nome"
-                    x-bind:disabled="!formEnabled || {{ $departamentos->isEmpty() ? 'true' : 'false' }}"
+                    x-bind:disabled="!formEnabled || {{ $departamentos->isEmpty() ? 'true' : 'false' }} || {{ $canCreate ? 'false' : 'true' }}"
                     class="w-full rounded border border-slate-300 px-3 py-2 text-sm @error('nome') border-red-500 @enderror"
                     required
                 />
@@ -46,7 +52,7 @@
                 <select
                     id="lw-grupo-departamento"
                     wire:model="departamentoId"
-                    x-bind:disabled="!formEnabled || {{ $departamentos->isEmpty() ? 'true' : 'false' }}"
+                    x-bind:disabled="!formEnabled || {{ $departamentos->isEmpty() ? 'true' : 'false' }} || {{ $canCreate ? 'false' : 'true' }}"
                     class="w-full rounded border border-slate-300 px-3 py-2 text-sm @error('departamento_id') border-red-500 @enderror"
                     required
                 >
@@ -75,7 +81,7 @@
                     type="submit"
                     wire:loading.attr="disabled"
                     wire:target="save"
-                    x-bind:disabled="!formEnabled || {{ $departamentos->isEmpty() ? 'true' : 'false' }}"
+                    x-bind:disabled="!formEnabled || {{ $departamentos->isEmpty() ? 'true' : 'false' }} || {{ $canCreate ? 'false' : 'true' }}"
                     class="rounded bg-indigo-600 px-6 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Salvar
@@ -104,12 +110,15 @@
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $grupo->empresa?->cnpj_cpf ? preg_replace('/\D/', '', $grupo->empresa->cnpj_cpf) : 'Nao vinculado' }}</td>
                         <td class="px-4 py-3 text-center text-sm text-slate-700">{{ $grupo->produtos_count ?? 0 }}</td>
                         <td class="px-4 py-3 text-center">
-                            <a href="{{ route('admin.grupos.edit', ['grupo' => $grupo->id, 'return' => url()->full()]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
-                            <form action="{{ route('admin.grupos.destroy', $grupo->id) }}" method="POST" class="ml-2 inline" onsubmit="return confirm('Tem certeza?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="inline-flex items-center rounded-full border border-red-600 bg-red-500 px-2.5 py-1 text-xs font-semibold text-white">Deletar</button>
-                            </form>
+                            <a wire:navigate href="{{ route('admin.grupos.edit', ['grupo' => $grupo->id, 'return' => $indexUrl]) }}" class="inline-flex items-center rounded-full border border-blue-600 bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">Editar</a>
+                            <button
+                                type="button"
+                                wire:click="deleteGroup({{ $grupo->id }})"
+                                wire:confirm="Tem certeza?"
+                                class="ml-2 inline-flex items-center rounded-full border border-red-600 bg-red-500 px-2.5 py-1 text-xs font-semibold text-white"
+                            >
+                                Deletar
+                            </button>
                         </td>
                     </tr>
                 @empty

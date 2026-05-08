@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\DepartmentsManagementPanel;
+use App\Livewire\Admin\DepartmentEditForm;
 use App\Models\Departamento;
 use App\Models\Empresa;
 use App\Models\User;
@@ -79,5 +80,80 @@ class DepartmentManagementTest extends TestCase
             ->set('nome', 'Higiene')
             ->call('save')
             ->assertHasErrors(['nome' => 'unique']);
+    }
+
+    public function test_default_admin_can_update_department_via_livewire_edit_component(): void
+    {
+        $empresa = Empresa::query()->create([
+            'cnpj_cpf' => '55.555.555/0001-55',
+            'nome' => 'Empresa Edicao',
+            'fantasia' => 'Empresa Edicao',
+            'razaosocial' => 'Empresa Edicao LTDA',
+            'urlimagem' => 'edicao.png',
+            'codigo' => '1007',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'api_token' => str_repeat('g', 60),
+        ]);
+
+        $departamento = Departamento::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Padaria',
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        Livewire::test(DepartmentEditForm::class, [
+            'departamento' => $departamento,
+            'returnUrl' => route('admin.departamentos.index'),
+        ])
+            ->set('nome', 'Padaria Atualizada')
+            ->call('save')
+            ->assertSee('Departamento atualizado com sucesso.');
+
+        $this->assertDatabaseHas('departamentos', [
+            'id' => $departamento->id,
+            'nome' => 'Padaria Atualizada',
+        ]);
+    }
+
+    public function test_default_admin_can_delete_department_via_livewire_component(): void
+    {
+        $empresa = Empresa::query()->create([
+            'cnpj_cpf' => '77.777.777/0001-77',
+            'nome' => 'Empresa Delete',
+            'fantasia' => 'Empresa Delete',
+            'razaosocial' => 'Empresa Delete LTDA',
+            'urlimagem' => 'delete.png',
+            'codigo' => '1009',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'api_token' => str_repeat('i', 60),
+        ]);
+
+        $departamento = Departamento::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Excluir Departamento',
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        Livewire::test(DepartmentsManagementPanel::class)
+            ->call('deleteDepartment', $departamento->id)
+            ->assertSee('Departamento Excluir Departamento deletado com sucesso.');
+
+        $this->assertDatabaseMissing('departamentos', [
+            'id' => $departamento->id,
+        ]);
     }
 }
