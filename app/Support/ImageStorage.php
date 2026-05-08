@@ -8,6 +8,13 @@ class ImageStorage
 
     public const PUBLIC_PREFIX = '/storage-images/';
 
+    private const LEGACY_IMAGES_DIRECTORIES = [
+        'galeria-nova',
+        'galeria-geral',
+        'empresas',
+        'home-carousel',
+    ];
+
     public static function disk(): string
     {
         return self::DISK;
@@ -56,7 +63,7 @@ class ImageStorage
         }
 
         if (preg_match('#^https?://localhost/storage/(.+)$#i', $value, $matches)) {
-            return '/storage/'.ltrim((string) ($matches[1] ?? ''), '/');
+            return self::normalizeLegacyStoragePath('/storage/'.ltrim((string) ($matches[1] ?? ''), '/'));
         }
 
         if (str_starts_with($value, 'storage-images/')) {
@@ -64,7 +71,11 @@ class ImageStorage
         }
 
         if (str_starts_with($value, 'storage/')) {
-            return '/'.ltrim($value, '/');
+            return self::normalizeLegacyStoragePath('/'.ltrim($value, '/'));
+        }
+
+        if (str_starts_with($value, '/storage/')) {
+            return self::normalizeLegacyStoragePath($value);
         }
 
         return $value;
@@ -72,7 +83,7 @@ class ImageStorage
 
     public static function extractRelativePathFromPublicUrl(string $url): string
     {
-        $value = trim($url);
+        $value = self::normalizePublicUrl(trim($url));
 
         if ($value === '') {
             return '';
@@ -95,5 +106,18 @@ class ImageStorage
         }
 
         return '';
+    }
+
+    private static function normalizeLegacyStoragePath(string $value): string
+    {
+        foreach (self::LEGACY_IMAGES_DIRECTORIES as $directory) {
+            $legacyPrefix = '/storage/'.$directory.'/';
+
+            if (str_starts_with($value, $legacyPrefix)) {
+                return self::PUBLIC_PREFIX.$directory.'/'.ltrim(substr($value, strlen($legacyPrefix)), '/');
+            }
+        }
+
+        return $value;
     }
 }
