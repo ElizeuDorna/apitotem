@@ -23,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
         config([
             'app.locale' => 'pt_BR',
             'app.fallback_locale' => 'pt_BR',
+            'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:262144'],
+            'livewire.temporary_file_upload.max_upload_time' => 15,
         ]);
 
         App::setLocale('pt_BR');

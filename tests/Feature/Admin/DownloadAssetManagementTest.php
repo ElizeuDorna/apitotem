@@ -6,7 +6,10 @@ use App\Models\DownloadAsset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class DownloadAssetManagementTest extends TestCase
@@ -90,5 +93,32 @@ class DownloadAssetManagementTest extends TestCase
             ->get(route('admin.downloads.download', $download))
             ->assertOk()
             ->assertHeader('content-disposition', 'attachment; filename=catalogo-admin.apk');
+    }
+
+    public function test_default_admin_can_upload_download_asset_via_livewire_component(): void
+    {
+        Config::set('livewire.temporary_file_upload.disk', 'public');
+        File::ensureDirectoryExists(storage_path('framework/testing/disks/tmp-for-tests'));
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(\App\Livewire\Admin\DownloadsUploadPanel::class)
+            ->set('title', 'Instalador Windows')
+            ->set('description', 'Primeiro piloto com Livewire.')
+            ->set('file', UploadedFile::fake()->create('instalador.zip', 64, 'application/zip'))
+            ->call('save')
+            ->assertSet('title', '')
+            ->assertSet('description', '')
+            ->assertSee('Arquivo de download criado com sucesso.');
+
+        $download = DownloadAsset::query()->where('title', 'Instalador Windows')->firstOrFail();
+
+        Storage::disk('public')->assertExists($download->file_path);
+        $this->assertSame('Primeiro piloto com Livewire.', $download->description);
     }
 }

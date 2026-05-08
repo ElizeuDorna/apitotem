@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DownloadAsset;
 use App\Models\User;
+use App\Services\DownloadAssetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -28,7 +29,6 @@ class DownloadAssetController extends Controller
         abort_unless($user?->hasMenuAccess(User::MENU_DOWNLOADS), 403);
 
         return view('admin.downloads.index', [
-            'downloads' => DownloadAsset::query()->ordered()->get(),
             'isDefaultAdmin' => (bool) $user?->isDefaultAdmin(),
         ]);
     }
@@ -40,24 +40,16 @@ class DownloadAssetController extends Controller
         return view('admin.downloads.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, DownloadAssetService $downloadAssetService): RedirectResponse
     {
         $this->authorizeDefaultAdmin();
 
         $validated = $this->validatePayload($request);
-        $file = $validated['file'];
-        $slug = $this->makeUniqueSlug((string) $validated['title']);
-        $path = $this->storeFile($file, $slug);
-
-        DownloadAsset::query()->create([
-            'title' => $validated['title'],
-            'slug' => $slug,
-            'description' => $validated['description'] ?? null,
-            'file_path' => $path,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getClientMimeType(),
-            'size_bytes' => (int) $file->getSize(),
-        ]);
+        $downloadAssetService->create(
+            (string) $validated['title'],
+            $validated['description'] ?? null,
+            $validated['file']
+        );
 
         return redirect()
             ->route('admin.downloads.index')
