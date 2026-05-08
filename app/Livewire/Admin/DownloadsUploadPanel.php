@@ -29,7 +29,7 @@ class DownloadsUploadPanel extends Component
 
     public function save(DownloadAssetService $downloadAssetService): void
     {
-        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+        abort_unless(Auth::user()?->canManageDownloads(), 403);
 
         $editingDownload = $this->editingDownloadId
             ? DownloadAsset::query()->findOrFail($this->editingDownloadId)
@@ -70,7 +70,7 @@ class DownloadsUploadPanel extends Component
 
     public function editDownload(int $downloadId): void
     {
-        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+        abort_unless(Auth::user()?->canManageDownloads(), 403);
 
         $download = DownloadAsset::query()->findOrFail($downloadId);
 
@@ -84,7 +84,7 @@ class DownloadsUploadPanel extends Component
 
     public function cancelEditing(): void
     {
-        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+        abort_unless(Auth::user()?->canManageDownloads(), 403);
 
         $this->resetForm();
         $this->statusMessage = null;
@@ -92,7 +92,7 @@ class DownloadsUploadPanel extends Component
 
     public function deleteDownload(int $downloadId, DownloadAssetService $downloadAssetService): void
     {
-        abort_unless(Auth::user()?->isDefaultAdmin(), 403);
+        abort_unless(Auth::user()?->canManageDownloads(), 403);
 
         $download = DownloadAsset::query()->findOrFail($downloadId);
         $name = $download->title;
@@ -115,7 +115,7 @@ class DownloadsUploadPanel extends Component
 
         return view('livewire.admin.downloads-upload-panel', [
             'downloads' => DownloadAsset::query()->ordered()->get(),
-            'isDefaultAdmin' => (bool) $user?->isDefaultAdmin(),
+            'canManageDownloads' => (bool) $user?->canManageDownloads(),
         ]);
     }
 

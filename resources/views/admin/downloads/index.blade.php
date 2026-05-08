@@ -5,7 +5,7 @@
                 Downloads
             </h2>
 
-            @if ($isDefaultAdmin)
+            @if ($canManageDownloads)
                 <button
                     type="button"
                     x-data="{}"
@@ -26,7 +26,7 @@
                     Esta tela reúne todos os arquivos liberados para download. Os links públicos também podem ser acessados sem login em
                     <a href="{{ route('downloads.public.index') }}" target="_blank" class="font-semibold text-indigo-700 hover:text-indigo-900">{{ route('downloads.public.index') }}</a>.
                 </p>
-                @if (! $isDefaultAdmin)
+                @if (! $canManageDownloads)
                     <p class="mt-2 text-sm text-slate-600">Seu acesso nesta área é somente leitura.</p>
                 @endif
             </div>

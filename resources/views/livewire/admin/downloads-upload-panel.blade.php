@@ -5,7 +5,7 @@
         </div>
     @endif
 
-    @if ($isDefaultAdmin)
+    @if ($canManageDownloads)
         <div id="upload-download" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
@@ -107,7 +107,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tamanho</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Atualizado</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Link público</th>
-                            @if ($isDefaultAdmin)
+                            @if ($canManageDownloads)
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Ações</th>
                             @endif
                         </tr>
@@ -130,7 +130,7 @@
                                         <div class="break-all text-xs text-slate-500">{{ route('downloads.file', $download) }}</div>
                                     </div>
                                 </td>
-                                @if ($isDefaultAdmin)
+                                @if ($canManageDownloads)
                                     <td class="px-4 py-3 align-top text-sm text-slate-700">
                                         <div class="flex flex-wrap items-center gap-3">
                                             <button
@@ -155,7 +155,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $isDefaultAdmin ? 6 : 5 }}" class="px-4 py-6 text-center text-sm text-slate-500">
+                                <td colspan="{{ $canManageDownloads ? 6 : 5 }}" class="px-4 py-6 text-center text-sm text-slate-500">
                                     Nenhum arquivo de download foi cadastrado ainda.
                                 </td>
                             </tr>

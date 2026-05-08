@@ -40,6 +40,8 @@ class User extends Authenticatable
 
     public const MENU_DOWNLOADS = 'downloads';
 
+    public const MENU_DOWNLOADS_UPLOAD = 'downloads_upload';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -112,6 +114,7 @@ class User extends Authenticatable
             self::MENU_GESTAO_TVS => 'Gestão de TVs',
             self::MENU_GALERIA_NOVA => 'Galeria de Imagem',
             self::MENU_DOWNLOADS => 'Downloads',
+            self::MENU_DOWNLOADS_UPLOAD => 'Downloads - Upload',
         ];
     }
 
@@ -128,5 +131,10 @@ class User extends Authenticatable
         }
 
         return in_array($menu, $permissions, true);
+    }
+
+    public function canManageDownloads(): bool
+    {
+        return $this->hasMenuAccess(self::MENU_DOWNLOADS_UPLOAD);
     }
 }

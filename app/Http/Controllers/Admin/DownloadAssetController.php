@@ -22,7 +22,7 @@ class DownloadAssetController extends Controller
         abort_unless($user?->hasMenuAccess(User::MENU_DOWNLOADS), 403);
 
         return view('admin.downloads.index', [
-            'isDefaultAdmin' => (bool) $user?->isDefaultAdmin(),
+            'canManageDownloads' => (bool) $user?->canManageDownloads(),
         ]);
     }
 

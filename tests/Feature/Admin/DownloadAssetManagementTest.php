@@ -122,6 +122,70 @@ class DownloadAssetManagementTest extends TestCase
         $this->assertSame('Primeiro piloto com Livewire.', $download->description);
     }
 
+    public function test_user_with_download_permission_but_without_upload_permission_has_read_only_access(): void
+    {
+        $user = User::factory()->create([
+            'cpf' => '99988877766',
+            'menu_permissions' => [User::MENU_DOWNLOADS],
+        ]);
+
+        $response = $this->actingAs($user)->get(route('admin.downloads.index'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Seu acesso nesta área é somente leitura.')
+            ->assertDontSee('Novo upload');
+    }
+
+    public function test_user_with_download_upload_permission_can_upload_download_asset_via_livewire_component(): void
+    {
+        Config::set('livewire.temporary_file_upload.disk', 'public');
+        File::ensureDirectoryExists(storage_path('framework/testing/disks/tmp-for-tests'));
+
+        $user = User::factory()->create([
+            'cpf' => '31313131313',
+            'menu_permissions' => [User::MENU_DOWNLOADS, User::MENU_DOWNLOADS_UPLOAD],
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(\App\Livewire\Admin\DownloadsUploadPanel::class)
+            ->set('title', 'Instalador Linux')
+            ->set('description', 'Upload liberado por permissao.')
+            ->set('file', UploadedFile::fake()->create('instalador-linux.zip', 64, 'application/zip'))
+            ->call('save')
+            ->assertSee('Arquivo de download criado com sucesso.');
+
+        $this->assertDatabaseHas('download_assets', [
+            'title' => 'Instalador Linux',
+            'description' => 'Upload liberado por permissao.',
+        ]);
+    }
+
+    public function test_user_without_download_upload_permission_cannot_upload_via_livewire_component(): void
+    {
+        Config::set('livewire.temporary_file_upload.disk', 'public');
+        File::ensureDirectoryExists(storage_path('framework/testing/disks/tmp-for-tests'));
+
+        $user = User::factory()->create([
+            'cpf' => '41414141414',
+            'menu_permissions' => [User::MENU_DOWNLOADS],
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(\App\Livewire\Admin\DownloadsUploadPanel::class)
+            ->set('title', 'Upload Bloqueado')
+            ->set('description', 'Nao deveria passar.')
+            ->set('file', UploadedFile::fake()->create('bloqueado.zip', 8, 'application/zip'))
+            ->call('save')
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('download_assets', [
+            'title' => 'Upload Bloqueado',
+        ]);
+    }
+
     public function test_default_admin_delete_also_removes_file_from_storage(): void
     {
         $path = 'downloads/remover-arquivo.apk';
