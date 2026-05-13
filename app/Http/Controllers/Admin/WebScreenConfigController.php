@@ -3,22 +3,28 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\TvProdutoResource;
 use App\Models\Configuracao;
+use App\Models\Device;
 use App\Models\DeviceConfiguration;
 use App\Models\Empresa;
 use App\Models\GlobalImageGallery;
 use App\Models\Grupo;
+use App\Models\Produto;
 use App\Models\User;
 use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use App\Support\ImageStorage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -38,9 +44,9 @@ class WebScreenConfigController extends Controller
         ], []);
 
         $companyConfig = $companyConfig->fresh() ?? $companyConfig;
+        $selectedDevice = $this->resolveSelectedDevice($empresaId, $request->query('device_id'));
         $selectedModel = $this->resolveSelectedModel($user, $empresaId, $request->query('model_id'));
-        $config = $companyConfig->replicate();
-        $config->empresa_id = $companyConfig->empresa_id;
+        $config = $this->buildEffectiveConfig($companyConfig, $selectedDevice?->configuration);
 
         if (is_array($selectedModel?->config_payload) && ! empty($selectedModel->config_payload)) {
             $this->applyConfigPayload($config, $selectedModel->config_payload);
@@ -65,6 +71,10 @@ class WebScreenConfigController extends Controller
             'config' => $config,
             'currentEmpresa' => $currentEmpresa,
             'responsiveModeEnabled' => $this->isResponsiveModeEnabled($empresaId),
+            'availableDevices' => Device::query()
+                ->where('empresa_id', $empresaId)
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'local']),
             'ownedModels' => WebScreenModel::query()
                 ->where('empresa_id', $empresaId)
                 ->where('is_admin_default', false)
@@ -76,6 +86,8 @@ class WebScreenConfigController extends Controller
                 ->orderBy('nome')
                 ->withCount('deviceConfigurations')
                 ->get(['id', 'nome', 'empresa_id']),
+            'selectedDevice' => $selectedDevice,
+            'selectedDeviceId' => $selectedDevice?->id,
             'selectedModel' => $selectedModel,
             'selectedModelId' => $selectedModel?->id,
             'selectedModelCanEdit' => $selectedModel
@@ -91,10 +103,147 @@ class WebScreenConfigController extends Controller
         ]);
     }
 
+    public function previewIndex(Request $request): View
+    {
+        $user = Auth::user();
+        abort_unless($user->isDefaultAdmin(), 403);
+
+        $empresaId = $this->resolveEmpresaId();
+        $selectedModel = $this->resolveSelectedModel($user, $empresaId, $request->query('model_id'));
+
+        return view('admin.tv-preview-index', [
+            'ownedModels' => WebScreenModel::query()
+                ->where('empresa_id', $empresaId)
+                ->where('is_admin_default', false)
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'source_model_id']),
+            'sharedDefaultModels' => WebScreenModel::query()
+                ->where('is_admin_default', true)
+                ->orderBy('nome')
+                ->get(['id', 'nome', 'empresa_id']),
+            'selectedModel' => $selectedModel,
+            'selectedModelId' => $selectedModel?->id,
+        ]);
+    }
+
+    public function preview(Request $request): View
+    {
+        $user = Auth::user();
+        abort_unless($user->isDefaultAdmin(), 403);
+        $empresaId = $this->resolveEmpresaId();
+        $selectedModel = $this->resolveSelectedModel($user, $empresaId, $request->query('model_id'));
+        abort_unless($selectedModel, 404);
+
+        return view('tv.produtos', [
+            'tvConfigEndpoint' => route('admin.tvpreview.config', ['model_id' => $selectedModel->id]),
+            'tvProductsEndpoint' => route('admin.tvpreview.products', ['model_id' => $selectedModel->id]),
+            'tvMediaEndpoint' => route('admin.tvpreview.media', ['model_id' => $selectedModel->id]),
+            'tvConfigPageUrl' => route('admin.tvpreview.index', ['model_id' => $selectedModel->id]),
+            'tvPreviewMode' => true,
+            'tvPreviewToken' => 'admin-preview',
+        ]);
+    }
+
+    public function previewConfig(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user->isDefaultAdmin(), 403);
+        $empresaId = $this->resolveEmpresaId();
+        $selectedModel = $this->resolveSelectedModel($user, $empresaId, $request->query('model_id'));
+
+        if (! $selectedModel) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Modelo nao encontrado para preview.',
+            ], 404);
+        }
+
+        $empresa = Empresa::query()->findOrFail($empresaId);
+        $config = $this->buildPreviewConfigForModel($empresaId, $selectedModel);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->buildTvPreviewPayload($config, $empresa),
+        ]);
+    }
+
+    public function previewProducts(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user->isDefaultAdmin(), 403);
+        $empresaId = $this->resolveEmpresaId();
+        $selectedModel = $this->resolveSelectedModel($user, $empresaId, $request->query('model_id'));
+
+        if (! $selectedModel) {
+            return response()->json([
+                'success' => false,
+                'reason' => 'model_not_found',
+                'data' => ['produtos' => []],
+                'meta' => ['total_produtos' => 0],
+            ], 404);
+        }
+
+        $config = $this->buildPreviewConfigForModel($empresaId, $selectedModel);
+        $showImage = (bool) ($config->showImage ?? true);
+        $orderMode = (string) ($config->productListOrderMode ?? 'grupo');
+        $alphabeticalDirection = (string) ($config->productAlphabeticalDirection ?? 'asc');
+        $departmentOrder = collect($config->productDepartmentOrder ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
+        $groupOrder = collect($config->productGroupOrder ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
+
+        $produtos = Produto::query()
+            ->with(['departamento:id,nome', 'grupo:id,nome,departamento_id'])
+            ->where('empresa_id', $empresaId)
+            ->get();
+
+        $produtos = $this->sortProductsForTv($produtos, $orderMode, $alphabeticalDirection, $departmentOrder, $groupOrder);
+
+        if (! $showImage) {
+            $produtos = $produtos->map(function ($produto) {
+                $produto->setAttribute('IMG', null);
+
+                return $produto;
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'produtos' => TvProdutoResource::collection($produtos),
+            ],
+            'meta' => [
+                'total_produtos' => $produtos->count(),
+            ],
+        ]);
+    }
+
+    public function previewMedia(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user->isDefaultAdmin(), 403);
+
+        return response()->json([
+            'status' => 'ok',
+            'videos' => [],
+            'imagens' => [],
+            'banners' => [],
+        ]);
+    }
+
     public function update(Request $request): RedirectResponse
     {
         $user = Auth::user();
         $empresaId = $this->resolveEmpresaId();
+
+        $selectedDeviceInput = $request->input('selected_device_id');
+        $selectedDevice = $this->resolveSelectedDevice($empresaId, $selectedDeviceInput);
+        if ($selectedDeviceInput !== null && $selectedDeviceInput !== '' && ! $selectedDevice) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'selected_device_id' => 'Dispositivo invalido para a empresa selecionada.',
+                ])
+                ->withInput();
+        }
 
         $selectedModelInput = $request->input('selected_model_id');
         $selectedModel = $this->resolveSelectedModel($user, $empresaId, $selectedModelInput);
@@ -122,8 +271,7 @@ class WebScreenConfigController extends Controller
         }
 
         $currentCompanyConfig = Configuracao::firstOrCreate(['empresa_id' => $empresaId], []);
-        $currentConfig = $currentCompanyConfig->replicate();
-        $currentConfig->empresa_id = $currentCompanyConfig->empresa_id;
+        $currentConfig = $this->buildEffectiveConfig($currentCompanyConfig, $selectedDevice?->configuration);
 
         if (is_array($selectedModel?->config_payload) && ! empty($selectedModel->config_payload)) {
             $this->applyConfigPayload($currentConfig, $selectedModel->config_payload);
@@ -146,6 +294,7 @@ class WebScreenConfigController extends Controller
 
             return redirect()
                 ->route('admin.web-screen-config.edit', array_filter([
+                    'device_id' => $selectedDevice?->id,
                     'model_id' => $createdModel->id,
                 ], static fn ($value) => $value !== null && $value !== ''))
                 ->with('success', 'Modelo criado com a configuracao atual da tela.');
@@ -178,7 +327,10 @@ class WebScreenConfigController extends Controller
             ]);
 
             return redirect()
-                ->route('admin.web-screen-config.edit', ['model_id' => $clonedModel->id])
+                ->route('admin.web-screen-config.edit', array_filter([
+                    'device_id' => $selectedDevice?->id,
+                    'model_id' => $clonedModel->id,
+                ], static fn ($value) => $value !== null && $value !== ''))
                 ->with('success', 'Modelo padrao clonado com sucesso. Agora voce pode editar a sua copia.');
         }
 
@@ -195,13 +347,15 @@ class WebScreenConfigController extends Controller
             }
 
             $shouldBeAdminDefault = $this->resolveBooleanInput($request, 'admin_default_value', false);
-
             $selectedModel->forceFill([
                 'is_admin_default' => $shouldBeAdminDefault,
             ])->save();
 
             return redirect()
-                ->route('admin.web-screen-config.edit', ['model_id' => $selectedModel->id])
+                ->route('admin.web-screen-config.edit', array_filter([
+                    'device_id' => $selectedDevice?->id,
+                    'model_id' => $selectedModel->id,
+                ], static fn ($value) => $value !== null && $value !== ''))
                 ->with('success', $selectedModel->is_admin_default
                     ? 'Modelo marcado como padrao global do admin e liberado para todas as empresas.'
                     : 'Modelo removido da lista de padroes do admin e mantido na empresa de origem.');
@@ -238,7 +392,9 @@ class WebScreenConfigController extends Controller
             $selectedModel->delete();
 
             return redirect()
-                ->route('admin.web-screen-config.edit')
+                ->route('admin.web-screen-config.edit', array_filter([
+                    'device_id' => $selectedDevice?->id,
+                ], static fn ($value) => $value !== null && $value !== ''))
                 ->with('success', 'Modelo "'.$selectedModelName.'" excluido com sucesso.');
         }
 
@@ -1534,25 +1690,55 @@ class WebScreenConfigController extends Controller
             ])->save();
         }
 
-        $missingConfigColumns = $this->resolveMissingConfiguracaoColumns($configPayload);
-        if ($missingConfigColumns !== []) {
-            return redirect()
-                ->back()
-                ->withErrors([
-                    'saveSection' => 'A configuracao nao foi salva porque faltam colunas no banco de dados: '.implode(', ', array_slice($missingConfigColumns, 0, 8)).'. Rode as migrations pendentes no servidor.',
-                ])
-                ->withInput();
+        if ($selectedDevice) {
+            if (! Schema::hasColumn('device_configurations', 'web_config_payload')) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'selected_device_id' => 'A configuracao por dispositivo exige a migration da coluna web_config_payload em device_configurations.',
+                    ])
+                    ->withInput();
+            }
+
+            $existingConfiguration = $selectedDevice->configuration;
+
+            DeviceConfiguration::query()->updateOrCreate(
+                ['device_id' => $selectedDevice->id],
+                [
+                    'web_screen_model_id' => $existingConfiguration?->web_screen_model_id,
+                    'product_department_id' => $existingConfiguration?->product_department_id,
+                    'product_group_id' => $existingConfiguration?->product_group_id,
+                    'web_config_payload' => $configPayload,
+                    'atualizar_produtos_segundos' => $existingConfiguration?->atualizar_produtos_segundos ?? 30,
+                    'volume' => $existingConfiguration?->volume ?? 50,
+                    'orientacao' => $existingConfiguration?->orientacao ?? 'landscape',
+                ]
+            );
         }
 
-        Configuracao::updateOrCreate(
-            ['empresa_id' => $empresaId],
-            $configPayload
-        );
+        if (! $selectedDevice) {
+            $missingConfigColumns = $this->resolveMissingConfiguracaoColumns($configPayload);
+            if ($missingConfigColumns !== []) {
+                return redirect()
+                    ->back()
+                    ->withErrors([
+                        'saveSection' => 'A configuracao nao foi salva porque faltam colunas no banco de dados: '.implode(', ', array_slice($missingConfigColumns, 0, 8)).'. Rode as migrations pendentes no servidor.',
+                    ])
+                    ->withInput();
+            }
+
+            Configuracao::updateOrCreate(
+                ['empresa_id' => $empresaId],
+                $configPayload
+            );
+        }
 
         $redirect = redirect()->back();
 
         if ($saveSection !== '') {
-            $redirect->with('success', 'Menu salvo com sucesso.');
+            $redirect->with('success', $selectedDevice
+                ? 'Menu salvo para o dispositivo selecionado com sucesso.'
+                : 'Menu salvo com sucesso.');
             $redirect->with('openConfigSection', $saveSection);
 
             if ($saveSection === 'companyGalleryConfigSection') {
@@ -1606,6 +1792,33 @@ class WebScreenConfigController extends Controller
             })
             ->filter(fn ($url) => $url !== '')
             ->all();
+    }
+
+    private function resolveSelectedDevice(int $empresaId, mixed $deviceId): ?Device
+    {
+        $normalizedDeviceId = (int) $deviceId;
+        if ($normalizedDeviceId <= 0) {
+            return null;
+        }
+
+        return Device::query()
+            ->where('empresa_id', $empresaId)
+            ->where('id', $normalizedDeviceId)
+            ->with('configuration')
+            ->first();
+    }
+
+    private function buildEffectiveConfig(Configuracao $companyConfig, ?DeviceConfiguration $deviceConfiguration): Configuracao
+    {
+        $config = $companyConfig->replicate();
+        $config->empresa_id = $companyConfig->empresa_id;
+
+        $payload = $deviceConfiguration?->web_config_payload;
+        if (is_array($payload) && ! empty($payload)) {
+            $this->applyConfigPayload($config, $payload);
+        }
+
+        return $config;
     }
 
     private function resolveSelectedModel(User $user, int $empresaId, mixed $modelId): ?WebScreenModel
@@ -1665,6 +1878,311 @@ class WebScreenConfigController extends Controller
         }
 
         return $candidate;
+    }
+
+    private function buildPreviewConfigForModel(int $empresaId, WebScreenModel $selectedModel): Configuracao
+    {
+        $companyConfig = Configuracao::firstOrCreate(['empresa_id' => $empresaId], []);
+        $config = $companyConfig->fresh() ?? $companyConfig;
+
+        if (is_array($selectedModel->config_payload) && ! empty($selectedModel->config_payload)) {
+            $config = $config->replicate();
+            $config->empresa_id = $empresaId;
+            $this->applyConfigPayload($config, $selectedModel->config_payload);
+        }
+
+        return $config;
+    }
+
+    private function buildTvPreviewPayload(Configuracao $config, Empresa $empresa): array
+    {
+        $configuredRightSidebarLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->rightSidebarLogoUrl ?? ''));
+        $companyLogoUrl = $this->normalizeCompanyLogoUrl((string) ($empresa->urlimagem ?? ''));
+        $rightSidebarLogoUrl = $configuredRightSidebarLogoUrl !== ''
+            ? $configuredRightSidebarLogoUrl
+            : $companyLogoUrl;
+        $leftVerticalLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->leftVerticalLogoUrl ?? ''));
+
+        $playlist = collect($config->videoPlaylist ?? [])
+            ->map(function ($item) {
+                return [
+                    'url' => (string) ($item['url'] ?? ''),
+                    'muted' => (bool) ($item['muted'] ?? false),
+                    'active' => (bool) ($item['active'] ?? true),
+                    'fullscreen' => (bool) ($item['fullscreen'] ?? false),
+                    'durationSeconds' => (int) ($item['durationSeconds'] ?? 0),
+                    'heightPx' => (int) ($item['heightPx'] ?? 0),
+                ];
+            })
+            ->filter(fn ($item) => $item['url'] !== '')
+            ->values();
+
+        $globalGalleryCode = substr(preg_replace('/\D/', '', (string) ($config->rightSidebarGlobalGalleryCode ?? '')) ?? '', 0, 14);
+        $configuredImageUrls = $this->normalizeImageUrlsList((string) ($config->rightSidebarImageUrls ?? ''));
+        $rightSidebarImageUrls = $configuredImageUrls;
+
+        if ($rightSidebarImageUrls === '') {
+            $scheduleUrls = collect((array) ($config->rightSidebarImageSchedules ?? []))
+                ->map(fn ($item) => $this->normalizeSlideUrlForCompare((string) (($item['url'] ?? ''))))
+                ->filter(fn (string $url) => $url !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            if (! empty($scheduleUrls)) {
+                $rightSidebarImageUrls = $this->normalizeImageUrlsList(implode("\n", $scheduleUrls));
+            }
+        }
+
+        if ($rightSidebarImageUrls === '' && $globalGalleryCode !== '') {
+            $globalGalleryUrls = $this->resolveGlobalGalleryImageUrls($globalGalleryCode);
+            $rightSidebarImageUrls = $this->normalizeImageUrlsList(implode("\n", $globalGalleryUrls));
+        }
+
+        $rightSidebarImageUrls = $this->filterRightSidebarImageUrlsBySchedule(
+            $rightSidebarImageUrls,
+            (array) ($config->rightSidebarImageSchedules ?? []),
+            false
+        );
+
+        return [
+            'videoUrl' => $config->videoUrl,
+            'apiRefreshInterval' => (int) ($config->apiRefreshInterval ?? 30),
+            'videoMuted' => (bool) $config->videoMuted,
+            'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
+            'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
+            'enableResponsiveLayout' => $this->isResponsiveModeEnabled((int) $empresa->id),
+            'showRightSidebarLogo' => (bool) ($config->showRightSidebarLogo ?? false),
+            'rightSidebarLogoPosition' => 'sidebar_top',
+            'rightSidebarLogoPositionWindows' => (string) ($config->rightSidebarLogoPositionWindows ?? $config->rightSidebarLogoPosition ?? 'sidebar_top'),
+            'rightSidebarLogoPositionAndroid' => (string) ($config->rightSidebarLogoPositionAndroid ?? $config->rightSidebarLogoPosition ?? 'sidebar_top'),
+            'rightSidebarLogoUrl' => $rightSidebarLogoUrl,
+            'rightSidebarLogoWidth' => (int) ($config->rightSidebarLogoWidth ?? 220),
+            'rightSidebarLogoHeight' => (int) ($config->rightSidebarLogoHeight ?? 58),
+            'rightSidebarLogoWidthWindows' => (int) ($config->rightSidebarLogoWidthWindows ?? $config->rightSidebarLogoWidth ?? 220),
+            'rightSidebarLogoHeightWindows' => (int) ($config->rightSidebarLogoHeightWindows ?? $config->rightSidebarLogoHeight ?? 58),
+            'rightSidebarLogoWidthAndroid' => (int) ($config->rightSidebarLogoWidthAndroid ?? $config->rightSidebarLogoWidth ?? 220),
+            'rightSidebarLogoHeightAndroid' => (int) ($config->rightSidebarLogoHeightAndroid ?? $config->rightSidebarLogoHeight ?? 58),
+            'showLeftVerticalLogo' => (bool) ($config->showLeftVerticalLogo ?? false),
+            'leftVerticalLogoUrl' => $leftVerticalLogoUrl,
+            'leftVerticalLogoWidth' => (int) ($config->leftVerticalLogoWidth ?? 120),
+            'leftVerticalLogoHeight' => (int) ($config->leftVerticalLogoHeight ?? 220),
+            'leftVerticalLogoWidthWindows' => (int) ($config->leftVerticalLogoWidthWindows ?? $config->leftVerticalLogoWidth ?? 120),
+            'leftVerticalLogoHeightWindows' => (int) ($config->leftVerticalLogoHeightWindows ?? $config->leftVerticalLogoHeight ?? 220),
+            'leftVerticalLogoWidthAndroid' => (int) ($config->leftVerticalLogoWidthAndroid ?? $config->leftVerticalLogoWidth ?? 120),
+            'leftVerticalLogoHeightAndroid' => (int) ($config->leftVerticalLogoHeightAndroid ?? $config->leftVerticalLogoHeight ?? 220),
+            'rightSidebarLogoBackgroundColor' => (string) ($config->rightSidebarLogoBackgroundColor ?? '#0f172a'),
+            'isRightSidebarLogoBackgroundTransparent' => (bool) ($config->isRightSidebarLogoBackgroundTransparent ?? false),
+            'isMainBorderEnabled' => (bool) ($config->isMainBorderEnabled ?? false),
+            'isRoundedCornersEnabled' => (bool) ($config->isRoundedCornersEnabled ?? true),
+            'mainBorderColor' => (string) ($config->mainBorderColor ?? '#000000'),
+            'mainBorderWidth' => (int) ($config->mainBorderWidth ?? 1),
+            'videoPlaylist' => $playlist,
+            'appBackgroundColor' => $config->appBackgroundColor,
+            'productsPanelBackgroundColor' => (string) ($config->productsPanelBackgroundColor ?? '#0f172a'),
+            'listBorderColor' => (string) ($config->listBorderColor ?? '#334155'),
+            'listBorderWidth' => (int) ($config->listBorderWidth ?? 1),
+            'videoBackgroundColor' => (string) ($config->videoBackgroundColor ?? '#000000'),
+            'showRightSidebarBorder' => (bool) ($config->showRightSidebarBorder ?? true),
+            'rightSidebarBorderColor' => (string) ($config->rightSidebarBorderColor ?? '#334155'),
+            'rightSidebarBorderWidth' => (int) ($config->rightSidebarBorderWidth ?? 1),
+            'rightSidebarMediaType' => (string) ($config->rightSidebarMediaType ?? 'video'),
+            'rightSidebarGlobalGalleryCode' => $globalGalleryCode,
+            'rightSidebarImageUrls' => $rightSidebarImageUrls,
+            'fullScreenSlideImageUrls' => $this->normalizeImageUrlsList((string) ($config->fullScreenSlideImageUrls ?? '')),
+            'fullScreenSlideInterval' => (int) ($config->fullScreenSlideInterval ?? 8),
+            'fullScreenSlideReturnDelaySeconds' => (int) ($config->fullScreenSlideReturnDelaySeconds ?? 0),
+            'fullScreenSlideEnabled' => (bool) ($config->fullScreenSlideEnabled ?? false),
+            'rightSidebarImageSchedules' => collect($config->rightSidebarImageSchedules ?? [])->values()->all(),
+            'rightSidebarImageInterval' => (int) ($config->rightSidebarImageInterval ?? 8),
+            'rightSidebarImageFit' => (string) ($config->rightSidebarImageFit ?? 'scale-down'),
+            'rightSidebarImageHeight' => (int) ($config->rightSidebarImageHeight ?? 96),
+            'rightSidebarImageWidth' => (int) ($config->rightSidebarImageWidth ?? 0),
+            'rightSidebarAndroidHeight' => (int) ($config->rightSidebarAndroidHeight ?? 0),
+            'rightSidebarAndroidWidth' => (int) ($config->rightSidebarAndroidWidth ?? 0),
+            'rightSidebarAndroidHorizontalOffset' => (int) ($config->rightSidebarAndroidHorizontalOffset ?? 0),
+            'rightSidebarAndroidRightMargin' => (int) ($config->rightSidebarAndroidRightMargin ?? 0),
+            'rightSidebarAndroidVerticalOffset' => (int) ($config->rightSidebarAndroidVerticalOffset ?? 0),
+            'rightSidebarHybridVideoDuration' => (int) ($config->rightSidebarHybridVideoDuration ?? 2),
+            'rightSidebarHybridImageDuration' => (int) ($config->rightSidebarHybridImageDuration ?? 4),
+            'rightSidebarProductCarouselEnabled' => (bool) ($config->rightSidebarProductCarouselEnabled ?? false),
+            'rightSidebarProductDisplayMode' => (string) ($config->rightSidebarProductDisplayMode ?? 'all'),
+            'rightSidebarProductTransitionMode' => (string) ($config->rightSidebarProductTransitionMode ?? 'products_only'),
+            'rightSidebarPlaybackSequence' => (string) ($config->rightSidebarPlaybackSequence ?? 'products,image,video'),
+            'rightSidebarProductInterval' => (int) ($config->rightSidebarProductInterval ?? 8),
+            'rightSidebarProductShowImage' => (bool) ($config->rightSidebarProductShowImage ?? true),
+            'rightSidebarProductImageWidth' => (int) ($config->rightSidebarProductImageWidth ?? 0),
+            'rightSidebarProductImageHeight' => (int) ($config->rightSidebarProductImageHeight ?? 0),
+            'rightSidebarProductShowName' => (bool) ($config->rightSidebarProductShowName ?? true),
+            'rightSidebarProductShowPrice' => (bool) ($config->rightSidebarProductShowPrice ?? true),
+            'rightSidebarProductNamePosition' => (string) ($config->rightSidebarProductNamePosition ?? 'top'),
+            'rightSidebarProductPricePosition' => (string) ($config->rightSidebarProductPricePosition ?? 'bottom'),
+            'rightSidebarProductNameColor' => (string) ($config->rightSidebarProductNameColor ?? '#FFFFFF'),
+            'rightSidebarProductPriceColor' => (string) ($config->rightSidebarProductPriceColor ?? '#FDE68A'),
+            'rightSidebarProductNameBadgeEnabled' => (bool) ($config->rightSidebarProductNameBadgeEnabled ?? true),
+            'rightSidebarProductNameBadgeColor' => (string) ($config->rightSidebarProductNameBadgeColor ?? '#0F172A'),
+            'rightSidebarProductPriceBadgeEnabled' => (bool) ($config->rightSidebarProductPriceBadgeEnabled ?? true),
+            'rightSidebarProductPriceBadgeColor' => (string) ($config->rightSidebarProductPriceBadgeColor ?? '#0F172A'),
+            'productListType' => (string) ($config->productListType ?? '1'),
+            'productListLeftGroupIds' => collect($config->productListLeftGroupIds ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'productListRightGroupIds' => collect($config->productListRightGroupIds ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'isVideoPanelTransparent' => (bool) ($config->isVideoPanelTransparent ?? false),
+            'rowBackgroundColor' => $config->rowBackgroundColor,
+            'borderColor' => $config->borderColor,
+            'rowBorderWidth' => (int) ($config->rowBorderWidth ?? 1),
+            'isRowBorderTransparent' => (bool) ($config->isRowBorderTransparent ?? false),
+            'priceColor' => $config->priceColor,
+            'showBorder' => (bool) $config->showBorder,
+            'showTitle' => (bool) ($config->showTitle ?? true),
+            'titleText' => (string) ($config->titleText ?? 'Lista de Produtos (TV)'),
+            'titleTextMode' => (string) ($config->titleTextMode ?? 'custom'),
+            'titlePosition' => (string) ($config->titlePosition ?? 'header'),
+            'titleTextColor' => (string) ($config->titleTextColor ?? '#FFFFFF'),
+            'titleBackgroundColor' => (string) ($config->titleBackgroundColor ?? '#111827'),
+            'titleFontSize' => (int) ($config->titleFontSize ?? 32),
+            'titleFontSizeMobile' => (int) ($config->titleFontSizeMobile ?? 24),
+            'titleFontWeight' => (string) ($config->titleFontWeight ?? '600'),
+            'showTitleBorder' => (bool) ($config->showTitleBorder ?? false),
+            'titleBorderColor' => (string) ($config->titleBorderColor ?? '#334155'),
+            'titleBorderWidth' => (int) ($config->titleBorderWidth ?? 1),
+            'groupLabelStyle' => (string) ($config->groupLabelStyle ?? 'badge'),
+            'groupLabelTextColor' => (string) ($config->groupLabelTextColor ?? '#FFFFFF'),
+            'groupLabelBackgroundColor' => (string) ($config->groupLabelBackgroundColor ?? '#1E293B'),
+            'groupLabelBorderColor' => (string) ($config->groupLabelBorderColor ?? '#334155'),
+            'groupLabelBorderWidth' => (int) ($config->groupLabelBorderWidth ?? 1),
+            'listFontSize' => (int) ($config->listFontSize ?? 18),
+            'rowVerticalPadding' => (int) ($config->rowVerticalPadding ?? 10),
+            'rowLineSpacing' => (int) ($config->rowLineSpacing ?? 12),
+            'productListVerticalOffset' => (int) ($config->productListVerticalOffset ?? 0),
+            'groupLabelVerticalOffset' => (int) ($config->groupLabelVerticalOffset ?? 0),
+            'productListOrderMode' => (string) ($config->productListOrderMode ?? 'grupo'),
+            'productAlphabeticalDirection' => (string) ($config->productAlphabeticalDirection ?? 'asc'),
+            'productDepartmentOrder' => collect($config->productDepartmentOrder ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'productGroupOrder' => collect($config->productGroupOrder ?? [])->map(fn ($id) => (int) $id)->values()->all(),
+            'showImage' => (bool) ($config->showImage ?? true),
+        ];
+    }
+
+    private function filterRightSidebarImageUrlsBySchedule(string $rawUrls, array $schedules, bool $isAndroidRuntime): string
+    {
+        $normalizedUrls = collect(preg_split('/\r?\n/', $rawUrls) ?: [])
+            ->map(fn ($item) => $this->normalizeSlideUrlForCompare((string) $item))
+            ->filter(fn (string $url) => $url !== '')
+            ->values();
+
+        if ($normalizedUrls->isEmpty() || empty($schedules)) {
+            return $normalizedUrls->implode("\n");
+        }
+
+        $now = now();
+        $currentDayOfWeek = (int) $now->dayOfWeekIso;
+        $currentTime = $now->format('H:i');
+
+        $activeUrls = collect($schedules)
+            ->filter(function ($schedule) use ($currentDayOfWeek, $currentTime, $isAndroidRuntime) {
+                if (! is_array($schedule)) {
+                    return false;
+                }
+
+                $runtime = (string) ($schedule['runtime'] ?? 'all');
+                if ($runtime === 'android' && ! $isAndroidRuntime) {
+                    return false;
+                }
+
+                if ($runtime === 'windows' && $isAndroidRuntime) {
+                    return false;
+                }
+
+                $days = collect($schedule['days'] ?? [])->map(fn ($day) => (int) $day)->filter()->values()->all();
+                if ($days !== [] && ! in_array($currentDayOfWeek, $days, true)) {
+                    return false;
+                }
+
+                $startTime = (string) ($schedule['start'] ?? '');
+                $endTime = (string) ($schedule['end'] ?? '');
+                if ($startTime !== '' && $currentTime < $startTime) {
+                    return false;
+                }
+
+                if ($endTime !== '' && $currentTime > $endTime) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->map(fn ($schedule) => $this->normalizeSlideUrlForCompare((string) ($schedule['url'] ?? '')))
+            ->filter(fn (string $url) => $url !== '')
+            ->unique()
+            ->values();
+
+        if ($activeUrls->isEmpty()) {
+            return $normalizedUrls->implode("\n");
+        }
+
+        return $activeUrls->implode("\n");
+    }
+
+    private function normalizeCompanyLogoUrl(string $url): string
+    {
+        return trim($url);
+    }
+
+    private function sortProductsForTv(Collection $products, string $mode, string $alphabeticalDirection, array $departmentOrder, array $groupOrder): Collection
+    {
+        $departmentRank = array_flip(array_values(array_unique(array_map('intval', $departmentOrder))));
+        $groupRank = array_flip(array_values(array_unique(array_map('intval', $groupOrder))));
+        $direction = $alphabeticalDirection === 'desc' ? 'desc' : 'asc';
+
+        return $products
+            ->sort(function ($left, $right) use ($mode, $direction, $departmentRank, $groupRank) {
+                $leftDepartmentId = (int) ($left->departamento_id ?? 0);
+                $rightDepartmentId = (int) ($right->departamento_id ?? 0);
+                $leftGroupId = (int) ($left->grupo_id ?? 0);
+                $rightGroupId = (int) ($right->grupo_id ?? 0);
+
+                $leftDepartmentPriority = array_key_exists($leftDepartmentId, $departmentRank)
+                    ? (int) $departmentRank[$leftDepartmentId]
+                    : 100000 + $leftDepartmentId;
+                $rightDepartmentPriority = array_key_exists($rightDepartmentId, $departmentRank)
+                    ? (int) $departmentRank[$rightDepartmentId]
+                    : 100000 + $rightDepartmentId;
+
+                $leftGroupPriority = array_key_exists($leftGroupId, $groupRank)
+                    ? (int) $groupRank[$leftGroupId]
+                    : 100000 + $leftGroupId;
+                $rightGroupPriority = array_key_exists($rightGroupId, $groupRank)
+                    ? (int) $groupRank[$rightGroupId]
+                    : 100000 + $rightGroupId;
+
+                if ($mode === 'departamento') {
+                    if ($leftDepartmentPriority !== $rightDepartmentPriority) {
+                        return $leftDepartmentPriority <=> $rightDepartmentPriority;
+                    }
+
+                    if ($leftGroupPriority !== $rightGroupPriority) {
+                        return $leftGroupPriority <=> $rightGroupPriority;
+                    }
+                } else {
+                    if ($leftGroupPriority !== $rightGroupPriority) {
+                        return $leftGroupPriority <=> $rightGroupPriority;
+                    }
+
+                    if ($leftDepartmentPriority !== $rightDepartmentPriority) {
+                        return $leftDepartmentPriority <=> $rightDepartmentPriority;
+                    }
+                }
+
+                $leftName = Str::ascii(mb_strtolower((string) ($left->NOME ?? '')));
+                $rightName = Str::ascii(mb_strtolower((string) ($right->NOME ?? '')));
+                $nameComparison = $leftName <=> $rightName;
+
+                if ($nameComparison !== 0) {
+                    return $direction === 'desc' ? -$nameComparison : $nameComparison;
+                }
+
+                return (int) $left->id <=> (int) $right->id;
+            })
+            ->values();
     }
 
     private function applyConfigPayload(Configuracao $config, array $payload): void

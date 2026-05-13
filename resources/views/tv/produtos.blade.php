@@ -30,6 +30,16 @@
             }
         }());
     </script>
+    <script>
+        window.__TV_RUNTIME_CONFIG__ = {
+            productsEndpoint: @json($tvProductsEndpoint ?? null),
+            configEndpoint: @json($tvConfigEndpoint ?? null),
+            mediaEndpoint: @json($tvMediaEndpoint ?? null),
+            configPageUrl: @json($tvConfigPageUrl ?? null),
+            token: @json($tvPreviewToken ?? null),
+            previewMode: @json((bool) ($tvPreviewMode ?? false)),
+        };
+    </script>
     @vite(['resources/css/app.css', 'resources/js/tv-produtos.js'])
     <style>
         .hidden {

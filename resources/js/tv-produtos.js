@@ -42,6 +42,8 @@ const fullscreenTestButton = document.getElementById('fullscreenTestButton');
 const OFFER_SLIDE_TRANSITION_MS = 280;
 
 const queryParams = new URLSearchParams(window.location.search);
+const runtimeConfig = window.__TV_RUNTIME_CONFIG__ || {};
+const isRuntimePreviewMode = Boolean(runtimeConfig.previewMode);
 const TOKEN_HISTORY_KEY = 'tv_device_token_history_v1';
 const TOKEN_BACKUP_KEY = 'tv_device_token_backup';
 const DEDICATED_FULLSCREEN_SKIP_ON_NEXT_LOAD_KEY = 'tv_dedicated_fullscreen_skip_next_load_v1';
@@ -161,14 +163,15 @@ function persistReliableDeviceToken(token) {
 }
 
 function getReliableDeviceToken() {
+    const fromRuntime = String(runtimeConfig.token || '').trim();
     const fromQuery = String(queryParams.get('token') || '').trim();
     const fromPrimary = String(localStorage.getItem('tv_device_token') || '').trim();
     const fromLast = String(localStorage.getItem('tv_last_device_token') || '').trim();
     const fromBackup = String(localStorage.getItem(TOKEN_BACKUP_KEY) || '').trim();
     const fromHistory = readTokenHistory()[0] || '';
-    const token = fromQuery || fromPrimary || fromLast || fromBackup || fromHistory;
+    const token = fromRuntime || fromQuery || fromPrimary || fromLast || fromBackup || fromHistory;
 
-    if (token) {
+    if (token && !isRuntimePreviewMode) {
         persistReliableDeviceToken(token);
     }
 
@@ -176,10 +179,10 @@ function getReliableDeviceToken() {
 }
 
 const initialToken = getReliableDeviceToken();
-const apiEndpoint = localStorage.getItem('tv_api_endpoint') || queryParams.get('api') || '/api/tv/produtos';
-const configEndpoint = '/api/tv/totemweb/config';
-const mediaEndpoint = '/api/tv/midias';
-const configPageUrl = '/tv/totemweb/configuracao';
+const apiEndpoint = String(runtimeConfig.productsEndpoint || localStorage.getItem('tv_api_endpoint') || queryParams.get('api') || '/api/tv/produtos');
+const configEndpoint = String(runtimeConfig.configEndpoint || queryParams.get('configApi') || '/api/tv/totemweb/config');
+const mediaEndpoint = String(runtimeConfig.mediaEndpoint || queryParams.get('mediaApi') || '/api/tv/midias');
+const configPageUrl = String(runtimeConfig.configPageUrl || queryParams.get('configPage') || '/tv/totemweb/configuracao');
 const initialRefreshSeconds = Number(localStorage.getItem('tv_refresh_seconds') || queryParams.get('refresh') || 30);
 let refreshSeconds = Math.max(5, Math.min(3600, Number(initialRefreshSeconds || 30)));
 const AUDIO_UNLOCK_STORAGE_KEY = 'tv_audio_autoplay_unlocked';
@@ -3209,7 +3212,7 @@ async function loadVideoPlaylist(token) {
     }
 }
 
-if (initialToken) {
+if (initialToken && !isRuntimePreviewMode) {
     persistReliableDeviceToken(initialToken);
 } else if (window.location.pathname !== configPageUrl) {
     redirectToConfigPage();

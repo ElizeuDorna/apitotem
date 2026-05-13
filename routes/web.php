@@ -174,6 +174,21 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'update'])
             ->name('admin.web-screen-config.update')
             ->middleware('menu.access:configuracao');
+        Route::get('/admin/tvpreview', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewIndex'])
+            ->name('admin.tvpreview.index')
+            ->middleware('menu.access:configuracao');
+        Route::get('/admin/tvpreview/tela', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'preview'])
+            ->name('admin.tvpreview.show')
+            ->middleware('menu.access:configuracao');
+        Route::get('/admin/tvpreview/config', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewConfig'])
+            ->name('admin.tvpreview.config')
+            ->middleware('menu.access:configuracao');
+        Route::get('/admin/tvpreview/produtos', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewProducts'])
+            ->name('admin.tvpreview.products')
+            ->middleware('menu.access:configuracao');
+        Route::get('/admin/tvpreview/midias', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewMedia'])
+            ->name('admin.tvpreview.media')
+            ->middleware('menu.access:configuracao');
         Route::get('/admin/global-image-galleries/lookup/{code}', [\App\Http\Controllers\Admin\GlobalImageGalleryController::class, 'lookupByCode'])
             ->name('admin.global-image-galleries.lookup')
             ->middleware('menu.access:configuracao');

@@ -45,9 +45,8 @@
 
                     @php
                         $embedStatuses = session('embedStatuses', []);
-                        $hasSelectedModel = !empty($selectedModelId);
+                        $hasSelectedModel = $selectedModel !== null || !empty($selectedModelId);
                         $configMenusLocked = !$hasSelectedModel;
-                        $selectedModelHasSavedConfig = $selectedModel && is_array($selectedModel->config_payload ?? null) && !empty($selectedModel->config_payload ?? []);
                         $selectedModelIsClone = $selectedModel && !empty($selectedModel->source_model_id ?? null);
 
                         $savedPlaylist = collect($config->videoPlaylist ?? []);
@@ -81,6 +80,7 @@
                     <form id="webConfigForm" method="POST" action="{{ route('admin.web-screen-config.update') }}" enctype="multipart/form-data" class="space-y-5">
                         @csrf
                         <input type="hidden" id="saveSection" name="saveSection" value="">
+                        <input type="hidden" id="selectedDeviceId" name="selected_device_id" value="{{ old('selected_device_id', $selectedDeviceId ?? '') }}">
                         <input type="hidden" id="selectedModelId" name="selected_model_id" value="{{ old('selected_model_id', $selectedModelId ?? '') }}">
                         <input type="hidden" id="modelAction" name="model_action" value="">
                         <input type="hidden" id="suggestedSlideSelectionSubmitted" name="suggestedSlideSelectionSubmitted" value="0">
@@ -111,6 +111,11 @@
                                         @elseif ($selectedModelIsClone)
                                             <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">Clone editavel</span>
                                         @endif
+                                        @if ($canManageDefaultModels)
+                                            <a href="{{ route('admin.tvpreview.show', ['model_id' => $selectedModel->id]) }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700">
+                                                Abrir TV Preview
+                                            </a>
+                                        @endif
                                     </div>
                                 @else
                                     <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Seleção obrigatória</span>
@@ -137,7 +142,7 @@
                                                     $isSelectedModel = (string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id;
                                                 @endphp
                                                 <a
-                                                    href="{{ route('admin.web-screen-config.edit', ['model_id' => $availableModel->id]) }}"
+                                                    href="{{ route('admin.web-screen-config.edit', array_filter(['device_id' => $selectedDeviceId ?? null, 'model_id' => $availableModel->id], static fn ($value) => $value !== null && $value !== '')) }}"
                                                     class="flex items-start justify-between gap-3 rounded-md border px-3 py-3 transition {{ $isSelectedModel ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50' }}"
                                                 >
                                                     <div class="min-w-0">
@@ -173,7 +178,7 @@
                                                     $isSelectedModel = (string) old('selected_model_id', $selectedModelId ?? '') === (string) $availableModel->id;
                                                 @endphp
                                                 <a
-                                                    href="{{ route('admin.web-screen-config.edit', ['model_id' => $availableModel->id]) }}"
+                                                    href="{{ route('admin.web-screen-config.edit', array_filter(['device_id' => $selectedDeviceId ?? null, 'model_id' => $availableModel->id], static fn ($value) => $value !== null && $value !== '')) }}"
                                                     class="flex items-start justify-between gap-3 rounded-md border px-3 py-3 transition {{ $isSelectedModel ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50' }}"
                                                 >
                                                     <div class="min-w-0">
@@ -235,11 +240,23 @@
 
                             <div class="rounded-md border border-sky-200 bg-sky-50 p-4 space-y-3">
                                 <div class="flex items-center justify-between gap-2">
-                                    <p class="text-sm font-semibold text-sky-900">Como aplicar em dispositivos</p>
+                                    <p class="text-sm font-semibold text-sky-900">Dispositivo alvo da configuração</p>
+                                    <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                                        {{ $selectedDevice ? 'Configuracao por dispositivo' : 'Configuracao geral da empresa' }}
+                                    </span>
                                 </div>
-                                <div class="rounded-md border border-sky-200 bg-white p-3 space-y-1">
-                                    <p class="text-sm font-semibold text-sky-900">A seleção do modelo por dispositivo agora fica em Ativar TV.</p>
-                                    <p class="text-xs text-sky-800">Nesta tela você edita o modelo. Depois, em Ativar TV, escolha qual modelo cada dispositivo vai usar.</p>
+                                <div>
+                                    <label class="block text-sm font-medium text-sky-900 mb-1" for="selectedDeviceConfigSelect">Escolha a TV desta empresa</label>
+                                    <select id="selectedDeviceConfigSelect" class="w-full border rounded px-3 py-2 bg-white" data-config-url="{{ route('admin.web-screen-config.edit') }}">
+                                        <option value="">Usar configuracao geral da empresa</option>
+                                        @foreach(($availableDevices ?? collect()) as $deviceOption)
+                                            <option value="{{ $deviceOption->id }}" @selected((string) old('selected_device_id', $selectedDeviceId ?? '') === (string) $deviceOption->id)>
+                                                {{ $deviceOption->nome }}{{ $deviceOption->local ? ' - ' . $deviceOption->local : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-1 text-xs text-sky-800">Ao selecionar uma TV, os menus desta página passam a carregar e salvar a configuracao daquele dispositivo.</p>
+                                    @error('selected_device_id')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
                             </div>
 
@@ -772,7 +789,7 @@
                                         <option value="mixed_with_images" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_images')>Misturar produtos + imagens</option>
                                         <option value="mixed_with_media" @selected(old('rightSidebarProductTransitionMode', $config->rightSidebarProductTransitionMode ?? 'products_only') === 'mixed_with_media')>Misturar produtos + imagens + videos</option>
                                     </select>
-                                    <p class="mt-1 text-xs text-sky-700">Salve este menu no modelo atual e vincule o dispositivo desejado em Ativar TV.</p>
+                                    <p class="mt-1 text-xs text-sky-700">Se uma TV estiver selecionada acima, este menu sera salvo tambem no snapshot desse dispositivo.</p>
                                     @error('rightSidebarProductTransitionMode')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
@@ -2147,7 +2164,9 @@
         const productListGroupRightInputs = Array.from(document.querySelectorAll('.product-list-group-right'));
         const webConfigForm = document.getElementById('webConfigForm');
         const saveSectionInput = document.getElementById('saveSection');
+        const selectedDeviceIdInput = document.getElementById('selectedDeviceId');
         const selectedModelIdInput = document.getElementById('selectedModelId');
+        const selectedDeviceConfigSelect = document.getElementById('selectedDeviceConfigSelect');
         const modelActionInput = document.getElementById('modelAction');
         const createModelButton = document.getElementById('createModelButton');
         const cloneModelButton = document.getElementById('cloneModelButton');
@@ -2180,6 +2199,38 @@
         let openRightSidebarImageScheduleUrl = null;
         let pendingScheduleRowHighlightUrl = normalizeSlideUrlForCompare(requestedOpenRightSidebarImageScheduleUrl || '');
         let onGaleriaNovaSlideSelect = null;
+
+        function redirectToWebConfigWithSelection(deviceId, modelId) {
+            const configUrl = String(selectedDeviceConfigSelect?.dataset?.configUrl || '').trim();
+            if (configUrl === '') {
+                return;
+            }
+
+            const url = new URL(configUrl, window.location.origin);
+            const normalizedDeviceId = String(deviceId || '').trim();
+            const normalizedModelId = String(modelId || '').trim();
+
+            if (normalizedDeviceId !== '') {
+                url.searchParams.set('device_id', normalizedDeviceId);
+            }
+
+            if (normalizedModelId !== '') {
+                url.searchParams.set('model_id', normalizedModelId);
+            }
+
+            window.location.assign(url.toString());
+        }
+
+        if (selectedDeviceConfigSelect instanceof HTMLSelectElement) {
+            selectedDeviceConfigSelect.addEventListener('change', () => {
+                const deviceId = String(selectedDeviceConfigSelect.value || '').trim();
+                const modelId = selectedModelIdInput instanceof HTMLInputElement
+                    ? String(selectedModelIdInput.value || '').trim()
+                    : '';
+
+                redirectToWebConfigWithSelection(deviceId, modelId);
+            });
+        }
 
         function resolveAdminPreviewFontFamily(fontKey) {
             switch (String(fontKey || 'arial').trim().toLowerCase()) {
@@ -4949,13 +5000,14 @@
             formControls.forEach((control) => {
                 const isToken = control instanceof HTMLInputElement && control.name === '_token';
                 const isSaveSection = control === saveSectionInput;
+                const isSelectedDeviceId = control === selectedDeviceIdInput;
                 const isSelectedModelId = control === selectedModelIdInput;
                 const isModelAction = control === modelActionInput;
                 const isSuggestedSlideSelectionSubmitted = control === suggestedSlideSelectionSubmittedInput;
                 const isOpenCompanyGalleryTarget = control === openCompanyGalleryTargetInput;
                 const isOpenRightSidebarImageScheduleUrl = control === openRightSidebarImageScheduleUrlInput;
                 const isForceClearRightSidebarSlides = control === forceClearRightSidebarSlidesInput;
-                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSelectedModelId || isModelAction || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
+                const shouldKeep = sectionControls.has(control) || isToken || isSaveSection || isSelectedDeviceId || isSelectedModelId || isModelAction || isSuggestedSlideSelectionSubmitted || isOpenCompanyGalleryTarget || isOpenRightSidebarImageScheduleUrl || isForceClearRightSidebarSlides;
 
                 controlsState.push({ control, disabled: control.disabled });
                 if (!shouldKeep) {

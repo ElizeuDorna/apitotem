@@ -213,7 +213,9 @@ class RegisteredUserController extends Controller
         }
 
         if (! $authUser->empresa_id) {
-            return $query->whereRaw('1 = 0');
+            return $authUser->hasMenuAccess(User::MENU_CADASTRO_PUBLICO)
+                ? $query
+                : $query->whereRaw('1 = 0');
         }
 
         $empresaVinculada = $authUser->empresa;

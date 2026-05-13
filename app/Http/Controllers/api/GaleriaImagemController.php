@@ -185,19 +185,22 @@ class GaleriaImagemController extends Controller
             'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
-        $gallery = $this->createOrReuseUploadGallery(
+        $result = $this->createOrReuseUploadGallery(
             $empresa,
             $request->file('image'),
             (string) ($validated['name'] ?? ''),
             (bool) ($validated['is_public'] ?? false)
         );
 
+        $gallery = $result['gallery'];
+        $created = $result['created'];
+
         return response()->json([
             'sucesso' => true,
-            'criado' => true,
-            'mensagem' => 'Imagem enviada com sucesso.',
+            'criado' => $created,
+            'mensagem' => $created ? 'Imagem enviada com sucesso.' : 'Imagem ja existente reaproveitada com sucesso.',
             'dados' => $this->payload($gallery->fresh()),
-        ], 201);
+        ], $created ? 201 : 200);
     }
 
     #[OA\Post(
@@ -239,19 +242,22 @@ class GaleriaImagemController extends Controller
             'is_public' => ['nullable', 'boolean'],
         ]);
 
-        $gallery = $this->createOrReuseLinkGallery(
+        $result = $this->createOrReuseLinkGallery(
             $empresa,
             trim((string) $validated['external_url']),
             (string) ($validated['name'] ?? ''),
             (bool) ($validated['is_public'] ?? false)
         );
 
+        $gallery = $result['gallery'];
+        $created = $result['created'];
+
         return response()->json([
             'sucesso' => true,
-            'criado' => true,
-            'mensagem' => 'Link cadastrado com sucesso.',
+            'criado' => $created,
+            'mensagem' => $created ? 'Link cadastrado com sucesso.' : 'Link ja existente reaproveitado com sucesso.',
             'dados' => $this->payload($gallery),
-        ], 201);
+        ], $created ? 201 : 200);
     }
 
     private function payload(GaleriaNova $gallery): array
@@ -269,7 +275,7 @@ class GaleriaImagemController extends Controller
         ];
     }
 
-    private function createOrReuseUploadGallery(Empresa $empresa, $upload, string $name, bool $isPublic): GaleriaNova
+    private function createOrReuseUploadGallery(Empresa $empresa, $upload, string $name, bool $isPublic): array
     {
         $imageHash = hash_file('sha256', (string) $upload->getRealPath());
 
@@ -280,7 +286,10 @@ class GaleriaImagemController extends Controller
             ->first();
 
         if ($existing) {
-            return $existing;
+            return [
+                'gallery' => $existing,
+                'created' => false,
+            ];
         }
 
         $gallery = GaleriaNova::query()->create([
@@ -306,10 +315,13 @@ class GaleriaImagemController extends Controller
             'file_path' => $path,
         ]);
 
-        return $gallery->fresh();
+        return [
+            'gallery' => $gallery->fresh(),
+            'created' => true,
+        ];
     }
 
-    private function createOrReuseLinkGallery(Empresa $empresa, string $externalUrl, string $name, bool $isPublic): GaleriaNova
+    private function createOrReuseLinkGallery(Empresa $empresa, string $externalUrl, string $name, bool $isPublic): array
     {
         $existing = GaleriaNova::query()
             ->where('empresa_id', $empresa->id)
@@ -318,20 +330,26 @@ class GaleriaImagemController extends Controller
             ->first();
 
         if ($existing) {
-            return $existing;
+            return [
+                'gallery' => $existing,
+                'created' => false,
+            ];
         }
 
-        return GaleriaNova::query()->create([
-            'code' => $this->generateUniqueCode(),
-            'empresa_id' => $empresa->id,
-            'is_public' => $isPublic,
-            'name' => trim($name) !== '' ? $name : 'Imagem via link',
-            'source_type' => 'link',
-            'external_url' => $externalUrl,
-            'file_path' => null,
-            'image_hash' => null,
-            'created_by' => null,
-        ]);
+        return [
+            'gallery' => GaleriaNova::query()->create([
+                'code' => $this->generateUniqueCode(),
+                'empresa_id' => $empresa->id,
+                'is_public' => $isPublic,
+                'name' => trim($name) !== '' ? $name : 'Imagem via link',
+                'source_type' => 'link',
+                'external_url' => $externalUrl,
+                'file_path' => null,
+                'image_hash' => null,
+                'created_by' => null,
+            ]),
+            'created' => true,
+        ];
     }
 
     private function generateUniqueCode(): string
