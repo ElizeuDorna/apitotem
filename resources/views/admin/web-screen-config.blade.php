@@ -865,6 +865,30 @@
                                             <span class="text-sm text-gray-700">Usar tarja no nome</span>
                                         </label>
                                         <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do nome (px)</label>
+                                            <input type="number" name="rightSidebarProductNameFontSize" min="8" max="120" value="{{ old('rightSidebarProductNameFontSize', $config->rightSidebarProductNameFontSize ?? 16) }}" class="w-full border rounded px-3 py-2">
+                                            @error('rightSidebarProductNameFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Familia da fonte do nome</label>
+                                            <select name="rightSidebarProductNameFontFamily" class="w-full border rounded px-3 py-2">
+                                                <option value="arial" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                                <option value="verdana" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                                <option value="tahoma" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                                <option value="trebuchet" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                                <option value="georgia" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                                <option value="courier" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                                <option value="system" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'system')>System UI</option>
+                                                <option value="impact_shadow" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'impact_shadow')>Impacto Sombra</option>
+                                                <option value="neon_glow" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'neon_glow')>Neon Glow</option>
+                                                <option value="serif_elegant" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'serif_elegant')>Serif Elegante</option>
+                                                <option value="gold_lux" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'gold_lux')>Dourado Luxo</option>
+                                                <option value="retro_arcade" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'retro_arcade')>Retro Arcade</option>
+                                                <option value="crystal_frost" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === 'crystal_frost')>Cristal Frost</option>
+                                            </select>
+                                            @error('rightSidebarProductNameFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">Cor do nome</label>
                                             <input type="color" name="rightSidebarProductNameColor" value="{{ old('rightSidebarProductNameColor', $config->rightSidebarProductNameColor ?? '#FFFFFF') }}" class="w-full h-10 border rounded">
                                         </div>
@@ -881,6 +905,30 @@
                                             <input type="checkbox" name="rightSidebarProductPriceBadgeEnabled" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('rightSidebarProductPriceBadgeEnabled', $config->rightSidebarProductPriceBadgeEnabled ?? true))>
                                             <span class="text-sm text-gray-700">Usar tarja no preço</span>
                                         </label>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do preço (px)</label>
+                                            <input type="number" name="rightSidebarProductPriceFontSize" min="8" max="120" value="{{ old('rightSidebarProductPriceFontSize', $config->rightSidebarProductPriceFontSize ?? 16) }}" class="w-full border rounded px-3 py-2">
+                                            @error('rightSidebarProductPriceFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Familia da fonte do preço</label>
+                                            <select name="rightSidebarProductPriceFontFamily" class="w-full border rounded px-3 py-2">
+                                                <option value="arial" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'arial')>Arial</option>
+                                                <option value="verdana" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'verdana')>Verdana</option>
+                                                <option value="tahoma" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'tahoma')>Tahoma</option>
+                                                <option value="trebuchet" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'trebuchet')>Trebuchet MS</option>
+                                                <option value="georgia" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'georgia')>Georgia</option>
+                                                <option value="courier" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'courier')>Courier New</option>
+                                                <option value="system" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'system')>System UI</option>
+                                                <option value="impact_shadow" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'impact_shadow')>Impacto Sombra</option>
+                                                <option value="neon_glow" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'neon_glow')>Neon Glow</option>
+                                                <option value="serif_elegant" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'serif_elegant')>Serif Elegante</option>
+                                                <option value="gold_lux" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'gold_lux')>Dourado Luxo</option>
+                                                <option value="retro_arcade" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'retro_arcade')>Retro Arcade</option>
+                                                <option value="crystal_frost" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === 'crystal_frost')>Cristal Frost</option>
+                                            </select>
+                                            @error('rightSidebarProductPriceFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-1">Cor do preço</label>
                                             <input type="color" name="rightSidebarProductPriceColor" value="{{ old('rightSidebarProductPriceColor', $config->rightSidebarProductPriceColor ?? '#FDE68A') }}" class="w-full h-10 border rounded">

@@ -649,6 +649,10 @@ class WebScreenConfigController extends Controller
             'rightSidebarProductShowPrice' => ['nullable', 'boolean'],
             'rightSidebarProductNamePosition' => ['nullable', 'in:top,bottom'],
             'rightSidebarProductPricePosition' => ['nullable', 'in:top,bottom'],
+            'rightSidebarProductNameFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
+            'rightSidebarProductPriceFontSize' => ['nullable', 'integer', 'min:8', 'max:120'],
+            'rightSidebarProductNameFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
+            'rightSidebarProductPriceFontFamily' => ['nullable', 'in:arial,verdana,tahoma,trebuchet,georgia,courier,system,impact_shadow,neon_glow,serif_elegant,gold_lux,retro_arcade,crystal_frost'],
             'rightSidebarProductNameColor' => ['nullable', 'string', 'max:9'],
             'rightSidebarProductPriceColor' => ['nullable', 'string', 'max:9'],
             'rightSidebarProductNameBadgeEnabled' => ['nullable', 'boolean'],
@@ -988,6 +992,10 @@ class WebScreenConfigController extends Controller
         $validated['rightSidebarProductShowPrice'] = (bool) ($validated['rightSidebarProductShowPrice'] ?? true);
         $validated['rightSidebarProductNamePosition'] = (string) ($validated['rightSidebarProductNamePosition'] ?? 'top');
         $validated['rightSidebarProductPricePosition'] = (string) ($validated['rightSidebarProductPricePosition'] ?? 'bottom');
+        $validated['rightSidebarProductNameFontSize'] = (int) ($validated['rightSidebarProductNameFontSize'] ?? 16);
+        $validated['rightSidebarProductPriceFontSize'] = (int) ($validated['rightSidebarProductPriceFontSize'] ?? 16);
+        $validated['rightSidebarProductNameFontFamily'] = (string) ($validated['rightSidebarProductNameFontFamily'] ?? 'arial');
+        $validated['rightSidebarProductPriceFontFamily'] = (string) ($validated['rightSidebarProductPriceFontFamily'] ?? 'arial');
         $validated['rightSidebarProductNameColor'] = $this->normalizeHexColor((string) ($validated['rightSidebarProductNameColor'] ?? '#ffffff'), '#ffffff');
         $validated['rightSidebarProductPriceColor'] = $this->normalizeHexColor((string) ($validated['rightSidebarProductPriceColor'] ?? '#fde68a'), '#fde68a');
         $validated['rightSidebarProductNameBadgeEnabled'] = (bool) ($validated['rightSidebarProductNameBadgeEnabled'] ?? true);
@@ -1633,6 +1641,22 @@ class WebScreenConfigController extends Controller
             unset($validated['rightSidebarProductPricePosition']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNameFontSize')) {
+            unset($validated['rightSidebarProductNameFontSize']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductPriceFontSize')) {
+            unset($validated['rightSidebarProductPriceFontSize']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNameFontFamily')) {
+            unset($validated['rightSidebarProductNameFontFamily']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'rightSidebarProductPriceFontFamily')) {
+            unset($validated['rightSidebarProductPriceFontFamily']);
+        }
+
         if (! Schema::hasColumn('configuracoes', 'rightSidebarProductNameColor')) {
             unset($validated['rightSidebarProductNameColor']);
         }
@@ -2017,6 +2041,10 @@ class WebScreenConfigController extends Controller
             'rightSidebarProductShowPrice' => (bool) ($config->rightSidebarProductShowPrice ?? true),
             'rightSidebarProductNamePosition' => (string) ($config->rightSidebarProductNamePosition ?? 'top'),
             'rightSidebarProductPricePosition' => (string) ($config->rightSidebarProductPricePosition ?? 'bottom'),
+            'rightSidebarProductNameFontSize' => (int) ($config->rightSidebarProductNameFontSize ?? 16),
+            'rightSidebarProductPriceFontSize' => (int) ($config->rightSidebarProductPriceFontSize ?? 16),
+            'rightSidebarProductNameFontFamily' => (string) ($config->rightSidebarProductNameFontFamily ?? 'arial'),
+            'rightSidebarProductPriceFontFamily' => (string) ($config->rightSidebarProductPriceFontFamily ?? 'arial'),
             'rightSidebarProductNameColor' => (string) ($config->rightSidebarProductNameColor ?? '#FFFFFF'),
             'rightSidebarProductPriceColor' => (string) ($config->rightSidebarProductPriceColor ?? '#FDE68A'),
             'rightSidebarProductNameBadgeEnabled' => (bool) ($config->rightSidebarProductNameBadgeEnabled ?? true),
@@ -2325,6 +2353,10 @@ class WebScreenConfigController extends Controller
             'rightSidebarProductPricePosition',
             'rightSidebarProductNameColor',
             'rightSidebarProductPriceColor',
+            'rightSidebarProductNameFontSize',
+            'rightSidebarProductPriceFontSize',
+            'rightSidebarProductNameFontFamily',
+            'rightSidebarProductPriceFontFamily',
             'rightSidebarProductNameBadgeEnabled',
             'rightSidebarProductNameBadgeColor',
             'rightSidebarProductPriceBadgeEnabled',

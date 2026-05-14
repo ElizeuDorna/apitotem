@@ -14,6 +14,10 @@ export function createRightSidebarProductCardRendererModule(deps) {
         const pricePosition = String(deps.visualConfig.rightSidebarProductPricePosition || 'bottom').toLowerCase() === 'top' ? 'top' : 'bottom';
         const configuredImageWidth = Math.max(0, Math.min(1000, Number(deps.visualConfig.rightSidebarProductImageWidth || 0) || 0));
         const configuredImageHeight = Math.max(0, Math.min(1000, Number(deps.visualConfig.rightSidebarProductImageHeight || 0) || 0));
+        const configuredNameFontSize = Math.max(8, Math.min(120, Number(deps.visualConfig.rightSidebarProductNameFontSize || 16) || 16));
+        const configuredPriceFontSize = Math.max(8, Math.min(120, Number(deps.visualConfig.rightSidebarProductPriceFontSize || 16) || 16));
+        const configuredNameFontFamily = deps.resolveTitleFontFamily(String(deps.visualConfig.rightSidebarProductNameFontFamily || 'arial'));
+        const configuredPriceFontFamily = deps.resolveTitleFontFamily(String(deps.visualConfig.rightSidebarProductPriceFontFamily || 'arial'));
 
         const nome = String(item?.nome || 'Produto').trim() || 'Produto';
         const precoNormal = Number(item?.preco || 0);
@@ -33,11 +37,11 @@ export function createRightSidebarProductCardRendererModule(deps) {
             : 'transparent';
 
         const nameBlock = showName
-            ? `<div style="padding:6px 8px;border-radius:8px;background:${nameBadgeBackground};color:${String(deps.visualConfig.rightSidebarProductNameColor || '#FFFFFF')};font-weight:700;text-align:center;line-height:1.2;word-break:break-word;">${nome}</div>`
+            ? `<div style="padding:6px 8px;border-radius:8px;background:${nameBadgeBackground};color:${String(deps.visualConfig.rightSidebarProductNameColor || '#FFFFFF')};font-family:${deps.escapeHtmlAttribute(configuredNameFontFamily)};font-weight:700;font-size:${configuredNameFontSize}px;text-align:center;line-height:1.2;word-break:break-word;">${nome}</div>`
             : '';
 
         const priceBlock = showPrice
-            ? `<div style="padding:6px 8px;border-radius:8px;background:${priceBadgeBackground};color:${String(deps.visualConfig.rightSidebarProductPriceColor || '#FDE68A')};font-weight:800;text-align:center;line-height:1.2;">${precoTexto}</div>`
+            ? `<div style="padding:6px 8px;border-radius:8px;background:${priceBadgeBackground};color:${String(deps.visualConfig.rightSidebarProductPriceColor || '#FDE68A')};font-family:${deps.escapeHtmlAttribute(configuredPriceFontFamily)};font-weight:800;font-size:${configuredPriceFontSize}px;text-align:center;line-height:1.2;">${precoTexto}</div>`
             : '';
 
         const imagemSrc = deps.normalizeImageSrcCandidate(deps.resolveRenderableImageUrl(imagem) || imagem);
