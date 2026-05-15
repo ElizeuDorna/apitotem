@@ -74,7 +74,7 @@ class GaleriaImagemController extends Controller
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'is_public' => ['nullable', 'boolean'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:262144'],
             'external_url' => ['nullable', 'url', 'max:1000'],
         ]);
 
@@ -182,7 +182,7 @@ class GaleriaImagemController extends Controller
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'is_public' => ['nullable', 'boolean'],
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:262144'],
         ]);
 
         $result = $this->createOrReuseUploadGallery(
