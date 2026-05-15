@@ -96,11 +96,12 @@ class GaleriaImagemController extends Controller
         }
 
         if ($upload) {
-            $gallery = $this->createOrReuseUploadGallery($empresa, $upload, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
+            $result = $this->createOrReuseUploadGallery($empresa, $upload, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
         } else {
-            $gallery = $this->createOrReuseLinkGallery($empresa, $externalUrl, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
+            $result = $this->createOrReuseLinkGallery($empresa, $externalUrl, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
         }
 
+        $gallery = $result['gallery'];
         $galleryPayload = $this->payload($gallery);
         $produtoModel->update([
             'IMG' => (string) ($galleryPayload['url'] ?? ''),
