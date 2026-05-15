@@ -170,25 +170,25 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:downloads');
         Route::get('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'edit'])
             ->name('admin.web-screen-config.edit')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::post('/admin/configuracao-tela-web', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'update'])
             ->name('admin.web-screen-config.update')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::get('/admin/tvpreview', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewIndex'])
             ->name('admin.tvpreview.index')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::get('/admin/tvpreview/tela', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'preview'])
             ->name('admin.tvpreview.show')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::get('/admin/tvpreview/config', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewConfig'])
             ->name('admin.tvpreview.config')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::get('/admin/tvpreview/produtos', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewProducts'])
             ->name('admin.tvpreview.products')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::get('/admin/tvpreview/midias', [\App\Http\Controllers\Admin\WebScreenConfigController::class, 'previewMedia'])
             ->name('admin.tvpreview.media')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:config_tela_web');
         Route::get('/admin/global-image-galleries/lookup/{code}', [\App\Http\Controllers\Admin\GlobalImageGalleryController::class, 'lookupByCode'])
             ->name('admin.global-image-galleries.lookup')
             ->middleware('menu.access:configuracao');
@@ -197,10 +197,10 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:configuracao');
         Route::get('/admin/organizar-lista', [\App\Http\Controllers\Admin\OrganizarListaController::class, 'edit'])
             ->name('admin.organizar-lista.edit')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:organizar_lista');
         Route::post('/admin/organizar-lista', [\App\Http\Controllers\Admin\OrganizarListaController::class, 'update'])
             ->name('admin.organizar-lista.update')
-            ->middleware('menu.access:configuracao');
+            ->middleware('menu.access:organizar_lista');
 
     Route::prefix('admin')->group(function () {
         Route::get('devices', [\App\Http\Controllers\Admin\DeviceManagementController::class, 'index'])
@@ -257,11 +257,14 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:grupos');
 
         Route::get('financeiro', [\App\Http\Controllers\Admin\FinanceiroController::class, 'index'])
-            ->name('admin.financeiro.index');
+            ->name('admin.financeiro.index')
+            ->middleware('menu.access:financeiro');
         Route::get('financeiro/{empresa}', [\App\Http\Controllers\Admin\FinanceiroController::class, 'show'])
-            ->name('admin.financeiro.show');
+            ->name('admin.financeiro.show')
+            ->middleware('menu.access:financeiro');
         Route::put('financeiro/{empresa}', [\App\Http\Controllers\Admin\FinanceiroController::class, 'update'])
-            ->name('admin.financeiro.update');
+            ->name('admin.financeiro.update')
+            ->middleware('menu.access:financeiro');
 
         Route::resource('global-image-galleries', \App\Http\Controllers\Admin\GlobalImageGalleryController::class, ['as' => 'admin'])
             ->except(['show']);

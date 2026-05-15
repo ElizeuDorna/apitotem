@@ -109,9 +109,11 @@
                     </a>
                 @endif
 
-                <a href="{{ route('admin.financeiro.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/financeiro*') ? $desktopNavActive : '' }}">
-                    <span>{{ __('Financeiro') }}</span>
-                </a>
+                @if (Auth::user()->hasMenuAccess('financeiro'))
+                    <a href="{{ route('admin.financeiro.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/financeiro*') ? $desktopNavActive : '' }}">
+                        <span>{{ __('Financeiro') }}</span>
+                    </a>
+                @endif
 
                 @if (Auth::user()->hasMenuAccess('config_admin'))
                     <a href="{{ route('admin.configadmin.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configadmin') ? $desktopNavActive : '' }}">
@@ -125,10 +127,13 @@
                     </a>
                 @endif
 
-                @if (Auth::user()->hasMenuAccess('configuracao'))
+                @if (Auth::user()->hasMenuAccess('config_tela_web'))
                     <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
                         <span>{{ __('Config Totem Web') }}</span>
                     </a>
+                @endif
+
+                @if (Auth::user()->hasMenuAccess('organizar_lista'))
                     <a href="{{ route('admin.organizar-lista.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/organizar-lista') ? $desktopNavActive : '' }}">
                         <span>{{ __('Organizar Lista') }}</span>
                     </a>
