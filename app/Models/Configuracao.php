@@ -40,6 +40,8 @@ class Configuracao extends Model
         'panelSidebarFontFamily',
         'panelSidebarFontSize',
         'produtoFormImagePreviewSize',
+        'metaAppId',
+        'metaRedirectUri',
         'leftVerticalLogoWidth',
         'leftVerticalLogoHeight',
         'leftVerticalLogoWidthWindows',

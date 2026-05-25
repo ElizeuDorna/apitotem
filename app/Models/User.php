@@ -48,6 +48,8 @@ class User extends Authenticatable
 
     public const MENU_FINANCEIRO = 'financeiro';
 
+    public const MENU_REDE_SOCIAL = 'rede_social';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -124,6 +126,7 @@ class User extends Authenticatable
             self::MENU_DOWNLOADS => 'Downloads',
             self::MENU_DOWNLOADS_UPLOAD => 'Downloads - Upload',
             self::MENU_FINANCEIRO => 'Financeiro',
+            self::MENU_REDE_SOCIAL => 'Rede Social',
         ];
     }
 

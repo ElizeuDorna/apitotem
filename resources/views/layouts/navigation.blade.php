@@ -127,6 +127,12 @@
                     </a>
                 @endif
 
+                @if (Auth::user()->hasMenuAccess('rede_social'))
+                    <a href="{{ route('admin.social-media.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/rede-social*') ? $desktopNavActive : '' }}">
+                        <span>{{ __('Rede Social') }}</span>
+                    </a>
+                @endif
+
                 @if (Auth::user()->hasMenuAccess('config_tela_web'))
                     <a href="{{ route('admin.web-screen-config.edit') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/configuracao-tela-web') ? $desktopNavActive : '' }}">
                         <span>{{ __('Config Totem Web') }}</span>

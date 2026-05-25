@@ -39,12 +39,21 @@ class ConfigAdminController extends Controller
         $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
 
         $config = $this->findOrCreateConfig($empresaId)->fresh();
+        $globalConfig = $this->findOrCreateConfig(null)->fresh();
+        $metaIntegrationFeatureReady = Schema::hasColumn('configuracoes', 'metaAppId')
+            && Schema::hasColumn('configuracoes', 'metaRedirectUri');
+        $metaAppSecretConfigured = trim((string) env('META_APP_SECRET')) !== '';
+        $metaGraphVersion = trim((string) env('META_GRAPH_VERSION', 'v22.0'));
 
         return view('admin.configadmin', compact(
             'config',
+            'globalConfig',
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
             'produtoFormImagePreviewFeatureReady',
+            'metaIntegrationFeatureReady',
+            'metaAppSecretConfigured',
+            'metaGraphVersion',
         ));
     }
 
@@ -68,9 +77,14 @@ class ConfigAdminController extends Controller
             'panelSidebarFontFamily' => 'nullable|string|in:'.implode(',', self::SIDEBAR_FONT_FAMILY_OPTIONS),
             'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
             'produtoFormImagePreviewSize' => 'nullable|integer|min:32|max:300',
+            'metaAppId' => 'nullable|string|max:120',
+            'metaRedirectUri' => 'nullable|url|max:500',
         ]);
 
         $config = $this->findOrCreateConfig($empresaId);
+        $globalConfig = $this->findOrCreateConfig(null);
+        $metaIntegrationFeatureReady = Schema::hasColumn('configuracoes', 'metaAppId')
+            && Schema::hasColumn('configuracoes', 'metaRedirectUri');
 
         $payload = [];
         $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
@@ -91,6 +105,16 @@ class ConfigAdminController extends Controller
             $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
         }
 
+        $globalPayload = [];
+        if ($currentUser?->isDefaultAdmin()) {
+            if ($metaIntegrationFeatureReady) {
+                $globalPayload['metaAppId'] = trim((string) ($validated['metaAppId'] ?? '')) ?: null;
+                $globalPayload['metaRedirectUri'] = trim((string) ($validated['metaRedirectUri'] ?? '')) ?: null;
+            } elseif ($request->filled('metaAppId') || $request->filled('metaRedirectUri')) {
+                $warningMessages[] = 'Configuracao global da Meta/Instagram indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
+            }
+        }
+
         if ($panelBrandIconFeatureReady) {
             if ($shouldRemoveIcon) {
                 $this->deletePanelBrandIcon($config->panelBrandIconUrl);
@@ -107,6 +131,10 @@ class ConfigAdminController extends Controller
 
         if ($payload !== []) {
             $config->fill($payload)->save();
+        }
+
+        if ($globalPayload !== []) {
+            $globalConfig->fill($globalPayload)->save();
         }
 
         $redirect = redirect()

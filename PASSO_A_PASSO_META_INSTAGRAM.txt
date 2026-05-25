@@ -1,0 +1,256 @@
+PASSO A PASSO PARA CRIAR AS CREDENCIAIS DA META E USAR NO SISTEMA
+
+OBJETIVO
+Criar o App da Meta, obter APP ID e APP SECRET, configurar a URL de retorno (callback) e deixar o sistema pronto para conectar o Instagram de cada empresa.
+
+ANTES DE COMECAR
+Voce vai precisar de:
+- Uma conta no Meta for Developers
+- Uma conta do Facebook com permissao administrativa
+- Uma pagina do Facebook
+- Uma conta Instagram Profissional vinculada a essa pagina
+- O dominio real do seu sistema ou a URL local de desenvolvimento
+
+IMPORTANTE
+- O APP ID e o APP SECRET sao do seu sistema
+- Cada empresa vai conectar o proprio Instagram dela depois
+- O APP SECRET deve ficar no .env ou no ambiente do servidor
+- O callback do sistema precisa bater exatamente com o configurado na Meta
+
+==================================================
+1. CRIAR CONTA E ACESSAR O PAINEL DA META
+==================================================
+1. Abra o navegador
+2. Acesse: https://developers.facebook.com/
+3. Faça login com sua conta Facebook
+4. Se for o primeiro acesso, conclua o cadastro no Meta for Developers
+
+==================================================
+2. CRIAR O APP NA META
+==================================================
+1. No topo direito, clique em My Apps
+2. Clique em Create App
+3. Escolha um tipo de app compatível com integracoes para negocio
+4. Se a Meta pedir categoria/uso, escolha a opcao mais adequada para integracao com Instagram e paginas
+5. Defina o nome do app
+   Exemplo: Plataforma Totem Social
+6. Informe o email de contato
+7. Conclua a criacao
+
+OBSERVACAO
+A interface da Meta muda com o tempo. O nome exato do tipo do app pode variar. O importante e criar um app que permita Login e acesso a Facebook Pages e Instagram Graph API.
+
+==================================================
+3. PEGAR O APP ID E O APP SECRET
+==================================================
+1. Dentro do app criado, abra Settings
+2. Entre em Basic
+3. Copie o campo App ID
+4. Clique para revelar ou gerar o App Secret
+5. Copie o App Secret
+6. Guarde esses dois dados com seguranca
+
+NO SISTEMA, ESSES DADOS VAO PARA:
+- META_APP_ID
+- META_APP_SECRET
+
+==================================================
+4. DEFINIR O DOMINIO DO APP
+==================================================
+1. Ainda em Settings > Basic
+2. Procure o campo App Domains
+3. Adicione o dominio do seu sistema
+   Exemplo producao:
+   seudominio.com
+4. Se estiver usando subdominio, confirme se ele precisa ser cadastrado tambem
+   Exemplo:
+   painel.seudominio.com
+
+==================================================
+5. CONFIGURAR A PRIVACY POLICY E DADOS MINIMOS
+==================================================
+1. Na mesma tela Basic, preencha os campos obrigatorios se a Meta exigir
+2. Privacy Policy URL
+3. Terms of Service URL, se necessario
+4. App Icon, se necessario
+5. Salve as alteracoes
+
+OBSERVACAO
+Em alguns casos, a Meta exige esses dados para liberar funcionalidades ou revisar permissoes.
+
+==================================================
+6. ADICIONAR O FACEBOOK LOGIN OU PRODUTO DE AUTENTICACAO
+==================================================
+1. No menu lateral do app, clique em Add Product
+2. Adicione Facebook Login, se estiver disponivel nesse modelo de app
+3. Se a interface da Meta usar outra nomenclatura, adicione o produto relacionado ao login/autorizacao
+4. Depois de adicionar, abra as configuracoes desse produto
+
+==================================================
+7. CONFIGURAR A URL DE CALLBACK
+==================================================
+A URL de callback do sistema e esta:
+/admin/rede-social/instagram/callback
+
+EXEMPLOS
+- Producao:
+  https://seudominio.com/admin/rede-social/instagram/callback
+- Homologacao:
+  https://hml.seudominio.com/admin/rede-social/instagram/callback
+- Desenvolvimento local:
+  http://localhost:8000/admin/rede-social/instagram/callback
+
+PASSOS
+1. Dentro do produto de login/autenticacao, procure o campo de redirect URI ou Valid OAuth Redirect URIs
+2. Cole a URL exata do callback do seu sistema
+3. Salve
+
+IMPORTANTE
+- Tem que ser exatamente igual ao valor de META_REDIRECT_URI
+- Qualquer diferenca pode causar erro de redirect_uri mismatch
+- Preste atencao em http/https, subdominio, barra final e porta
+
+==================================================
+8. CONFIGURAR AS PERMISSOES NECESSARIAS
+==================================================
+O fluxo desta integracao depende normalmente destas permissoes:
+- pages_show_list
+- pages_read_engagement
+- instagram_basic
+- instagram_content_publish
+- business_management
+
+PASSOS
+1. Dentro do painel do app, localize a area de permissoes/scopes
+2. Confirme que o app esta preparado para trabalhar com Facebook Pages e Instagram Graph API
+3. Se a Meta exigir App Review para producao, siga esse processo depois do teste inicial
+
+OBSERVACAO
+Algumas permissoes podem funcionar em teste apenas para usuarios com funcao no app, como admin, developer ou tester.
+
+==================================================
+9. ADICIONAR USUARIOS DE TESTE SE O APP NAO ESTIVER PUBLICO
+==================================================
+Se o app ainda nao estiver liberado para publico geral:
+1. No painel da Meta, abra Roles
+2. Adicione sua conta ou as contas que vao testar como:
+   - Admin
+   - Developer
+   - Tester
+3. A pessoa convidada precisa aceitar o convite
+
+SEM ISSO, O LOGIN PODE FALHAR MESMO COM TUDO CERTO
+
+==================================================
+10. GARANTIR QUE O INSTAGRAM DA EMPRESA ESTA PRONTO
+==================================================
+Para cada empresa que vai conectar no sistema:
+1. A conta Instagram precisa ser Profissional
+2. A conta precisa estar vinculada a uma pagina do Facebook
+3. O usuario que vai autorizar precisa ter acesso a essa pagina
+4. O Instagram conectado deve ser o da empresa correta
+
+==================================================
+11. PREENCHER O .ENV DO SISTEMA
+==================================================
+No arquivo .env da aplicacao, preencha:
+
+META_APP_ID=123456789012345
+META_APP_SECRET=seu_secret_meta_aqui
+META_REDIRECT_URI=https://seudominio.com/admin/rede-social/instagram/callback
+META_GRAPH_VERSION=v22.0
+
+SE FOR PRODUCAO
+- Coloque no ambiente do servidor
+- O secret deve ficar fora do painel administrativo
+
+SE FOR DESENVOLVIMENTO
+- Pode usar no .env local
+- Se estiver usando Docker, a aplicacao precisa reler essas configuracoes
+
+ATENCAO SOBRE TESTES
+- Mesmo para testar em desenvolvimento, estas credenciais sao obrigatorias:
+   META_APP_ID
+   META_APP_SECRET
+   META_REDIRECT_URI
+- Sem essas credenciais o sistema nao consegue iniciar a autorizacao real com a Meta.
+- O que nao precisa, nesta fase inicial, e a liberacao publica do app para todos os usuarios.
+- Enquanto o app estiver em modo de desenvolvimento, o teste funciona apenas com contas adicionadas no app como Admin, Developer ou Tester.
+
+==================================================
+12. LIMPAR O CACHE DE CONFIGURACAO DO LARAVEL
+==================================================
+Depois de alterar o .env, rode:
+
+php artisan config:clear
+
+SE ESTIVER EM DOCKER DEV, RODE NO CONTAINER DA APLICACAO
+Exemplo:
+
+docker compose exec -T laravel.test php artisan config:clear
+
+==================================================
+13. TESTAR NO SISTEMA
+==================================================
+ANTES DE TESTAR, CONFIRME
+- O .env ja esta preenchido com as credenciais da Meta
+- O cache de configuracao ja foi limpo
+- A conta que vai testar foi adicionada no app da Meta se ele ainda nao estiver publico
+
+1. Entre no painel
+2. Selecione a empresa correta
+3. Abra o menu Rede Social
+4. Clique em Configurar integracao
+5. Clique em Conectar Instagram
+6. Faça login/autorizacao na Meta
+7. Ao voltar, verifique se aparece como conectado
+8. Confira se o nome do Instagram e da pagina foram identificados
+
+==================================================
+14. TESTAR PUBLICACAO
+==================================================
+1. Crie um template com imagem valida
+2. Adicione ao menos um produto, se for o caso
+3. Clique em Publicar agora
+4. Verifique se a publicacao foi enviada para a conta Instagram da empresa conectada
+
+==================================================
+15. ERROS MAIS COMUNS
+==================================================
+ERRO: redirect_uri mismatch
+CAUSA:
+- O callback configurado na Meta nao e exatamente igual ao META_REDIRECT_URI
+
+ERRO: conta nao encontrada ou sem permissao
+CAUSA:
+- O usuario nao tem acesso suficiente a pagina do Facebook
+
+ERRO: nao existe conta Instagram comercial vinculada
+CAUSA:
+- A conta do Instagram e pessoal ou nao esta conectada a pagina
+
+ERRO: login falha mesmo com tudo certo
+CAUSA:
+- O app ainda esta em modo restrito e o usuario nao foi adicionado como tester/developer/admin
+
+ERRO: publica em uma conta errada
+CAUSA:
+- A empresa conectou outra conta Instagram ou outra pagina no momento da autorizacao
+
+==================================================
+16. RESUMO RAPIDO
+==================================================
+Voce precisa fazer 4 coisas:
+1. Criar o app na Meta
+2. Copiar APP ID e APP SECRET
+3. Configurar o callback exatamente igual ao sistema
+4. Garantir que cada empresa conecte uma conta Instagram profissional vinculada a uma pagina Facebook
+
+==================================================
+17. DICA PRATICA
+==================================================
+Antes de tentar com clientes reais:
+1. Configure tudo com uma empresa de teste
+2. Conecte uma conta Instagram de teste
+3. Faça uma publicacao manual
+4. So depois libere o fluxo para as demais empresas
