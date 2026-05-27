@@ -60,55 +60,68 @@
                             @else
                                 @php($metaAppId = old('metaAppId', $globalConfig->metaAppId ?? ''))
                                 @php($metaRedirectUri = old('metaRedirectUri', $globalConfig->metaRedirectUri ?? ''))
-                                <div class="rounded-xl border border-slate-200 bg-white p-4">
-                                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                        <div>
-                                            <label for="metaAppId" class="mb-1 block text-sm font-semibold">Meta App ID</label>
-                                            <input
-                                                id="metaAppId"
-                                                type="text"
-                                                name="metaAppId"
-                                                value="{{ $metaAppId }}"
-                                                class="w-full rounded border px-3 py-2 text-sm"
-                                                placeholder="Ex.: 123456789012345"
-                                            />
-                                            <p class="mt-1 text-xs text-slate-500">Identificador publico do app da plataforma criado no Meta for Developers.</p>
-                                            @error('metaAppId')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                                        </div>
+                                <form method="POST" action="{{ route('admin.configadmin.update') }}" class="space-y-4">
+                                    @csrf
 
-                                        <div>
-                                            <label for="metaRedirectUri" class="mb-1 block text-sm font-semibold">Meta Redirect URI</label>
-                                            <input
-                                                id="metaRedirectUri"
-                                                type="url"
-                                                name="metaRedirectUri"
-                                                value="{{ $metaRedirectUri }}"
-                                                class="w-full rounded border px-3 py-2 text-sm"
-                                                placeholder="https://seudominio.com/admin/rede-social/instagram/callback"
-                                            />
-                                            <p class="mt-1 text-xs text-slate-500">Precisa ser exatamente igual ao callback cadastrado na Meta.</p>
-                                            @error('metaRedirectUri')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                                        </div>
-                                    </div>
+                                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div>
+                                                <label for="metaAppId" class="mb-1 block text-sm font-semibold">Meta App ID</label>
+                                                <input
+                                                    id="metaAppId"
+                                                    type="text"
+                                                    name="metaAppId"
+                                                    value="{{ $metaAppId }}"
+                                                    class="w-full rounded border px-3 py-2 text-sm"
+                                                    placeholder="Ex.: 123456789012345"
+                                                />
+                                                <p class="mt-1 text-xs text-slate-500">Identificador publico do app da plataforma criado no Meta for Developers.</p>
+                                                @error('metaAppId')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                            </div>
 
-                                    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                            <div class="font-semibold text-slate-900">App Secret</div>
-                                            <div class="mt-1">Fica somente no servidor/.env por seguranca.</div>
-                                            <div class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ ($metaAppSecretConfigured ?? false) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                                {{ ($metaAppSecretConfigured ?? false) ? 'Configurado no servidor' : 'Nao configurado no servidor' }}
+                                            <div>
+                                                <label for="metaRedirectUri" class="mb-1 block text-sm font-semibold">Meta Redirect URI</label>
+                                                <input
+                                                    id="metaRedirectUri"
+                                                    type="url"
+                                                    name="metaRedirectUri"
+                                                    value="{{ $metaRedirectUri }}"
+                                                    class="w-full rounded border px-3 py-2 text-sm"
+                                                    placeholder="https://seudominio.com/admin/rede-social/instagram/callback"
+                                                />
+                                                <p class="mt-1 text-xs text-slate-500">Precisa ser exatamente igual ao callback cadastrado na Meta.</p>
+                                                @error('metaRedirectUri')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                             </div>
                                         </div>
 
-                                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                            <div class="font-semibold text-slate-900">Graph API Version</div>
-                                            <div class="mt-1">Definida no servidor/.env para controle tecnico da integracao.</div>
-                                            <div class="mt-2 inline-flex rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                                                {{ $metaGraphVersion ?? 'v22.0' }}
+                                        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                                <div class="font-semibold text-slate-900">App Secret</div>
+                                                <div class="mt-1">Fica somente no servidor/.env por seguranca.</div>
+                                                <div class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ ($metaAppSecretConfigured ?? false) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                                    {{ ($metaAppSecretConfigured ?? false) ? 'Configurado no servidor' : 'Nao configurado no servidor' }}
+                                                </div>
+                                            </div>
+
+                                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                                <div class="font-semibold text-slate-900">Graph API Version</div>
+                                                <div class="mt-1">Definida no servidor/.env para controle tecnico da integracao.</div>
+                                                <div class="mt-2 inline-flex rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                                    {{ $metaGraphVersion ?? 'v22.0' }}
+                                                </div>
                                             </div>
                                         </div>
+
+                                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                                            <p class="text-xs text-slate-500">
+                                                O App ID e a Redirect URI ficam gravados e devem reaparecer neste formulario para conferencia e edicao.
+                                            </p>
+                                            <button type="submit" class="inline-flex items-center rounded-md border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                                                Salvar Meta / Instagram
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                </form>
                             @endif
                         </div>
                     @endif

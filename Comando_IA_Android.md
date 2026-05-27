@@ -2,6 +2,14 @@
 
 Este arquivo descreve o fluxo real que o app Android precisa seguir para funcionar com a API de TV deste projeto.
 
+Escopo deste documento:
+
+- app Android de TV, em modo kiosk, consumindo a mesma API usada pela tela web `/tv/totemweb`
+- reaproveitamento maximo das configuracoes ja existentes no admin web
+- indicacao clara do que ja existe pronto no backend e no admin
+- indicacao do que o app Android nativo precisa reinterpretar localmente
+- separacao entre app TV de exibicao e app administrativo interno
+
 O objetivo e cobrir:
 
 - como o app Android gera e persiste o identificador do dispositivo
@@ -10,6 +18,23 @@ O objetivo e cobrir:
 - como receber e salvar o token definitivo da TV
 - como consumir as rotas autenticadas da TV depois da ativacao
 - quais respostas de erro o app precisa tratar
+
+## Decisao principal para o projeto Android
+
+O backend atual ja possui suporte real para TV Android e ja expoe varias configuracoes especificas para Android na mesma API usada pela tela web `/tv/totemweb`.
+
+Isso significa:
+
+- o app Android PODE reutilizar a mesma API de TV que a tela web ja usa
+- o app Android PODE reutilizar a maior parte dos controles ja existentes no admin web
+- NAO e obrigatorio criar um segundo painel de configuracao so para Android na versao inicial
+- o que muda e a camada de renderizacao: no web a interpretacao das regras esta em JavaScript; no Android nativo essa mesma logica precisa ser implementada em Kotlin
+
+Conclusao pratica:
+
+- se o app Android for um WebView apontando para `/tv/totemweb`, o reaproveitamento e quase total
+- se o app Android for nativo, ele deve consumir a mesma API e reinterpretar localmente as configuracoes visuais
+- novos controles no admin so sao necessarios se o app nativo passar a exigir comportamentos que a API atual ainda nao consegue expressar
 
 ## Visao geral do fluxo
 
@@ -538,6 +563,52 @@ Ela retorna uma estrutura extensa de configuracao visual, incluindo por exemplo:
 - fontes, tamanhos e titulos
 - configuracoes de oferta e aparencia geral
 
+### Resposta objetiva para a pergunta sobre o admin web
+
+Sim. O dispositivo Android consegue pegar grande parte das configuracoes que ja existem no admin web, porque a API ja devolve campos especificos para Android.
+
+Exemplos reais do que ja existe no contrato atual:
+
+- posicao e tamanho de logo para Android
+- largura e altura de logo vertical para Android
+- habilitacao de fullscreen slide para Android
+- largura e altura de imagem fullscreen para Android
+- largura, altura e offsets da barra lateral para Android
+- agendas de imagens com `enabledForAndroid`
+- tamanhos, fontes, cores, badges, posicoes e offsets de nome/preco por plataforma
+
+Portanto, para o app Android TV de exibicao, a base correta e:
+
+- consumir `GET /api/tv/totemweb/config`
+- interpretar os campos Android quando existirem
+- usar fallback para campos genericos quando o campo Android especifico nao vier preenchido
+
+### O que o app Android nativo ainda precisa implementar
+
+A API entrega os dados, mas o comportamento visual ainda precisa ser codificado no app Android nativo.
+
+O app Android precisa implementar localmente pelo menos estas regras:
+
+- escolher versao Android ou generica de cada campo visual
+- respeitar agendas de imagem por data
+- respeitar agendas de imagem por plataforma
+- aplicar fullscreen slide apenas quando habilitado para Android
+- aplicar tamanhos, offsets e object fit equivalentes no renderer nativo
+- alternar corretamente entre produtos, imagens e videos conforme a configuracao
+- respeitar intervalos de refresh e de troca de midia
+- tratar fallback quando algum campo vier vazio ou zerado
+
+### Quando novos controles no admin seriam necessarios
+
+So criar novos controles se surgir necessidade de comportamento que NAO esteja representado hoje na API, por exemplo:
+
+- recursos exclusivos de player Android sem equivalente atual no web
+- politicas de cache offline configuraveis por dispositivo
+- comportamento de brilho, volume do hardware ou preferencias do sistema Android
+- layouts novos que nao possam ser descritos pelos campos atuais da configuracao
+
+Se o objetivo for apenas reproduzir no Android o que ja existe em `/tv/totemweb`, o caminho correto e reaproveitar o admin atual e nao abrir outro painel do zero.
+
 ### Campos importantes para Android
 
 A API possui campos especificos para Android em varios pontos, por exemplo:
@@ -674,8 +745,9 @@ No estado atual do controller, a API responde estrutura vazia:
 1. Carregar `tv_device_token` salvo.
 2. Chamar `GET /api/tv/bootstrap` ou `GET /api/tv/produtos`.
 3. Se responder sucesso, seguir normalmente.
-4. Se responder `forceReconfigure=true`, voltar para fluxo de ativacao.
-5. Se falhar so por rede, manter token e tentar novamente depois.
+4. Se `GET /api/tv/produtos` ou `GET /api/tv/totemweb/config` responder `forceReconfigure=true`, voltar para fluxo de ativacao.
+5. Se `bootstrap`, `ofertas` ou `midias` responderem `401` generico, tratar como token invalido e redirecionar para reconfiguracao se a falha persistir ou se o dispositivo nao conseguir mais autenticar.
+6. Se falhar so por rede, manter token e tentar novamente depois.
 
 ## Regras de tratamento de erro no Android
 
@@ -685,6 +757,19 @@ No estado atual do controller, a API responde estrutura vazia:
 - falha momentanea de internet
 - erro 5xx do servidor
 - erro 401 sem `forceReconfigure=true` em cenarios nao definitivos
+
+### Onde `forceReconfigure` existe hoje de forma explicita
+
+- `GET /api/tv/produtos`
+- `GET /api/tv/totemweb/config`
+
+### Onde hoje o backend pode responder apenas `401` generico
+
+- `GET /api/tv/bootstrap`
+- `GET /api/tv/ofertas`
+- `GET /api/tv/midias`
+
+Nessas rotas autenticadas por middleware, o app Android deve tratar `401` como token invalido ou dispositivo desativado, mesmo sem campo `forceReconfigure`.
 
 ### Quando forcar reconfiguracao
 
@@ -770,10 +855,37 @@ No estado atual do controller, a API responde estrutura vazia:
 - o app precisa consultar `POST /api/tv/check-activation` ate receber o token
 - quando receber o token, deve salvar localmente e passar a usar Bearer token
 - depois disso, o app usa `heartbeat`, `bootstrap`, `tv/produtos`, `tv/ofertas`, `tv/midias` e opcionalmente `tv/totemweb/config`
-- se a API responder `forceReconfigure=true`, o app deve voltar para o fluxo de ativacao
+- a configuracao visual principal deve ser lida em `GET /api/tv/totemweb/config`
+- o app nativo precisa reinterpretar localmente as mesmas regras visuais que hoje existem na tela web
+- os controles atuais do admin web ja cobrem grande parte do comportamento Android
+- nao criar um segundo painel Android do zero sem necessidade real
+- se `tv/produtos` ou `tv/totemweb/config` responder `forceReconfigure=true`, o app deve voltar para o fluxo de ativacao
+- se `bootstrap`, `ofertas` ou `midias` responderem `401` repetidamente, tratar como token invalido e voltar para reconfiguracao
 - erros de rede nao devem limpar automaticamente o token salvo
 
-## Endpoints CRUD da API (produtos, departamentos e grupos)
+## Escopo do app TV versus escopo administrativo
+
+O app Android descrito neste documento e um app de EXIBICAO para TV.
+
+Escopo esperado da TV Android:
+
+- ativar dispositivo
+- receber token da TV
+- carregar configuracao visual
+- carregar produtos, ofertas e midias
+- renderizar a tela conforme configuracao recebida
+- enviar heartbeat
+
+Fora do escopo da TV Android, a menos que exista um segundo app administrativo:
+
+- CRUD de produtos
+- CRUD de departamentos
+- CRUD de grupos
+- autenticacao com token da empresa para operacoes administrativas
+
+Se futuramente existir um app Android interno de administracao, ele pode usar essas rotas. Mas isso nao faz parte do app TV kiosk.
+
+## Endpoints CRUD da API (somente para app administrativo, nao para a TV kiosk)
 
 Esses endpoints existem no backend e ficam no grupo com middleware `identify.company`.
 
@@ -823,7 +935,7 @@ PATCH /api/grupos/{id}
 DELETE /api/grupos/{id}
 ```
 
-Exemplos de uso no app:
+Exemplos de uso em um app administrativo:
 
 - listar catalogo: `GET /api/produtos`
 - cadastrar item: `POST /api/produtos`
@@ -847,6 +959,174 @@ Exemplos de uso no app:
 - Camada de repositorio isolando chamadas de rede
 - Coroutines para operacoes assincronas
 - Sem uso de RxJava
+
+## Tipos de layout que o app Android deve suportar
+
+O app Android deve ser capaz de montar os layouts abaixo usando a mesma configuracao recebida da API.
+
+Esses layouts NAO sao telas administrativas. Sao variacoes da tela principal da TV.
+
+### Layout 1. Lista principal com barra lateral direita
+
+Esse e o layout padrao mais comum.
+
+Caracteristicas:
+
+- lista principal de produtos ocupando a area central ou esquerda
+- barra lateral direita ativa
+- titulo opcional no topo ou no rodape
+- logo lateral opcional
+- logo vertical esquerda opcional
+
+Campos principais envolvidos:
+
+- `showRightSidebarPanel`
+- `showTitle`
+- `titlePosition`
+- `showRightSidebarLogo`
+- `showLeftVerticalLogo`
+- `productListType=1`
+
+### Layout 2. Lista principal sem barra lateral direita
+
+Esse layout ocupa praticamente toda a tela com a lista de produtos.
+
+Caracteristicas:
+
+- lista usa largura total
+- sem painel lateral de video/imagem
+- pode manter titulo e identidade visual
+
+Campos principais envolvidos:
+
+- `showRightSidebarPanel=false`
+- `showTitle`
+- `productListType=1`
+
+### Layout 3. Lista dupla de produtos
+
+Esse layout divide a listagem principal em duas colunas ou duas listas.
+
+Caracteristicas:
+
+- duas listas de produtos lado a lado
+- pode separar por grupos configurados ou dividir automaticamente ao meio
+- continua podendo usar barra lateral e titulo
+
+Campos principais envolvidos:
+
+- `productListType=2`
+- `productListLeftGroupIds`
+- `productListRightGroupIds`
+- `showRightSidebarPanel`
+
+### Layout 4. Barra lateral em modo video
+
+Nesse modo a barra lateral exibe video ou playlist de videos.
+
+Caracteristicas:
+
+- video unico ou playlist
+- area principal continua com lista de produtos
+- logo pode aparecer acima da lateral, conforme configuracao
+
+Campos principais envolvidos:
+
+- `rightSidebarMediaType=video`
+- `videoUrl`
+- `videoPlaylist`
+- `showVideoPanel`
+- `showRightSidebarPanel`
+
+### Layout 5. Barra lateral em modo imagem
+
+Nesse modo a barra lateral exibe imagens estaticas ou slideshow de imagens.
+
+Caracteristicas:
+
+- usa lista de imagens configuradas
+- pode aplicar agenda por data e por plataforma Android
+- cada imagem pode ter tamanho, offset, fit, nome e preco especificos
+
+Campos principais envolvidos:
+
+- `rightSidebarMediaType=image`
+- `rightSidebarImageUrls`
+- `rightSidebarImageSchedules`
+- `rightSidebarImageInterval`
+- `rightSidebarAndroidHeight`
+- `rightSidebarAndroidWidth`
+- `rightSidebarAndroidHorizontalOffset`
+- `rightSidebarAndroidVerticalOffset`
+
+### Layout 6. Barra lateral em modo hibrido
+
+Nesse modo a lateral alterna entre produtos, imagens e videos.
+
+Caracteristicas:
+
+- mistura midias na lateral
+- pode alternar por sequencia configurada
+- pode incluir carrossel de produtos na lateral
+
+Campos principais envolvidos:
+
+- `rightSidebarMediaType=hybrid`
+- `rightSidebarPlaybackSequence`
+- `rightSidebarHybridVideoDuration`
+- `rightSidebarHybridImageDuration`
+- `rightSidebarProductCarouselEnabled`
+- `rightSidebarProductDisplayMode`
+- `rightSidebarProductTransitionMode`
+
+### Layout 7. Slide em tela cheia
+
+Esse layout toma a tela toda temporariamente e depois retorna ao layout principal.
+
+Caracteristicas:
+
+- imagens fullscreen dedicadas
+- habilitacao separada para Android
+- intervalo, datas e delay de retorno configuraveis
+- dimensoes Android especificas quando configuradas
+
+Campos principais envolvidos:
+
+- `fullScreenSlideEnabled`
+- `fullScreenSlideEnabledAndroid`
+- `fullScreenSlideImageUrls`
+- `fullScreenSlideInterval`
+- `fullScreenSlideReturnDelaySeconds`
+- `fullScreenSlideStartDate`
+- `fullScreenSlideEndDate`
+- `fullScreenSlideImageWidthAndroid`
+- `fullScreenSlideImageHeightAndroid`
+
+### Layout 8. Slide de ofertas
+
+Esse layout mostra ofertas em destaque periodicamente.
+
+Caracteristicas:
+
+- entra como modo especial ou transitorio
+- busca dados em `GET /api/tv/ofertas`
+- usa configuracao visual propria para fontes, fundo e imagem do produto
+
+Campos principais envolvidos:
+
+- `offerSlideEnabled`
+- `offerSlideIntervalSeconds`
+- configuracoes visuais de `offerSlide*`
+
+### Regra geral para a IA do Android
+
+O app nao deve criar apenas um layout fixo. Ele deve criar um renderer capaz de montar dinamicamente essas variacoes conforme os campos da API.
+
+Em outras palavras:
+
+- a API escolhe o layout efetivo
+- o admin web altera o comportamento
+- o Android obedece o contrato recebido
 
 ### Dependencias necessarias no `build.gradle`
 
@@ -1123,9 +1403,7 @@ object RetrofitInstance {
 
     private const val BASE_URL = "https://app.tabeladeprecodigital.com.br/api/"
 
-    private val gson = GsonBuilder()
-        .registerTypeAdapter(Double::class.java, OfertaDeserializer())
-        .create()
+  private val gson = GsonBuilder().create()
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -1175,7 +1453,13 @@ Regras:
 
 ## Heartbeat em background com WorkManager
 
-O heartbeat precisa continuar funcionando mesmo com o app em segundo plano.
+O heartbeat precisa continuar funcionando enquanto o app estiver ativo e, se necessario, tambem quando estiver em background.
+
+Observacao importante:
+
+- `PeriodicWorkRequest` do WorkManager nao e adequado para intervalo real de 60 segundos
+- para heartbeat frequente, o app deve preferir coroutine controlada pelo ciclo de vida, foreground service quando necessario, ou aceitar um intervalo maior no WorkManager
+- se a exigencia for heartbeat estrito de 60 segundos, nao documentar isso como `PeriodicWorkRequest` simples
 
 ```kotlin
 class HeartbeatWorker(
@@ -1199,7 +1483,7 @@ class HeartbeatWorker(
 // Agendamento (chamar na inicializacao do app apos ativacao)
 fun scheduleHeartbeat(context: Context) {
     val request = PeriodicWorkRequestBuilder<HeartbeatWorker>(
-        60, TimeUnit.SECONDS
+    15, TimeUnit.MINUTES
     )
         .setConstraints(
             Constraints.Builder()
@@ -1221,7 +1505,8 @@ fun scheduleHeartbeat(context: Context) {
 ## AndroidManifest - permissoes e configuracoes necessarias
 
 ```xml
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Acesso a internet -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -1387,3 +1672,20 @@ suspend fun getOrCreateDeviceUuid(context: Context): String {
 - fixar `android:screenOrientation="landscape"` na Activity no manifest
 - nao depender de rotacao automatica do dispositivo
 - o campo `orientacao` retornado pelo `bootstrap` pode ser usado para ajustes futuros de layout
+
+## Checklist final para a IA que vai construir o app Android nativo
+
+Antes de escrever codigo, a IA deve assumir estas premissas como obrigatorias:
+
+- o app Android deve reproduzir o comportamento da tela web `/tv/totemweb`, e nao inventar um fluxo novo
+- a mesma API ja usada pelo web deve ser reutilizada
+- a principal fonte de layout remoto e `GET /api/tv/totemweb/config`
+- os campos Android devem ter prioridade sobre os campos genericos equivalentes
+- quando o backend nao fornecer campo Android especifico, usar fallback do campo generico
+- o app precisa tratar produtos, ofertas, videos, imagens, fullscreen e agenda por plataforma
+- o app precisa manter `device_uuid`, `tv_device_token` e opcionalmente `tv_last_device_token`
+- erros temporarios de rede nao devem destruir estado local
+- reconfiguracao forcada deve voltar para a tela de ativacao
+- o app TV kiosk nao deve implementar CRUD administrativo como parte do fluxo principal
+
+Se a IA for construir renderer 100% nativo, ela precisa portar a logica visual do frontend web para Kotlin. Se for construir um shell Android com WebView kiosk, o reaproveitamento e maior, mas a dependencia do frontend web tambem aumenta.
