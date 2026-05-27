@@ -179,6 +179,52 @@
                     @endif
                 </div>
 
+                <div class="mt-6 rounded-[1.75rem] border {{ $integration->status === 'connected' ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-4">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <div class="text-sm font-semibold {{ $integration->status === 'connected' ? 'text-emerald-900' : 'text-amber-900' }}">
+                                @if (! $instagramConfigured)
+                                    Conclua primeiro a configuracao global da Meta antes de criar templates para publicacao.
+                                @elseif ($integration->status === 'connected')
+                                    Conexao Meta pronta para esta empresa.
+                                @else
+                                    Conecte a conta Meta desta empresa antes de testar a conexao ou publicar templates.
+                                @endif
+                            </div>
+
+                            <div class="mt-1 text-sm {{ $integration->status === 'connected' ? 'text-emerald-800' : 'text-amber-800' }}">
+                                @if ($integration->status === 'connected')
+                                    Instagram: {{ $integration->instagram_username ?: 'Conta conectada' }} | Facebook: {{ $integration->facebook_page_name ?: 'Pagina conectada' }}
+                                @else
+                                    {{ $integrationStatus['message'] }}
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                @click="integrationOpen = true"
+                                class="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                Ver integracao
+                            </button>
+
+                            @if ($instagramConfigured)
+                                @if ($integration->status === 'connected')
+                                    <button type="button" wire:click="testIntegration" class="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
+                                        Testar conexao Meta
+                                    </button>
+                                @else
+                                    <a href="{{ route('admin.social-media.instagram.connect') }}" class="inline-flex rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                                        Conectar Meta
+                                    </a>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
                 <form wire:submit="save" class="mt-6 space-y-5">
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
