@@ -444,16 +444,6 @@ class InstagramGraphService
 
     private function appId(): string
     {
-        $configured = '';
-
-        if (Schema::hasColumn('configuracoes', 'metaAppId')) {
-            $configured = trim((string) (Configuracao::query()->whereNull('empresa_id')->value('metaAppId') ?? ''));
-        }
-
-        if ($configured !== '') {
-            return $configured;
-        }
-
         return trim((string) config('services.instagram_graph.app_id'));
     }
 
@@ -464,16 +454,6 @@ class InstagramGraphService
 
     private function redirectUri(): string
     {
-        $configured = '';
-
-        if (Schema::hasColumn('configuracoes', 'metaRedirectUri')) {
-            $configured = trim((string) (Configuracao::query()->whereNull('empresa_id')->value('metaRedirectUri') ?? ''));
-        }
-
-        if ($configured !== '') {
-            return $configured;
-        }
-
         return trim((string) config('services.instagram_graph.redirect_uri'));
     }
 
