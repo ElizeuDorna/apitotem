@@ -627,7 +627,19 @@ class InstagramGraphService
             $metaSubcode = Arr::get($body, 'error.error_subcode');
 
             if ($this->isTokenProblem($exception)) {
-                return 'Token da Meta expirado ou invalido. Reconecte a conta desta empresa e tente novamente.';
+                $details = [];
+
+                if ($metaCode !== null) {
+                    $details[] = 'codigo '.$metaCode;
+                }
+
+                if ($metaSubcode !== null) {
+                    $details[] = 'subcodigo '.$metaSubcode;
+                }
+
+                $suffix = $details === [] ? '' : ' ('.implode(', ', $details).')';
+
+                return 'A Meta rejeitou o token salvo desta empresa'.$suffix.'. Reconecte a conta e teste a integracao antes de publicar novamente.';
             }
 
             if ($metaMessage !== '') {

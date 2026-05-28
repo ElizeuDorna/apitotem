@@ -393,14 +393,20 @@
                         <div>
                             <label class="block text-sm font-semibold text-slate-800">Inicio do agendamento</label>
                             <input type="datetime-local" wire:model="scheduledStartAt" class="mt-1 w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                            <p class="mt-1 text-xs text-slate-500">Opcional. Deixe vazio se quiser apenas salvar o template e publicar manualmente quando precisar.</p>
                             @error('scheduled_start_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
 
                         <div>
                             <label class="block text-sm font-semibold text-slate-800">Fim do agendamento</label>
                             <input type="datetime-local" wire:model="scheduledEndAt" class="mt-1 w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                            <p class="mt-1 text-xs text-slate-500">Opcional. So preencha se quiser limitar ate quando o agendamento automatico pode rodar.</p>
                             @error('scheduled_end_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+                        <span class="font-semibold">Publicar agora</span> ignora a janela de agendamento e tenta postar imediatamente usando a integracao Meta da empresa ativa.
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
@@ -644,6 +650,7 @@
                                         <button type="button" wire:click="deleteTemplate({{ $template->id }})" wire:confirm="Tem certeza?" class="rounded-xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Excluir</button>
                                         @if ($integrationReady)
                                             <button type="button" wire:click="publishNow({{ $template->id }})" class="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Publicar agora</button>
+                                            <span class="inline-flex rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800">Ignora o agendamento</span>
                                         @elseif ($integrationStatus['level'] === 'expired')
                                             <span class="inline-flex rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Reconecte a Meta para publicar</span>
                                         @endif
