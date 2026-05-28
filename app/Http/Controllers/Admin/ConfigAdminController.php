@@ -39,20 +39,12 @@ class ConfigAdminController extends Controller
         $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
 
         $config = $this->findOrCreateConfig($empresaId)->fresh();
-        $metaAppId = trim((string) config('services.instagram_graph.app_id'));
-        $metaRedirectUri = trim((string) config('services.instagram_graph.redirect_uri'));
-        $metaAppSecretConfigured = trim((string) env('META_APP_SECRET')) !== '';
-        $metaGraphVersion = trim((string) env('META_GRAPH_VERSION', 'v22.0'));
 
         return view('admin.configadmin', compact(
             'config',
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
             'produtoFormImagePreviewFeatureReady',
-            'metaAppId',
-            'metaRedirectUri',
-            'metaAppSecretConfigured',
-            'metaGraphVersion',
         ));
     }
 

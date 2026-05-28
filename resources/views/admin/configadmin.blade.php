@@ -49,52 +49,6 @@
                             </div>
                         </div>
 
-                        <div id="meta-instagram" class="rounded-lg border border-slate-200 bg-slate-50 p-4 scroll-mt-24 mb-6">
-                            <h3 class="mb-3 text-base font-semibold text-slate-800">Meta / Instagram da Plataforma</h3>
-                            <p class="mb-3 text-sm text-slate-600">Essa configuracao e global da plataforma. Cada empresa conecta o proprio Instagram, mas o sistema usa um unico app Meta da plataforma para iniciar a autorizacao.</p>
-
-                            <div class="rounded-xl border border-slate-200 bg-white p-4">
-                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                        <div class="font-semibold text-slate-900">Meta App ID</div>
-                                        <div class="mt-1 break-all">{{ $metaAppId !== '' ? $metaAppId : 'Nao configurado no .env' }}</div>
-                                        <div class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $metaAppId !== '' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                            {{ $metaAppId !== '' ? 'Configurado no servidor' : 'Nao configurado no servidor' }}
-                                        </div>
-                                    </div>
-
-                                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                        <div class="font-semibold text-slate-900">Meta Redirect URI</div>
-                                        <div class="mt-1 break-all">{{ $metaRedirectUri !== '' ? $metaRedirectUri : 'Nao configurado no .env' }}</div>
-                                        <div class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $metaRedirectUri !== '' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                            {{ $metaRedirectUri !== '' ? 'Configurado no servidor' : 'Nao configurado no servidor' }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                        <div class="font-semibold text-slate-900">App Secret</div>
-                                        <div class="mt-1">Fica somente no servidor/.env por seguranca.</div>
-                                        <div class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ ($metaAppSecretConfigured ?? false) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                            {{ ($metaAppSecretConfigured ?? false) ? 'Configurado no servidor' : 'Nao configurado no servidor' }}
-                                        </div>
-                                    </div>
-
-                                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                                        <div class="font-semibold text-slate-900">Graph API Version</div>
-                                        <div class="mt-1">Definida no servidor/.env para controle tecnico da integracao.</div>
-                                        <div class="mt-2 inline-flex rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                                            {{ $metaGraphVersion ?? 'v22.0' }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-800">
-                                    Essas credenciais agora sao lidas somente do arquivo .env do servidor. Para alterar Meta App ID, Meta Redirect URI, App Secret ou Graph API Version, ajuste o ambiente do servidor e limpe os caches de configuracao do Laravel.
-                                </div>
-                            </div>
-                        </div>
                     @endif
 
                     <div id="identidade-painel" class="rounded-lg border border-slate-200 bg-slate-50 p-4 scroll-mt-24">
