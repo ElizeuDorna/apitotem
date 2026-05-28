@@ -105,7 +105,7 @@ VALIDACOES NO APP DESKTOP
 - Exigir CODIGO antes do envio.
 - Exigir exatamente uma origem de imagem (arquivo OU link).
 - Se link: validar URL antes de enviar.
-- Se upload: validar extensoes permitidas (jpg, jpeg, png, webp) e tamanho maximo 256MB.
+- Se upload: validar extensoes permitidas (jpg, jpeg, png, webp) e tamanho maximo 4MB.
 
 CONTRATO DE CAMPOS
 - Path:

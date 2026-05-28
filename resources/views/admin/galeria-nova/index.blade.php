@@ -80,21 +80,6 @@
 
                     @php
                         $resolvedUrl = \App\Http\Controllers\Admin\GaleriaNovaController::itemUrl($gallery);
-                        $selectionAttributes = [];
-
-                        if (request()->boolean('selecionar_produto')) {
-                            $selectionAttributes['data-select-produto-image-url'] = $resolvedUrl;
-                        }
-
-                        if (request()->boolean('selecionar_social_media')) {
-                            $selectionAttributes['data-select-social-media-image-url'] = $resolvedUrl;
-                        }
-
-                        if (request()->boolean('selecionar_slide')) {
-                            $selectionAttributes['data-select-slide-image-url'] = $resolvedUrl;
-                        }
-
-                        $selectionEnabled = $selectionAttributes !== [];
                     @endphp
 
                     <div class="rounded-md border border-gray-200 p-3">
@@ -118,20 +103,8 @@
 
                         @if ($resolvedUrl)
                             <div class="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
-                                <div
-                                    @foreach ($selectionAttributes as $attribute => $value)
-                                        {{ $attribute }}="{{ $value }}"
-                                    @endforeach
-                                    class="{{ $selectionEnabled ? 'cursor-pointer rounded-md transition hover:ring-2 hover:ring-cyan-400 hover:ring-offset-2' : '' }}"
-                                    title="{{ $selectionEnabled ? 'Clique para selecionar esta imagem' : '' }}"
-                                >
-                                    <img src="{{ $resolvedUrl }}" alt="Imagem {{ $gallery->name }}" class="h-28 w-full rounded border object-cover">
-                                </div>
+                                <img src="{{ $resolvedUrl }}" alt="Imagem {{ $gallery->name }}" class="h-28 w-full rounded object-cover border">
                                 <p class="mt-2 text-xs text-gray-600 break-all">{{ $gallery->source_type === 'link' ? 'Link externo' : 'Upload' }}</p>
-
-                                @if ($selectionEnabled)
-                                    <p class="mt-2 text-xs font-medium text-cyan-700">Clique na imagem ou no botao abaixo para selecionar.</p>
-                                @endif
 
                                 @if (request()->boolean('selecionar_produto'))
                                     <button

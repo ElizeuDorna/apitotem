@@ -167,6 +167,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/configadmin', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'update'])
         ->name('admin.configadmin.update')
         ->middleware('menu.access:config_admin');
+        Route::post('/admin/configadmin/apk-upload', [\App\Http\Controllers\Admin\ConfigAdminController::class, 'storeApk'])
+            ->name('admin.apk-upload.store')
+            ->middleware('menu.access:config_admin');
         Route::get('/admin/downloads', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'index'])
             ->name('admin.downloads.index')
             ->middleware('menu.access:downloads');

@@ -74,7 +74,7 @@ class GaleriaImagemController extends Controller
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'is_public' => ['nullable', 'boolean'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:262144'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'external_url' => ['nullable', 'url', 'max:1000'],
         ]);
 
@@ -96,12 +96,11 @@ class GaleriaImagemController extends Controller
         }
 
         if ($upload) {
-            $result = $this->createOrReuseUploadGallery($empresa, $upload, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
+            $gallery = $this->createOrReuseUploadGallery($empresa, $upload, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
         } else {
-            $result = $this->createOrReuseLinkGallery($empresa, $externalUrl, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
+            $gallery = $this->createOrReuseLinkGallery($empresa, $externalUrl, (string) ($validated['name'] ?? ''), (bool) ($validated['is_public'] ?? false));
         }
 
-        $gallery = $result['gallery'];
         $galleryPayload = $this->payload($gallery);
         $produtoModel->update([
             'IMG' => (string) ($galleryPayload['url'] ?? ''),
@@ -183,25 +182,22 @@ class GaleriaImagemController extends Controller
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'is_public' => ['nullable', 'boolean'],
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:262144'],
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
-        $result = $this->createOrReuseUploadGallery(
+        $gallery = $this->createOrReuseUploadGallery(
             $empresa,
             $request->file('image'),
             (string) ($validated['name'] ?? ''),
             (bool) ($validated['is_public'] ?? false)
         );
 
-        $gallery = $result['gallery'];
-        $created = $result['created'];
-
         return response()->json([
             'sucesso' => true,
-            'criado' => $created,
-            'mensagem' => $created ? 'Imagem enviada com sucesso.' : 'Imagem ja existente reaproveitada com sucesso.',
+            'criado' => true,
+            'mensagem' => 'Imagem enviada com sucesso.',
             'dados' => $this->payload($gallery->fresh()),
-        ], $created ? 201 : 200);
+        ], 201);
     }
 
     #[OA\Post(
@@ -243,22 +239,19 @@ class GaleriaImagemController extends Controller
             'is_public' => ['nullable', 'boolean'],
         ]);
 
-        $result = $this->createOrReuseLinkGallery(
+        $gallery = $this->createOrReuseLinkGallery(
             $empresa,
             trim((string) $validated['external_url']),
             (string) ($validated['name'] ?? ''),
             (bool) ($validated['is_public'] ?? false)
         );
 
-        $gallery = $result['gallery'];
-        $created = $result['created'];
-
         return response()->json([
             'sucesso' => true,
-            'criado' => $created,
-            'mensagem' => $created ? 'Link cadastrado com sucesso.' : 'Link ja existente reaproveitado com sucesso.',
+            'criado' => true,
+            'mensagem' => 'Link cadastrado com sucesso.',
             'dados' => $this->payload($gallery),
-        ], $created ? 201 : 200);
+        ], 201);
     }
 
     private function payload(GaleriaNova $gallery): array
@@ -276,7 +269,7 @@ class GaleriaImagemController extends Controller
         ];
     }
 
-    private function createOrReuseUploadGallery(Empresa $empresa, $upload, string $name, bool $isPublic): array
+    private function createOrReuseUploadGallery(Empresa $empresa, $upload, string $name, bool $isPublic): GaleriaNova
     {
         $imageHash = hash_file('sha256', (string) $upload->getRealPath());
 
@@ -287,10 +280,7 @@ class GaleriaImagemController extends Controller
             ->first();
 
         if ($existing) {
-            return [
-                'gallery' => $existing,
-                'created' => false,
-            ];
+            return $existing;
         }
 
         $gallery = GaleriaNova::query()->create([
@@ -316,13 +306,10 @@ class GaleriaImagemController extends Controller
             'file_path' => $path,
         ]);
 
-        return [
-            'gallery' => $gallery->fresh(),
-            'created' => true,
-        ];
+        return $gallery->fresh();
     }
 
-    private function createOrReuseLinkGallery(Empresa $empresa, string $externalUrl, string $name, bool $isPublic): array
+    private function createOrReuseLinkGallery(Empresa $empresa, string $externalUrl, string $name, bool $isPublic): GaleriaNova
     {
         $existing = GaleriaNova::query()
             ->where('empresa_id', $empresa->id)
@@ -331,26 +318,20 @@ class GaleriaImagemController extends Controller
             ->first();
 
         if ($existing) {
-            return [
-                'gallery' => $existing,
-                'created' => false,
-            ];
+            return $existing;
         }
 
-        return [
-            'gallery' => GaleriaNova::query()->create([
-                'code' => $this->generateUniqueCode(),
-                'empresa_id' => $empresa->id,
-                'is_public' => $isPublic,
-                'name' => trim($name) !== '' ? $name : 'Imagem via link',
-                'source_type' => 'link',
-                'external_url' => $externalUrl,
-                'file_path' => null,
-                'image_hash' => null,
-                'created_by' => null,
-            ]),
-            'created' => true,
-        ];
+        return GaleriaNova::query()->create([
+            'code' => $this->generateUniqueCode(),
+            'empresa_id' => $empresa->id,
+            'is_public' => $isPublic,
+            'name' => trim($name) !== '' ? $name : 'Imagem via link',
+            'source_type' => 'link',
+            'external_url' => $externalUrl,
+            'file_path' => null,
+            'image_hash' => null,
+            'created_by' => null,
+        ]);
     }
 
     private function generateUniqueCode(): string
