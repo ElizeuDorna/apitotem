@@ -129,6 +129,11 @@ Route::get('/dw', [\App\Http\Controllers\Admin\DownloadAssetController::class, '
 Route::get('/dw/{downloadAsset:slug}', [\App\Http\Controllers\Admin\DownloadAssetController::class, 'download'])
     ->name('downloads.file');
 
+Route::get('/webhooks/whatsapp', [\App\Http\Controllers\Admin\WhatsAppWebhookController::class, 'verify'])
+    ->name('whatsapp.webhook.verify');
+Route::post('/webhooks/whatsapp', [\App\Http\Controllers\Admin\WhatsAppWebhookController::class, 'receive'])
+    ->name('whatsapp.webhook.receive');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -258,6 +263,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('rede-social', [\App\Http\Controllers\Admin\SocialMediaTemplateController::class, 'index'])
             ->name('admin.social-media.index')
+            ->middleware('menu.access:rede_social');
+        Route::get('rede-social/whatsapp', [\App\Http\Controllers\Admin\SocialMediaTemplateController::class, 'index'])
+            ->name('admin.social-media.whatsapp.index')
             ->middleware('menu.access:rede_social');
         Route::get('rede-social/instagram/connect', [\App\Http\Controllers\Admin\InstagramIntegrationController::class, 'redirect'])
             ->name('admin.social-media.instagram.connect')

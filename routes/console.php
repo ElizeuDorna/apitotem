@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('devices:cleanup-activations')->everyFiveMinutes();
 Schedule::command('social-media:publish-scheduled')->everyMinute();
+Schedule::command('whatsapp:dispatch-scheduled')->everyMinute();

@@ -38,4 +38,9 @@ return [
         'version' => env('META_GRAPH_VERSION', 'v22.0'),
     ],
 
+    'whatsapp_graph' => [
+        'version' => env('WHATSAPP_GRAPH_VERSION', 'v25.0'),
+        'verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
+    ],
+
 ];
