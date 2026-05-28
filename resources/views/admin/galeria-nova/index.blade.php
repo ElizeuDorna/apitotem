@@ -116,6 +116,16 @@
                                     </button>
                                 @endif
 
+                                @if (request()->boolean('selecionar_social_media'))
+                                    <button
+                                        type="button"
+                                        class="mt-2 w-full rounded bg-cyan-600 px-2 py-1 text-xs font-semibold text-white hover:bg-cyan-500"
+                                        data-select-social-media-image-url="{{ $resolvedUrl }}"
+                                    >
+                                        Selecionar para imagem principal do post
+                                    </button>
+                                @endif
+
                                 @if (request()->boolean('selecionar_slide'))
                                     <button
                                         type="button"
@@ -149,6 +159,7 @@
         const toggleGaleriaNovaFormBtn = document.getElementById('toggleGaleriaNovaFormBtn');
         const galeriaNovaFormWrapper = document.getElementById('galeriaNovaFormWrapper');
         const produtoImagemSelecionadaStorageKey = 'produto_imagem_url_selecionada';
+        const socialMediaCoverImagemSelecionadaStorageKey = 'social_media_cover_image_url_selected';
         const slideLateralImagemSelecionadaStorageKey = 'right_sidebar_slide_image_url_selected';
 
         if (toggleGaleriaNovaFormBtn && galeriaNovaFormWrapper) {
@@ -174,16 +185,19 @@
             }
 
             const selectProdutoButton = target.closest('[data-select-produto-image-url]');
+            const selectSocialMediaButton = target.closest('[data-select-social-media-image-url]');
             const selectSlideButton = target.closest('[data-select-slide-image-url]');
-            const selectButton = selectProdutoButton || selectSlideButton;
+            const selectButton = selectProdutoButton || selectSocialMediaButton || selectSlideButton;
             if (!(selectButton instanceof HTMLElement)) {
                 return;
             }
 
             const isProdutoSelection = selectButton.hasAttribute('data-select-produto-image-url');
+            const isSocialMediaSelection = selectButton.hasAttribute('data-select-social-media-image-url');
             const isSlideSelection = selectButton.hasAttribute('data-select-slide-image-url');
             const selectedUrl = String(
                 selectButton.getAttribute('data-select-produto-image-url')
+                    || selectButton.getAttribute('data-select-social-media-image-url')
                     || selectButton.getAttribute('data-select-slide-image-url')
                     || ''
             ).trim();
@@ -195,6 +209,10 @@
                 localStorage.setItem(produtoImagemSelecionadaStorageKey, selectedUrl);
             }
 
+            if (isSocialMediaSelection) {
+                localStorage.setItem(socialMediaCoverImagemSelecionadaStorageKey, selectedUrl);
+            }
+
             if (isSlideSelection) {
                 localStorage.setItem(slideLateralImagemSelecionadaStorageKey, selectedUrl);
             }
@@ -203,6 +221,13 @@
                 if (isProdutoSelection) {
                     window.opener.postMessage({
                         type: 'galeriaNovaSelectImage',
+                        url: selectedUrl,
+                    }, window.location.origin);
+                }
+
+                if (isSocialMediaSelection) {
+                    window.opener.postMessage({
+                        type: 'galeriaNovaSelectSocialMediaCoverImage',
                         url: selectedUrl,
                     }, window.location.origin);
                 }

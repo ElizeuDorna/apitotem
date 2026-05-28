@@ -273,49 +273,21 @@ class InstagramGraphService
 
         $integration = $this->assertIntegrationReady($integration, requireInstagram: true, requireFacebook: false);
 
-        $imageUrl = $this->templateService->toAbsoluteImageUrl($this->templateService->resolveTemplateImageUrl($template));
-        if ($imageUrl === '') {
+        $imageUrls = $this->resolvePublishImageUrls($template);
+        if ($imageUrls === []) {
             throw new RuntimeException('O template precisa de uma imagem principal para publicar no Instagram.');
         }
 
-        $previewProducts = $template->templateProducts->map(function ($item): array {
-            return [
-                'name' => $item->custom_title ?: (string) ($item->produto?->NOME ?? 'Produto'),
-                'price' => (float) ($item->produto?->PRECO ?? 0),
-                'offer' => (float) ($item->produto?->OFERTA ?? 0),
-                'show_price' => (bool) $item->show_price,
-                'show_offer_price' => (bool) $item->show_offer_price,
-            ];
-        })->all();
-
-        $caption = $this->templateService->buildCaptionPreview(
-            (string) ($template->titulo ?? ''),
-            (string) ($template->legenda ?? ''),
-            $previewProducts,
-        );
+        $caption = $this->buildTemplateCaption($template);
 
         try {
-            $containerResponse = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media'), [
-                'image_url' => $imageUrl,
-                'caption' => $caption,
-                'access_token' => $integration->access_token,
-            ])->throw()->json();
-
-            $creationId = (string) Arr::get($containerResponse, 'id', '');
-            if ($creationId === '') {
-                throw new RuntimeException('Nao foi possivel criar o container de publicacao no Instagram.');
-            }
-
-            $publishResponse = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media_publish'), [
-                'creation_id' => $creationId,
-                'access_token' => $integration->access_token,
-            ])->throw()->json();
-
-            $publishId = (string) Arr::get($publishResponse, 'id', '');
+            $publishId = $this->shouldPublishCarousel($template, $imageUrls)
+                ? $this->publishInstagramCarousel($integration, $imageUrls, $caption)
+                : $this->publishInstagramSingleImage($integration, $imageUrls[0], $caption);
 
             $template->update([
                 'instagram_publish_status' => 'published',
-                'instagram_publish_id' => $publishId !== '' ? $publishId : $creationId,
+                'instagram_publish_id' => $publishId,
                 'instagram_last_published_at' => now(),
                 'instagram_last_error' => null,
             ]);
@@ -326,7 +298,7 @@ class InstagramGraphService
             ]);
 
             return [
-                'publish_id' => $publishId !== '' ? $publishId : $creationId,
+                'publish_id' => $publishId,
             ];
         } catch (Throwable $exception) {
             $message = $this->humanizeMetaException($exception);
@@ -352,39 +324,17 @@ class InstagramGraphService
 
         $integration = $this->assertIntegrationReady($integration, requireInstagram: false, requireFacebook: true);
 
-        $imageUrl = $this->templateService->toAbsoluteImageUrl($this->templateService->resolveTemplateImageUrl($template));
-        if ($imageUrl === '') {
+        $imageUrls = $this->resolvePublishImageUrls($template);
+        if ($imageUrls === []) {
             throw new RuntimeException('O template precisa de uma imagem principal para publicar no Facebook.');
         }
 
-        $previewProducts = $template->templateProducts->map(function ($item): array {
-            return [
-                'name' => $item->custom_title ?: (string) ($item->produto?->NOME ?? 'Produto'),
-                'price' => (float) ($item->produto?->PRECO ?? 0),
-                'offer' => (float) ($item->produto?->OFERTA ?? 0),
-                'show_price' => (bool) $item->show_price,
-                'show_offer_price' => (bool) $item->show_offer_price,
-            ];
-        })->all();
-
-        $caption = $this->templateService->buildCaptionPreview(
-            (string) ($template->titulo ?? ''),
-            (string) ($template->legenda ?? ''),
-            $previewProducts,
-        );
+        $caption = $this->buildTemplateCaption($template);
 
         try {
-            $response = Http::asForm()->post($this->graphUrl('/'.$integration->facebook_page_id.'/photos'), [
-                'url' => $imageUrl,
-                'caption' => $caption,
-                'published' => 'true',
-                'access_token' => $integration->access_token,
-            ])->throw()->json();
-
-            $publishId = (string) Arr::get($response, 'post_id', Arr::get($response, 'id', ''));
-            if ($publishId === '') {
-                throw new RuntimeException('Nao foi possivel criar a publicacao na pagina do Facebook.');
-            }
+            $publishId = $this->shouldPublishCarousel($template, $imageUrls)
+                ? $this->publishFacebookMultiImagePost($integration, $imageUrls, $caption)
+                : $this->publishFacebookSingleImage($integration, $imageUrls[0], $caption);
 
             $template->update([
                 'facebook_publish_status' => 'published',
@@ -412,6 +362,160 @@ class InstagramGraphService
 
             throw new RuntimeException($message);
         }
+    }
+
+    private function buildTemplateCaption(SocialMediaTemplate $template): string
+    {
+        $previewProducts = $template->templateProducts->map(function ($item): array {
+            return [
+                'name' => $item->custom_title ?: (string) ($item->produto?->NOME ?? 'Produto'),
+                'price' => (float) ($item->produto?->PRECO ?? 0),
+                'offer' => (float) ($item->produto?->OFERTA ?? 0),
+                'show_price' => (bool) $item->show_price,
+                'show_offer_price' => (bool) $item->show_offer_price,
+            ];
+        })->all();
+
+        return $this->templateService->buildCaptionPreview(
+            (string) ($template->titulo ?? ''),
+            (string) ($template->legenda ?? ''),
+            $previewProducts,
+        );
+    }
+
+    private function resolvePublishImageUrls(SocialMediaTemplate $template): array
+    {
+        $mode = (string) ($template->image_publish_mode ?? 'single');
+
+        if ($mode === 'product_images') {
+            $imageUrls = array_values(array_filter(array_map(
+                fn (string $url): string => $this->templateService->toAbsoluteImageUrl($url),
+                $this->templateService->resolveTemplateImageUrls($template),
+            )));
+
+            if ($imageUrls !== []) {
+                return array_values(array_unique($imageUrls));
+            }
+        }
+
+        $singleImageUrl = $this->templateService->toAbsoluteImageUrl($this->templateService->resolveTemplateImageUrl($template));
+
+        return $singleImageUrl !== '' ? [$singleImageUrl] : [];
+    }
+
+    private function shouldPublishCarousel(SocialMediaTemplate $template, array $imageUrls): bool
+    {
+        return (string) ($template->image_publish_mode ?? 'single') === 'product_images'
+            && count($imageUrls) > 1;
+    }
+
+    private function publishInstagramSingleImage(SocialMediaIntegration $integration, string $imageUrl, string $caption): string
+    {
+        $containerResponse = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media'), [
+            'image_url' => $imageUrl,
+            'caption' => $caption,
+            'access_token' => $integration->access_token,
+        ])->throw()->json();
+
+        $creationId = (string) Arr::get($containerResponse, 'id', '');
+        if ($creationId === '') {
+            throw new RuntimeException('Nao foi possivel criar o container de publicacao no Instagram.');
+        }
+
+        $publishResponse = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media_publish'), [
+            'creation_id' => $creationId,
+            'access_token' => $integration->access_token,
+        ])->throw()->json();
+
+        return (string) Arr::get($publishResponse, 'id', $creationId);
+    }
+
+    private function publishInstagramCarousel(SocialMediaIntegration $integration, array $imageUrls, string $caption): string
+    {
+        $children = [];
+
+        foreach ($imageUrls as $imageUrl) {
+            $response = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media'), [
+                'image_url' => $imageUrl,
+                'is_carousel_item' => 'true',
+                'access_token' => $integration->access_token,
+            ])->throw()->json();
+
+            $children[] = (string) Arr::get($response, 'id', '');
+        }
+
+        $children = array_values(array_filter($children));
+        if ($children === []) {
+            throw new RuntimeException('Nao foi possivel criar os itens do carrossel no Instagram.');
+        }
+
+        $containerResponse = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media'), [
+            'media_type' => 'CAROUSEL',
+            'children' => implode(',', $children),
+            'caption' => $caption,
+            'access_token' => $integration->access_token,
+        ])->throw()->json();
+
+        $creationId = (string) Arr::get($containerResponse, 'id', '');
+        if ($creationId === '') {
+            throw new RuntimeException('Nao foi possivel criar o container de carrossel no Instagram.');
+        }
+
+        $publishResponse = Http::asForm()->post($this->graphUrl('/'.$integration->instagram_business_account_id.'/media_publish'), [
+            'creation_id' => $creationId,
+            'access_token' => $integration->access_token,
+        ])->throw()->json();
+
+        return (string) Arr::get($publishResponse, 'id', $creationId);
+    }
+
+    private function publishFacebookSingleImage(SocialMediaIntegration $integration, string $imageUrl, string $caption): string
+    {
+        $response = Http::asForm()->post($this->graphUrl('/'.$integration->facebook_page_id.'/photos'), [
+            'url' => $imageUrl,
+            'caption' => $caption,
+            'published' => 'true',
+            'access_token' => $integration->access_token,
+        ])->throw()->json();
+
+        $publishId = (string) Arr::get($response, 'post_id', Arr::get($response, 'id', ''));
+        if ($publishId === '') {
+            throw new RuntimeException('Nao foi possivel criar a publicacao na pagina do Facebook.');
+        }
+
+        return $publishId;
+    }
+
+    private function publishFacebookMultiImagePost(SocialMediaIntegration $integration, array $imageUrls, string $caption): string
+    {
+        $attachedMedia = [];
+
+        foreach ($imageUrls as $index => $imageUrl) {
+            $response = Http::asForm()->post($this->graphUrl('/'.$integration->facebook_page_id.'/photos'), [
+                'url' => $imageUrl,
+                'published' => 'false',
+                'access_token' => $integration->access_token,
+            ])->throw()->json();
+
+            $mediaId = (string) Arr::get($response, 'id', '');
+            if ($mediaId === '') {
+                throw new RuntimeException('Nao foi possivel preparar as imagens do carrossel no Facebook.');
+            }
+
+            $attachedMedia['attached_media['.$index.']'] = json_encode(['media_fbid' => $mediaId], JSON_UNESCAPED_SLASHES);
+        }
+
+        $response = Http::asForm()->post($this->graphUrl('/'.$integration->facebook_page_id.'/feed'), array_merge([
+            'message' => $caption,
+            'access_token' => $integration->access_token,
+        ], $attachedMedia))->throw()->json();
+
+        $publishId = (string) Arr::get($response, 'id', '');
+        if ($publishId === '') {
+            throw new RuntimeException('Nao foi possivel criar a publicacao com varias imagens no Facebook.');
+        }
+
+        return $publishId;
     }
 
     private function exchangeCode(string $code): array

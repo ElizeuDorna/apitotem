@@ -22,6 +22,8 @@ class SocialMediaTemplatesPanel extends Component
 
     public string $coverImageUrl = '';
 
+    public string $imagePublishMode = 'single';
+
     public string $scheduledStartAt = '';
 
     public string $scheduledEndAt = '';
@@ -129,6 +131,7 @@ class SocialMediaTemplatesPanel extends Component
         $this->legenda = (string) ($template->legenda ?? '');
         $this->layoutMode = (string) ($template->layout_mode ?? 'product_list');
         $this->coverImageUrl = (string) ($template->cover_image_url ?? '');
+        $this->imagePublishMode = (string) ($template->image_publish_mode ?? 'single');
         $this->scheduledStartAt = optional($template->scheduled_start_at)->format('Y-m-d\TH:i') ?? '';
         $this->scheduledEndAt = optional($template->scheduled_end_at)->format('Y-m-d\TH:i') ?? '';
         $this->instagramAutoPublish = (bool) $template->instagram_auto_publish;
@@ -167,6 +170,7 @@ class SocialMediaTemplatesPanel extends Component
             'legenda' => $this->legenda,
             'layout_mode' => $this->layoutMode,
             'cover_image_url' => $this->coverImageUrl,
+            'image_publish_mode' => $this->imagePublishMode,
             'scheduled_start_at' => $this->scheduledStartAt !== '' ? $this->scheduledStartAt : null,
             'scheduled_end_at' => $this->scheduledEndAt !== '' ? $this->scheduledEndAt : null,
             'instagram_auto_publish' => $this->instagramAutoPublish,
@@ -251,6 +255,7 @@ class SocialMediaTemplatesPanel extends Component
             'legenda',
             'layoutMode',
             'coverImageUrl',
+            'imagePublishMode',
             'scheduledStartAt',
             'scheduledEndAt',
             'instagramAutoPublish',
@@ -262,6 +267,7 @@ class SocialMediaTemplatesPanel extends Component
         ]);
 
         $this->layoutMode = 'product_list';
+    $this->imagePublishMode = 'single';
         $this->instagramAutoPublish = false;
         $this->facebookAutoPublish = false;
         $this->publishToInstagram = true;
@@ -311,6 +317,8 @@ class SocialMediaTemplatesPanel extends Component
             'previewImageUrl' => $this->coverImageUrl !== ''
                 ? $this->coverImageUrl
                 : (string) ($previewProducts[0]['image_url'] ?? ''),
+            'previewImageModeLabel' => $this->imagePublishMode === 'product_images' ? 'Todas as imagens dos produtos' : 'Imagem unica',
+            'galleryPickerUrl' => route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_social_media' => 1]),
             'instagramConfigured' => $instagramService->isConfigured(),
             'integration' => $integration,
             'integrationReady' => $integrationReady,

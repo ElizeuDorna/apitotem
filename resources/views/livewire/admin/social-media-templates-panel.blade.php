@@ -274,11 +274,116 @@
                         @error('publish_channels')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
-                    <div>
+                    <div
+                        x-data="{
+                            imageValue: $wire.entangle('coverImageUrl', true),
+                            storageKey: 'social_media_cover_image_url_selected',
+                            previewLoaded: false,
+                            messageHandler: null,
+                            focusHandler: null,
+                            storageHandler: null,
+                            init() {
+                                this.imageValue = this.normalizeImageUrl(this.imageValue);
+                                this.previewLoaded = this.hasImage();
+                                this.messageHandler = (event) => {
+                                    if (event.origin !== window.location.origin) return;
+                                    const payload = event.data || {};
+                                    if (payload.type !== 'galeriaNovaSelectSocialMediaCoverImage') return;
+                                    this.applySelectedImage(payload.url);
+                                };
+                                this.focusHandler = () => this.syncSelectedImageFromStorage();
+                                this.storageHandler = (event) => {
+                                    if (event.key !== this.storageKey) return;
+                                    this.syncSelectedImageFromStorage();
+                                };
+                                window.addEventListener('message', this.messageHandler);
+                                window.addEventListener('focus', this.focusHandler);
+                                window.addEventListener('storage', this.storageHandler);
+                                this.syncSelectedImageFromStorage();
+                            },
+                            destroy() {
+                                window.removeEventListener('message', this.messageHandler);
+                                window.removeEventListener('focus', this.focusHandler);
+                                window.removeEventListener('storage', this.storageHandler);
+                            },
+                            hasImage() {
+                                return String(this.imageValue || '').trim() !== '';
+                            },
+                            applySelectedImage(url) {
+                                const normalized = this.normalizeImageUrl(url);
+                                if (normalized === '') return;
+                                this.imageValue = normalized;
+                                this.previewLoaded = false;
+                            },
+                            syncSelectedImageFromStorage() {
+                                const selected = localStorage.getItem(this.storageKey);
+                                if (!selected) return;
+                                this.applySelectedImage(selected);
+                                localStorage.removeItem(this.storageKey);
+                            },
+                            clearImage() {
+                                this.imageValue = '';
+                                this.previewLoaded = false;
+                            },
+                            normalizeImageUrl(value) {
+                                const normalized = String(value || '').trim();
+                                if (normalized === '') return '';
+
+                                const legacyPrefixes = [
+                                    '/storage/galeria-nova/',
+                                    '/storage/galeria-geral/',
+                                    '/storage/empresas/',
+                                    '/storage/home-carousel/',
+                                ];
+
+                                for (const prefix of legacyPrefixes) {
+                                    if (normalized.startsWith(prefix)) {
+                                        return '/storage-images/' + normalized.slice('/storage/'.length);
+                                    }
+                                }
+
+                                return normalized;
+                            }
+                        }"
+                    >
                         <label class="block text-sm font-semibold text-slate-800">Imagem principal do post</label>
-                        <input type="text" wire:model="coverImageUrl" class="mt-1 w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Se deixar vazio, a primeira imagem do produto sera usada automaticamente" />
+                        <div class="mt-1 flex flex-col gap-2 md:flex-row md:items-stretch">
+                            <input type="text" x-model="imageValue" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Se deixar vazio, a primeira imagem do produto sera usada automaticamente" />
+                            <a href="{{ $galleryPickerUrl }}" target="_blank" class="inline-flex items-center justify-center rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">Buscar na galeria</a>
+                        </div>
                         <p class="mt-1 text-xs text-slate-500">Quando voce adiciona o primeiro produto, a imagem dele ja vira base do template. Se quiser, pode trocar aqui ou por item.</p>
+                        <div class="mt-2" x-show="hasImage()" x-cloak>
+                            <div class="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                <img :src="imageValue" alt="Preview da imagem principal" x-on:load="previewLoaded = true" x-on:error="previewLoaded = false" x-show="previewLoaded" class="h-14 w-14 rounded-lg object-cover" />
+                                <button type="button" x-on:click="clearImage()" class="text-xs font-medium text-red-600 hover:text-red-800">Limpar imagem</button>
+                            </div>
+                        </div>
                         @error('cover_image_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <label class="block text-sm font-semibold text-slate-800">Como publicar as imagens</label>
+                        <p class="mt-1 text-xs text-slate-500">Escolha se o post vai sair com a imagem principal apenas ou com todas as imagens dos produtos do template.</p>
+
+                        <div class="mt-3 grid gap-3 md:grid-cols-2">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-300">
+                                <input type="radio" wire:model="imagePublishMode" value="single" class="mt-1 border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                <span>
+                                    <span class="block text-sm font-semibold text-slate-900">Imagem unica</span>
+                                    <span class="mt-1 block text-xs text-slate-500">Publica somente a capa do template, como ja funciona hoje.</span>
+                                </span>
+                            </label>
+
+                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-300">
+                                <input type="radio" wire:model="imagePublishMode" value="product_images" class="mt-1 border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                <span>
+                                    <span class="block text-sm font-semibold text-slate-900">Todas as imagens dos produtos</span>
+                                    <span class="mt-1 block text-xs text-slate-500">Usa as imagens dos produtos adicionados e tenta publicar em formato de carrossel quando houver mais de uma imagem valida.</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        @error('image_publish_mode')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -428,7 +533,7 @@
                                     </div>
                                 </div>
                                 <div class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200">
-                                    Feed
+                                    {{ $previewImageModeLabel }}
                                 </div>
                             </div>
 

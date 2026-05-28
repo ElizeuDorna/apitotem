@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Livewire\Admin\SocialMediaTemplatesPanel;
 use App\Models\Departamento;
 use App\Models\Empresa;
+use App\Models\GaleriaNova;
 use App\Models\Grupo;
 use App\Models\Produto;
 use App\Models\SocialMediaTemplate;
@@ -41,6 +42,7 @@ class SocialMediaTemplateManagementTest extends TestCase
             ->set('titulo', 'Oferta da semana')
             ->set('legenda', 'Aproveite os melhores precos.')
             ->set('layoutMode', 'mixed')
+            ->set('imagePublishMode', 'product_images')
             ->set('scheduledStartAt', '2026-05-25T09:00')
             ->set('scheduledEndAt', '2026-05-30T18:00')
             ->set('instagramAutoPublish', true)
@@ -59,6 +61,7 @@ class SocialMediaTemplateManagementTest extends TestCase
 
         $this->assertSame($empresa->id, $template->empresa_id);
         $this->assertSame('/storage-images/arroz.png', $template->cover_image_url);
+    $this->assertSame('product_images', $template->image_publish_mode);
         $this->assertSame('scheduled', $template->instagram_publish_status);
         $this->assertTrue((bool) $template->publish_to_instagram);
         $this->assertTrue((bool) $template->publish_to_facebook);
@@ -104,6 +107,56 @@ class SocialMediaTemplateManagementTest extends TestCase
         $response = $this->actingAs($user)->get(route('admin.social-media.index'));
 
         $response->assertForbidden();
+    }
+
+    public function test_social_media_page_displays_gallery_picker_for_cover_image(): void
+    {
+        $empresa = $this->createEmpresa('44.111.222/0001-78', 'Empresa Galeria Social', 'tok-social-galeria');
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        $galleryUrl = route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_social_media' => 1]);
+
+        $this->get(route('admin.social-media.index'))
+            ->assertOk()
+            ->assertSee($galleryUrl)
+            ->assertSee('Buscar na galeria');
+    }
+
+    public function test_user_with_social_media_permission_can_open_gallery_picker_for_cover_image(): void
+    {
+        $empresa = $this->createEmpresa('44.111.222/0001-79', 'Empresa Permissao Social', 'tok-social-perm');
+
+        GaleriaNova::query()->create([
+            'code' => '12345678901234',
+            'empresa_id' => $empresa->id,
+            'is_public' => false,
+            'name' => 'Imagem Social',
+            'source_type' => 'link',
+            'external_url' => 'https://cdn.example.com/social-cover.png',
+            'file_path' => null,
+            'image_hash' => null,
+            'created_by' => null,
+        ]);
+
+        $user = User::factory()->create([
+            'cpf' => '12312312313',
+            'empresa_id' => $empresa->id,
+            'menu_permissions' => [User::MENU_REDE_SOCIAL],
+        ]);
+
+        $this->actingAs($user);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        $this->get(route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_social_media' => 1]))
+            ->assertOk()
+            ->assertSee('Selecionar para imagem principal do post');
     }
 
     public function test_instagram_callback_stores_connected_account_for_active_company(): void
@@ -487,6 +540,114 @@ class SocialMediaTemplateManagementTest extends TestCase
             'facebook_publish_status' => 'published',
             'instagram_publish_id' => 'ig-published-1',
             'facebook_publish_id' => 'fb-post-1',
+        ]);
+    }
+
+    public function test_template_can_publish_all_product_images_as_carousel(): void
+    {
+        $empresa = $this->createEmpresa('12.333.444/0001-56', 'Empresa Carrossel', 'tok-carousel');
+        $produtoA = $this->createProduto($empresa, '301', 'Cafe Extra Forte', '/storage-images/cafe-extra.png', 19.90, 16.90);
+        $produtoB = $this->createProduto($empresa, '302', 'Cafe Tradicional', '/storage-images/cafe-tradicional.png', 17.90, 14.90);
+
+        $template = SocialMediaTemplate::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'Campanha Carrossel',
+            'titulo' => 'Cafes em oferta',
+            'legenda' => 'Escolha o sabor ideal para sua loja.',
+            'layout_mode' => 'mixed',
+            'cover_image_url' => '/storage-images/capa-template.png',
+            'image_publish_mode' => 'product_images',
+            'publish_to_instagram' => true,
+            'publish_to_facebook' => true,
+            'instagram_publish_status' => 'draft',
+            'facebook_publish_status' => 'draft',
+        ]);
+
+        SocialMediaTemplateProduct::query()->create([
+            'social_media_template_id' => $template->id,
+            'produto_id' => $produtoA->id,
+            'sort_order' => 1,
+            'custom_image_url' => 'https://cdn.example.com/cafe-extra-social.png',
+            'show_price' => true,
+            'show_offer_price' => true,
+        ]);
+
+        SocialMediaTemplateProduct::query()->create([
+            'social_media_template_id' => $template->id,
+            'produto_id' => $produtoB->id,
+            'sort_order' => 2,
+            'show_price' => true,
+            'show_offer_price' => true,
+        ]);
+
+        SocialMediaIntegration::query()->create([
+            'empresa_id' => $empresa->id,
+            'provider' => 'instagram_graph',
+            'status' => 'connected',
+            'instagram_business_account_id' => 'ig-800',
+            'instagram_username' => 'mercado.carousel',
+            'facebook_page_id' => 'page-800',
+            'facebook_page_name' => 'Pagina Carousel',
+            'access_token' => 'page-token',
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        Http::fake([
+            'https://graph.facebook.com/*/ig-800/media' => Http::sequence()
+                ->push(['id' => 'ig-child-1'], 200)
+                ->push(['id' => 'ig-child-2'], 200)
+                ->push(['id' => 'ig-carousel-1'], 200),
+            'https://graph.facebook.com/*/ig-800/media_publish' => Http::response(['id' => 'ig-published-carousel'], 200),
+            'https://graph.facebook.com/*/page-800/photos' => Http::sequence()
+                ->push(['id' => 'fb-photo-1'], 200)
+                ->push(['id' => 'fb-photo-2'], 200),
+            'https://graph.facebook.com/*/page-800/feed' => Http::response(['id' => 'page-800_post_1'], 200),
+        ]);
+
+        $this->actingAs($admin);
+        session([EmpresaContext::ADMIN_SESSION_KEY => $empresa->id]);
+
+        Livewire::test(SocialMediaTemplatesPanel::class)
+            ->call('publishNow', $template->id)
+            ->assertSee('Template publicado com sucesso em instagram e facebook.');
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return str_contains($request->url(), '/ig-800/media')
+                && ($data['is_carousel_item'] ?? null) === 'true'
+                && in_array(($data['image_url'] ?? null), [
+                    'https://cdn.example.com/cafe-extra-social.png',
+                    'http://localhost/storage-images/cafe-tradicional.png',
+                ], true);
+        });
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return str_contains($request->url(), '/ig-800/media')
+                && ($data['media_type'] ?? null) === 'CAROUSEL'
+                && ($data['children'] ?? null) === 'ig-child-1,ig-child-2';
+        });
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return str_contains($request->url(), '/page-800/feed')
+                && ($data['attached_media[0]'] ?? null) === '{"media_fbid":"fb-photo-1"}'
+                && ($data['attached_media[1]'] ?? null) === '{"media_fbid":"fb-photo-2"}';
+        });
+
+        $this->assertDatabaseHas('social_media_templates', [
+            'id' => $template->id,
+            'instagram_publish_status' => 'published',
+            'facebook_publish_status' => 'published',
+            'instagram_publish_id' => 'ig-published-carousel',
+            'facebook_publish_id' => 'page-800_post_1',
         ]);
     }
 

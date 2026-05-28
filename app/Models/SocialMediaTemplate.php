@@ -18,6 +18,7 @@ class SocialMediaTemplate extends Model
         'legenda',
         'layout_mode',
         'cover_image_url',
+        'image_publish_mode',
         'scheduled_start_at',
         'scheduled_end_at',
         'instagram_auto_publish',

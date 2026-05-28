@@ -172,6 +172,33 @@ class SocialMediaTemplateService
         return ImageStorage::normalizePublicUrl((string) ($firstItem->produto?->IMG ?? ''));
     }
 
+    public function resolveTemplateImageUrls(SocialMediaTemplate $template): array
+    {
+        $template->loadMissing('templateProducts.produto');
+
+        $imageUrls = $template->templateProducts
+            ->map(function ($item): string {
+                $customImageUrl = ImageStorage::normalizePublicUrl((string) ($item->custom_image_url ?? ''));
+                if ($customImageUrl !== '') {
+                    return $customImageUrl;
+                }
+
+                return ImageStorage::normalizePublicUrl((string) ($item->produto?->IMG ?? ''));
+            })
+            ->filter(fn (string $url) => $url !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($imageUrls !== []) {
+            return $imageUrls;
+        }
+
+        $fallback = $this->resolveTemplateImageUrl($template);
+
+        return $fallback !== '' ? [$fallback] : [];
+    }
+
     public function toAbsoluteImageUrl(string $url): string
     {
         $normalized = ImageStorage::normalizePublicUrl($url);
@@ -201,6 +228,7 @@ class SocialMediaTemplateService
                     $fail('Informe uma URL valida ou um caminho interno iniciando com /storage/ ou /storage-images/.');
                 }
             }],
+            'image_publish_mode' => ['nullable', Rule::in(['single', 'product_images'])],
             'scheduled_start_at' => ['nullable', 'date'],
             'scheduled_end_at' => ['nullable', 'date', 'after_or_equal:scheduled_start_at'],
             'instagram_auto_publish' => ['nullable', 'boolean'],
@@ -301,6 +329,7 @@ class SocialMediaTemplateService
             'legenda' => trim((string) ($validated['legenda'] ?? '')) ?: null,
             'layout_mode' => $validated['layout_mode'],
             'cover_image_url' => $coverImageUrl ?: null,
+            'image_publish_mode' => (string) ($validated['image_publish_mode'] ?? 'single'),
             'scheduled_start_at' => $validated['scheduled_start_at'] ?? null,
             'scheduled_end_at' => $validated['scheduled_end_at'] ?? null,
             'instagram_auto_publish' => $instagramAutoPublish,
@@ -321,6 +350,10 @@ class SocialMediaTemplateService
                 $payload['facebook_publish_status'],
                 $payload['facebook_last_error'],
             );
+        }
+
+        if (! Schema::hasColumn('social_media_templates', 'image_publish_mode')) {
+            unset($payload['image_publish_mode']);
         }
 
         return [$payload, $productItems->all()];
