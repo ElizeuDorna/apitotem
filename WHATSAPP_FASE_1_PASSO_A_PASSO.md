@@ -73,13 +73,20 @@ Observacao:
 
 Na aba WhatsApp, a empresa vai preencher:
 
-- Business Account ID
-- Phone Number ID
-- Numero exibido
-- Access Token
+- WhatsApp Business Account ID da empresa
+- Phone Number ID do numero da empresa
+- Numero exibido no WhatsApp da empresa
+- Access Token da empresa na Meta
 - Expiracao do token, se quiser registrar
 
 Esses dados ficam salvos para a empresa ativa.
+
+Importante:
+
+- quem busca esses dados na Meta e a propria empresa que vai usar o modulo;
+- a empresa entra na conta Meta dela, copia os identificadores e o token;
+- depois a propria empresa preenche esses dados dentro do sistema;
+- esse cadastro nao e do dono da plataforma, e sim da empresa cliente que vai disparar.
 
 ## Estrutura criada no projeto
 
@@ -142,9 +149,17 @@ No sistema:
 
 - selecione a empresa ativa, se necessario;
 - entre em Rede Social;
-- abra a aba WhatsApp;
-- preencha os dados da Meta;
+- abra o menu WhatsApp;
+- pegue na Meta os dados da propria empresa;
+- preencha no painel os dados da Meta da propria empresa;
 - clique em salvar integracao.
+
+Resumo deste passo:
+
+- a empresa cliente acessa o sistema;
+- a empresa cliente acessa a Meta dela;
+- copia o WhatsApp Business Account ID, o Phone Number ID e o Access Token;
+- cola esses dados no formulario de integracao do WhatsApp.
 
 ### 4. Cadastrar os contatos
 
@@ -250,10 +265,10 @@ Importante antes de comecar:
 
 Voce vai precisar pegar na Meta:
 
-- Business Account ID;
-- Phone Number ID;
+- WhatsApp Business Account ID da empresa;
+- Phone Number ID do numero da empresa;
 - numero exibido;
-- Access Token.
+- Access Token da empresa.
 
 ### 4. Configurar o webhook
 

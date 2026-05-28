@@ -15,7 +15,7 @@
         <div class="mb-5 flex items-start justify-between gap-4">
             <div>
                 <h3 class="text-base font-semibold text-slate-900">Integracao Meta WhatsApp</h3>
-                <p class="mt-1 text-sm text-slate-600">Este modulo fica separado do Instagram/Facebook. Aqui voce informa manualmente os dados do WhatsApp Business da empresa.</p>
+                <p class="mt-1 text-sm text-slate-600">Preencha aqui os dados da Meta da empresa ativa que vai enviar as mensagens pelo proprio numero.</p>
             </div>
             @if ($integration)
                 <div class="rounded-full px-3 py-1 text-xs font-semibold {{ $integration->status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700' }}">
@@ -26,17 +26,19 @@
 
         <form wire:submit="saveIntegration" class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-                <label class="mb-1 block text-sm font-semibold text-slate-800">Business Account ID</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">WhatsApp Business Account ID da empresa</label>
                 <input type="text" wire:model="metaBusinessAccountId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
+                <p class="mt-1 text-xs text-slate-500">A empresa pega este ID na propria conta Meta Business / WhatsApp.</p>
                 @error('meta_business_account_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             <div>
-                <label class="mb-1 block text-sm font-semibold text-slate-800">Phone Number ID</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">Phone Number ID do numero da empresa</label>
                 <input type="text" wire:model="metaPhoneNumberId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
+                <p class="mt-1 text-xs text-slate-500">Esse e o identificador do numero de WhatsApp conectado na Meta.</p>
                 @error('meta_phone_number_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             <div>
-                <label class="mb-1 block text-sm font-semibold text-slate-800">Numero exibido</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">Numero exibido no WhatsApp da empresa</label>
                 <input type="text" wire:model="displayPhoneNumber" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
             </div>
             <div>
@@ -44,8 +46,9 @@
                 <input type="datetime-local" wire:model="accessTokenExpiresAt" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
             </div>
             <div class="md:col-span-2">
-                <label class="mb-1 block text-sm font-semibold text-slate-800">Access Token</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">Access Token da empresa na Meta</label>
                 <textarea rows="3" wire:model="accessToken" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm"></textarea>
+                <p class="mt-1 text-xs text-slate-500">Cole aqui o token gerado na conta Meta da empresa que vai usar o disparo.</p>
                 @error('access_token')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             <div class="md:col-span-2 flex flex-wrap items-center gap-3">
