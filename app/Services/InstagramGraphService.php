@@ -172,7 +172,7 @@ class InstagramGraphService
 
     public function integrationStatusSummary(SocialMediaIntegration $integration): array
     {
-        if ($integration->status === 'expired' || ($integration->access_token && $this->isExpired($integration))) {
+        if ($integration->status === 'expired') {
             if ($this->canAttemptAutomaticRefresh($integration)) {
                 return [
                     'level' => 'connected',
@@ -541,7 +541,7 @@ class InstagramGraphService
 
     private function refreshIntegrationTokenIfNeeded(SocialMediaIntegration $integration): SocialMediaIntegration
     {
-        if (! $this->isExpired($integration) && $integration->status !== 'expired') {
+        if ($integration->status !== 'expired') {
             return $integration;
         }
 
