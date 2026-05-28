@@ -173,6 +173,13 @@ class InstagramGraphService
     public function integrationStatusSummary(SocialMediaIntegration $integration): array
     {
         if ($integration->status === 'expired' || ($integration->access_token && $this->isExpired($integration))) {
+            if ($this->canAttemptAutomaticRefresh($integration)) {
+                return [
+                    'level' => 'connected',
+                    'message' => 'A conexao Meta precisa renovar o token. O sistema tentara renovar automaticamente no proximo teste ou publicacao.',
+                ];
+            }
+
             return [
                 'level' => 'expired',
                 'message' => 'Token da Meta expirado. Reconecte a conta desta empresa para voltar a publicar.',
@@ -190,6 +197,14 @@ class InstagramGraphService
             'level' => 'connected',
             'message' => 'Conexao Meta ativa e pronta para publicar no Instagram e Facebook.',
         ];
+    }
+
+    public function canAttemptAutomaticRefresh(?SocialMediaIntegration $integration): bool
+    {
+        return $integration !== null
+            && filled($integration->access_token)
+            && $this->supportsMetaUserTokenPersistence()
+            && filled($integration->meta_user_access_token);
     }
 
     public function publishTemplate(SocialMediaTemplate $template): array
@@ -499,11 +514,19 @@ class InstagramGraphService
 
     private function assertIntegrationReady(?SocialMediaIntegration $integration, bool $requireInstagram, bool $requireFacebook): SocialMediaIntegration
     {
-        if (! $integration || $integration->status !== 'connected' || ! $integration->access_token) {
+        if (! $integration || ! $integration->access_token) {
+            throw new RuntimeException('A empresa ainda nao possui uma integracao Meta conectada.');
+        }
+
+        if ($integration->status !== 'connected' && ! $this->canAttemptAutomaticRefresh($integration)) {
             throw new RuntimeException('A empresa ainda nao possui uma integracao Meta conectada.');
         }
 
         $integration = $this->refreshIntegrationTokenIfNeeded($integration);
+
+        if ($integration->status !== 'connected') {
+            throw new RuntimeException('A empresa ainda nao possui uma integracao Meta conectada.');
+        }
 
         if ($requireInstagram && ! $integration->instagram_business_account_id) {
             throw new RuntimeException('A integracao Meta nao possui uma conta comercial do Instagram vinculada.');
@@ -518,7 +541,7 @@ class InstagramGraphService
 
     private function refreshIntegrationTokenIfNeeded(SocialMediaIntegration $integration): SocialMediaIntegration
     {
-        if (! $this->isExpired($integration)) {
+        if (! $this->isExpired($integration) && $integration->status !== 'expired') {
             return $integration;
         }
 

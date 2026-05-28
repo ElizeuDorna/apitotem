@@ -1,6 +1,6 @@
 <div
     x-data="{
-        integrationOpen: {{ (! $instagramConfigured || $integration->status !== 'connected' || session()->has('error')) ? 'true' : 'false' }}
+        integrationOpen: {{ (! $instagramConfigured || ! $integrationReady || session()->has('error')) ? 'true' : 'false' }}
     }"
     class="space-y-6"
 >
@@ -26,8 +26,8 @@
                 <div>
                     <div class="flex flex-wrap items-center gap-3">
                         <h2 class="text-2xl font-bold text-slate-900">Rede Social</h2>
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $integration->status === 'connected' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                            {{ $integration->status === 'connected' ? 'Meta configurada para Instagram e Facebook desta empresa' : 'Meta ainda nao configurada para esta empresa' }}
+                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $integrationReady ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                            {{ $integrationReady ? 'Meta configurada para Instagram e Facebook desta empresa' : 'Meta ainda nao configurada para esta empresa' }}
                         </span>
                     </div>
                     <p class="mt-1 text-sm text-slate-500">A integracao fica separada da criacao de templates. Depois de configurada, voce escolhe em cada template se quer divulgar no Instagram, no Facebook ou nos dois.</p>
@@ -52,7 +52,7 @@
                         <p class="mt-1 text-sm text-slate-500">Essa configuracao vale para a empresa ativa. Normalmente ela e feita uma vez e depois voce volta aqui so quando precisar reconectar ou trocar a conta.</p>
                     </div>
 
-                    <div class="rounded-2xl px-4 py-2 text-sm font-semibold {{ $integration->status === 'connected' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700' }}">
+                    <div class="rounded-2xl px-4 py-2 text-sm font-semibold {{ $integrationReady ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700' }}">
                         @if ($integrationStatus['level'] === 'expired')
                             Token expirado
                         @elseif ($integrationStatus['level'] === 'connected')
@@ -107,7 +107,7 @@
                                 @endif
                             </div>
                         @else
-                            @if ($integration->status === 'connected')
+                            @if ($integrationReady)
                                 <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900">
                                     <p><span class="font-semibold">Instagram:</span> {{ $integration->instagram_username ?: 'Conta conectada' }}</p>
                                     <p class="mt-1"><span class="font-semibold">Facebook:</span> {{ $integration->facebook_page_name ?: 'Pagina nao identificada' }}</p>
@@ -179,21 +179,21 @@
                     @endif
                 </div>
 
-                <div class="mt-6 rounded-[1.75rem] border {{ $integration->status === 'connected' ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-4">
+                <div class="mt-6 rounded-[1.75rem] border {{ $integrationReady ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-4">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <div class="text-sm font-semibold {{ $integration->status === 'connected' ? 'text-emerald-900' : 'text-amber-900' }}">
+                            <div class="text-sm font-semibold {{ $integrationReady ? 'text-emerald-900' : 'text-amber-900' }}">
                                 @if (! $instagramConfigured)
                                     Conclua primeiro a configuracao global da Meta antes de criar templates para publicacao.
-                                @elseif ($integration->status === 'connected')
+                                @elseif ($integrationReady)
                                     Conexao Meta pronta para esta empresa.
                                 @else
                                     Conecte a conta Meta desta empresa antes de testar a conexao ou publicar templates.
                                 @endif
                             </div>
 
-                            <div class="mt-1 text-sm {{ $integration->status === 'connected' ? 'text-emerald-800' : 'text-amber-800' }}">
-                                @if ($integration->status === 'connected')
+                            <div class="mt-1 text-sm {{ $integrationReady ? 'text-emerald-800' : 'text-amber-800' }}">
+                                @if ($integrationReady)
                                     Instagram: {{ $integration->instagram_username ?: 'Conta conectada' }} | Facebook: {{ $integration->facebook_page_name ?: 'Pagina conectada' }}
                                 @else
                                     {{ $integrationStatus['message'] }}
@@ -211,7 +211,7 @@
                             </button>
 
                             @if ($instagramConfigured)
-                                @if ($integration->status === 'connected')
+                                @if ($integrationReady)
                                     <button type="button" wire:click="testIntegration" class="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
                                         Testar conexao Meta
                                     </button>
@@ -642,7 +642,7 @@
                                     <div class="flex flex-wrap justify-end gap-2">
                                         <button type="button" wire:click="editTemplate({{ $template->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Editar</button>
                                         <button type="button" wire:click="deleteTemplate({{ $template->id }})" wire:confirm="Tem certeza?" class="rounded-xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Excluir</button>
-                                        @if ($integration->status === 'connected' && $integrationStatus['level'] !== 'expired')
+                                        @if ($integrationReady)
                                             <button type="button" wire:click="publishNow({{ $template->id }})" class="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Publicar agora</button>
                                         @elseif ($integrationStatus['level'] === 'expired')
                                             <span class="inline-flex rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Reconecte a Meta para publicar</span>

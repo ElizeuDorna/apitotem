@@ -230,6 +230,8 @@ class SocialMediaTemplatesPanel extends Component
         abort_unless($user, 403);
 
         $integration = $templateService->integrationForUser($user);
+        $integrationCanAutoRefresh = $instagramService->canAttemptAutomaticRefresh($integration);
+        $integrationReady = $integration->status === 'connected' || $integrationCanAutoRefresh;
 
         try {
             $result = $instagramService->testIntegration($integration);
@@ -309,6 +311,8 @@ class SocialMediaTemplatesPanel extends Component
                 : (string) ($previewProducts[0]['image_url'] ?? ''),
             'instagramConfigured' => $instagramService->isConfigured(),
             'integration' => $integration,
+            'integrationReady' => $integrationReady,
+            'integrationCanAutoRefresh' => $integrationCanAutoRefresh,
             'integrationStatus' => $instagramService->integrationStatusSummary($integration),
         ]);
     }
