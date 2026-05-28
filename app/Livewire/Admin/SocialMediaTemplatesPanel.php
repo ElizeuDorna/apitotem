@@ -278,6 +278,8 @@ class SocialMediaTemplatesPanel extends Component
         $availableProducts = $templateService->availableProductsForUser($user);
         $productsById = $availableProducts->keyBy('id');
         $integration = $templateService->integrationForUser($user);
+        $integrationCanAutoRefresh = $instagramService->canAttemptAutomaticRefresh($integration);
+        $integrationReady = $integration->status === 'connected' || $integrationCanAutoRefresh;
 
         $previewProducts = collect($this->selectedProducts)
             ->map(function (array $item) use ($productsById): array {
