@@ -1,5 +1,7 @@
 <div
     x-data="{
+        socialSectionOpen: true,
+        templatesSectionOpen: true,
         integrationOpen: {{ (! $instagramConfigured || ! $integrationReady || session()->has('error')) ? 'true' : 'false' }}
     }"
     class="space-y-6"
@@ -21,22 +23,33 @@
             <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errorMessage }}</div>
         @endif
 
-        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section class="rounded-3xl border border-cyan-200 bg-white p-5 shadow-sm shadow-cyan-100/60">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <button
+                    type="button"
+                    @click="socialSectionOpen = !socialSectionOpen"
+                    class="flex flex-1 items-start justify-between gap-4 rounded-[1.75rem] border border-cyan-200 bg-[linear-gradient(135deg,#ecfeff_0%,#f0f9ff_100%)] px-4 py-4 text-left shadow-sm transition hover:border-cyan-300 hover:bg-[linear-gradient(135deg,#cffafe_0%,#e0f2fe_100%)]"
+                >
                     <div class="flex flex-wrap items-center gap-3">
                         <h2 class="text-2xl font-bold text-slate-900">Rede Social</h2>
                         <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $integrationReady ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
                             {{ $integrationReady ? 'Meta configurada para Instagram e Facebook desta empresa' : 'Meta ainda nao configurada para esta empresa' }}
                         </span>
                     </div>
-                    <p class="mt-1 text-sm text-slate-500">A integracao fica separada da criacao de templates. Depois de configurada, voce escolhe em cada template se quer divulgar no Instagram, no Facebook ou nos dois.</p>
-                </div>
+                    <div class="flex items-center gap-3">
+                        <p class="hidden text-sm text-slate-500 lg:block">A integracao fica separada da criacao de templates.</p>
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300 bg-white text-cyan-700 shadow-sm">
+                            <span x-show="socialSectionOpen">-</span>
+                            <span x-show="!socialSectionOpen">+</span>
+                        </span>
+                    </div>
+                </button>
 
                 <div class="flex flex-wrap gap-3">
                     <button
                         type="button"
                         @click="integrationOpen = !integrationOpen"
+                        x-show="socialSectionOpen"
                         class="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                     >
                         <span x-show="!integrationOpen">Configurar integracao</span>
@@ -45,7 +58,9 @@
                 </div>
             </div>
 
-            <div x-cloak x-show="integrationOpen" x-transition class="mt-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5">
+            <p x-show="socialSectionOpen" class="mt-1 text-sm text-slate-500">A integracao fica separada da criacao de templates. Depois de configurada, voce escolhe em cada template se quer divulgar no Instagram, no Facebook ou nos dois.</p>
+
+            <div x-cloak x-show="socialSectionOpen && integrationOpen" x-transition class="mt-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5">
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-2xl">
                         <h3 class="text-lg font-bold text-slate-900">Configuracao Meta, Instagram e Facebook</h3>
@@ -139,22 +154,32 @@
         </section>
 
         <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-            <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section class="rounded-3xl border border-amber-200 bg-white p-6 shadow-sm shadow-amber-100/60">
                 <div class="flex items-start justify-between gap-4">
-                    <div>
+                    <button
+                        type="button"
+                        @click="templatesSectionOpen = !templatesSectionOpen"
+                        class="flex flex-1 items-start justify-between gap-4 rounded-[1.75rem] border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-4 py-4 text-left shadow-sm transition hover:border-amber-300 hover:bg-[linear-gradient(135deg,#ffedd5_0%,#fef3c7_100%)]"
+                    >
+                        <div>
                         <h2 class="text-2xl font-bold text-slate-900">Templates de Rede Social</h2>
                         <p class="mt-1 text-sm text-slate-500">Monte um post com titulo, produtos da empresa, imagem principal e agendamento sem mexer no cadastro atual.</p>
-                    </div>
+                        </div>
+                        <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-700 shadow-sm">
+                            <span x-show="templatesSectionOpen">-</span>
+                            <span x-show="!templatesSectionOpen">+</span>
+                        </span>
+                    </button>
 
                     @if ($editingTemplateId)
-                        <button type="button" wire:click="resetForm" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        <button type="button" wire:click="resetForm" x-show="templatesSectionOpen" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                             Novo template
                         </button>
                     @endif
                 </div>
 
                 @if (! $integrationReady)
-                    <div class="mt-6 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-4">
+                    <div x-show="templatesSectionOpen" class="mt-6 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-4">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div class="text-sm text-amber-900">
                                 A publicacao depende da integracao Meta mostrada no painel superior.
@@ -171,7 +196,7 @@
                     </div>
                 @endif
 
-                <form wire:submit="save" class="mt-6 space-y-5">
+                <form wire:submit="save" x-show="templatesSectionOpen" class="mt-6 space-y-5">
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label class="block text-sm font-semibold text-slate-800">Nome interno do template</label>
@@ -470,45 +495,6 @@
                                 </div>
                             </div>
 
-                            <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                                <div class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Resumo visual</div>
-                                <div class="mt-3 grid gap-3">
-                                    <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                                        <div class="text-xs font-semibold text-slate-500">Formato</div>
-                                        <div class="mt-1 text-sm font-bold text-slate-900">{{ $layoutMode === 'image' ? 'Imagem principal com texto' : ($layoutMode === 'mixed' ? 'Imagem + vitrine de produtos' : 'Vitrine em lista') }}</div>
-                                    </div>
-                                    <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                                        <div class="text-xs font-semibold text-slate-500">Redes selecionadas</div>
-                                        <div class="mt-1 text-sm font-bold text-slate-900">
-                                            @if ($publishToInstagram && $publishToFacebook)
-                                                Instagram e Facebook
-                                            @elseif ($publishToInstagram)
-                                                Instagram
-                                            @elseif ($publishToFacebook)
-                                                Facebook
-                                            @else
-                                                Nenhuma selecionada
-                                            @endif
-                                        </div>
-                                    </div>
-                                    <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                                        <div class="text-xs font-semibold text-slate-500">Janela de exibicao</div>
-                                        <div class="mt-1 text-sm font-bold text-slate-900">
-                                            {{ $scheduledStartAt !== '' ? \Carbon\Carbon::parse($scheduledStartAt)->format('d/m/Y H:i') : 'Sem inicio definido' }}
-                                            <span class="font-medium text-slate-400">ate</span>
-                                            {{ $scheduledEndAt !== '' ? \Carbon\Carbon::parse($scheduledEndAt)->format('d/m/Y H:i') : 'sem data final' }}
-                                        </div>
-                                    </div>
-                                    <div class="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                                        <div class="text-xs font-semibold text-slate-500">Agendamento automatico</div>
-                                        <div class="mt-1 text-sm font-bold text-slate-900">
-                                            {{ $instagramAutoPublish ? 'Instagram ativo' : 'Instagram manual' }}
-                                            <span class="font-medium text-slate-400">|</span>
-                                            {{ $facebookAutoPublish ? 'Facebook ativo' : 'Facebook manual' }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </section>
