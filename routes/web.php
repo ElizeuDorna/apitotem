@@ -263,22 +263,22 @@ Route::middleware('auth')->group(function () {
 
         Route::get('rede-social', [\App\Http\Controllers\Admin\SocialMediaTemplateController::class, 'index'])
             ->name('admin.social-media.index')
-            ->middleware('menu.access:rede_social');
+            ->middleware('menu.access:rede_social_meta');
         Route::get('rede-social/whatsapp', [\App\Http\Controllers\Admin\SocialMediaTemplateController::class, 'index'])
             ->name('admin.social-media.whatsapp.index')
-            ->middleware('menu.access:rede_social');
+            ->middleware('menu.access:rede_social_whatsapp');
         Route::get('rede-social/instagram/connect', [\App\Http\Controllers\Admin\InstagramIntegrationController::class, 'redirect'])
             ->name('admin.social-media.instagram.connect')
-            ->middleware('menu.access:rede_social');
+            ->middleware('menu.access:rede_social_meta');
         Route::get('rede-social/instagram/callback', [\App\Http\Controllers\Admin\InstagramIntegrationController::class, 'callback'])
             ->name('admin.social-media.instagram.callback')
-            ->middleware('menu.access:rede_social');
+            ->middleware('menu.access:rede_social_meta');
         Route::post('rede-social/instagram/complete-selection', [\App\Http\Controllers\Admin\InstagramIntegrationController::class, 'completeSelection'])
             ->name('admin.social-media.instagram.complete-selection')
-            ->middleware('menu.access:rede_social');
+            ->middleware('menu.access:rede_social_meta');
         Route::post('rede-social/instagram/disconnect', [\App\Http\Controllers\Admin\InstagramIntegrationController::class, 'disconnect'])
             ->name('admin.social-media.instagram.disconnect')
-            ->middleware('menu.access:rede_social');
+            ->middleware('menu.access:rede_social_meta');
 
         Route::get('financeiro', [\App\Http\Controllers\Admin\FinanceiroController::class, 'index'])
             ->name('admin.financeiro.index')

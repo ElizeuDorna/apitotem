@@ -50,6 +50,10 @@ class User extends Authenticatable
 
     public const MENU_REDE_SOCIAL = 'rede_social';
 
+    public const MENU_REDE_SOCIAL_META = 'rede_social_meta';
+
+    public const MENU_REDE_SOCIAL_WHATSAPP = 'rede_social_whatsapp';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -127,6 +131,8 @@ class User extends Authenticatable
             self::MENU_DOWNLOADS_UPLOAD => 'Downloads - Upload',
             self::MENU_FINANCEIRO => 'Financeiro',
             self::MENU_REDE_SOCIAL => 'Rede Social',
+            self::MENU_REDE_SOCIAL_META => 'Rede Social - Facebook / Instagram',
+            self::MENU_REDE_SOCIAL_WHATSAPP => 'Rede Social - WhatsApp',
         ];
     }
 
@@ -140,6 +146,17 @@ class User extends Authenticatable
 
         if ($permissions === null) {
             return true;
+        }
+
+        if ($menu === self::MENU_REDE_SOCIAL) {
+            return in_array(self::MENU_REDE_SOCIAL, $permissions, true)
+                || in_array(self::MENU_REDE_SOCIAL_META, $permissions, true)
+                || in_array(self::MENU_REDE_SOCIAL_WHATSAPP, $permissions, true);
+        }
+
+        if ($menu === self::MENU_REDE_SOCIAL_META || $menu === self::MENU_REDE_SOCIAL_WHATSAPP) {
+            return in_array(self::MENU_REDE_SOCIAL, $permissions, true)
+                || in_array($menu, $permissions, true);
         }
 
         return in_array($menu, $permissions, true);

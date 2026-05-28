@@ -144,6 +144,7 @@ class GaleriaNovaController extends Controller
             $user->isDefaultAdmin()
             || $user->hasMenuAccess('produtos')
             || $user->hasMenuAccess('rede_social')
+            || $user->hasMenuAccess('rede_social_meta')
             || $user->hasMenuAccess('configuracao')
         ) {
             return;

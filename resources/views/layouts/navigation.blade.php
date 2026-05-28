@@ -11,6 +11,7 @@
         $cadastroMenuActive = request()->is('admin/produtos*')
             || request()->is('admin/departamentos*')
             || request()->is('admin/grupos*');
+        $socialMediaMenuActive = request()->is('admin/rede-social*');
     @endphp
 
     @php
@@ -128,9 +129,31 @@
                 @endif
 
                 @if (Auth::user()->hasMenuAccess('rede_social'))
-                    <a href="{{ route('admin.social-media.index') }}" class="{{ $desktopNavBase }} {{ request()->is('admin/rede-social*') ? $desktopNavActive : '' }}">
-                        <span>{{ __('Rede Social') }}</span>
-                    </a>
+                    <div x-data="{ socialMediaOpen: {{ $socialMediaMenuActive ? 'true' : 'false' }} }" class="rounded-lg border border-slate-800 bg-slate-900/60 px-1.5 py-1">
+                        <button
+                            type="button"
+                            @click="socialMediaOpen = !socialMediaOpen"
+                            class="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[11px] font-semibold text-slate-200 transition hover:bg-slate-800"
+                        >
+                            <span>{{ __('Rede Social') }}</span>
+                            <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': socialMediaOpen }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.512a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+
+                        <div x-cloak x-show="socialMediaOpen" class="mt-1 space-y-0.5 border-t border-slate-800 pt-1">
+                            @if ($navUser->hasMenuAccess('rede_social_meta'))
+                                <a href="{{ route('admin.social-media.index') }}" class="{{ $desktopNavBase }} ml-2 {{ request()->routeIs('admin.social-media.index') ? $desktopNavActive : '' }}">
+                                    <span>{{ __('Facebook / Instagram') }}</span>
+                                </a>
+                            @endif
+                            @if ($navUser->hasMenuAccess('rede_social_whatsapp'))
+                                <a href="{{ route('admin.social-media.whatsapp.index') }}" class="{{ $desktopNavBase }} ml-2 {{ request()->routeIs('admin.social-media.whatsapp.index') ? $desktopNavActive : '' }}">
+                                    <span>{{ __('WhatsApp') }}</span>
+                                </a>
+                            @endif
+                        </div>
+                    </div>
                 @endif
 
                 @if (Auth::user()->hasMenuAccess('config_tela_web'))

@@ -26,7 +26,7 @@ class WhatsAppCampaignManagementTest extends TestCase
         $user = User::factory()->create([
             'cpf' => '11122233344',
             'empresa_id' => $empresa->id,
-            'menu_permissions' => [User::MENU_REDE_SOCIAL],
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_WHATSAPP],
         ]);
 
         $response = $this->actingAs($user)->get(route('admin.social-media.whatsapp.index'));
@@ -37,13 +37,27 @@ class WhatsAppCampaignManagementTest extends TestCase
             ->assertSeeLivewire(WhatsAppCampaignsPanel::class);
     }
 
+    public function test_user_with_only_meta_permission_cannot_access_whatsapp_page(): void
+    {
+        $empresa = $this->createEmpresa('11.222.333/0001-40', 'Empresa Meta Sem WhatsApp', 'tok-meta-only');
+        $user = User::factory()->create([
+            'cpf' => '11122233340',
+            'empresa_id' => $empresa->id,
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_META],
+        ]);
+
+        $response = $this->actingAs($user)->get(route('admin.social-media.whatsapp.index'));
+
+        $response->assertForbidden();
+    }
+
     public function test_user_can_configure_whatsapp_integration_contacts_and_campaign(): void
     {
         $empresa = $this->createEmpresa('11.222.333/0001-45', 'Empresa WhatsApp Config', 'tok-wpp-config');
         $user = User::factory()->create([
             'cpf' => '11122233345',
             'empresa_id' => $empresa->id,
-            'menu_permissions' => [User::MENU_REDE_SOCIAL],
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_WHATSAPP],
         ]);
 
         $this->actingAs($user);
@@ -138,7 +152,7 @@ class WhatsAppCampaignManagementTest extends TestCase
         $user = User::factory()->create([
             'cpf' => '11122233346',
             'empresa_id' => $empresa->id,
-            'menu_permissions' => [User::MENU_REDE_SOCIAL],
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_WHATSAPP],
         ]);
 
         Http::fake([

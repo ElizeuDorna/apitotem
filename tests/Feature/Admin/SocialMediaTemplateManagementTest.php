@@ -109,6 +109,39 @@ class SocialMediaTemplateManagementTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_user_with_meta_social_media_permission_can_access_social_media_page(): void
+    {
+        $empresa = $this->createEmpresa('44.111.222/0001-70', 'Empresa Meta Permissao', 'tok-meta-perm');
+
+        $user = User::factory()->create([
+            'cpf' => '12312312370',
+            'empresa_id' => $empresa->id,
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_META],
+        ]);
+
+        $response = $this->actingAs($user)->get(route('admin.social-media.index'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Instagram e Facebook')
+            ->assertDontSee('href="'.route('admin.social-media.whatsapp.index').'"', false);
+    }
+
+    public function test_user_with_only_whatsapp_permission_cannot_access_meta_social_media_page(): void
+    {
+        $empresa = $this->createEmpresa('44.111.222/0001-71', 'Empresa WhatsApp Restrita', 'tok-wpp-restrita');
+
+        $user = User::factory()->create([
+            'cpf' => '12312312371',
+            'empresa_id' => $empresa->id,
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_WHATSAPP],
+        ]);
+
+        $response = $this->actingAs($user)->get(route('admin.social-media.index'));
+
+        $response->assertForbidden();
+    }
+
     public function test_social_media_page_displays_gallery_picker_for_cover_image(): void
     {
         $empresa = $this->createEmpresa('44.111.222/0001-78', 'Empresa Galeria Social', 'tok-social-galeria');
@@ -148,7 +181,7 @@ class SocialMediaTemplateManagementTest extends TestCase
         $user = User::factory()->create([
             'cpf' => '12312312313',
             'empresa_id' => $empresa->id,
-            'menu_permissions' => [User::MENU_REDE_SOCIAL],
+            'menu_permissions' => [User::MENU_REDE_SOCIAL_META],
         ]);
 
         $this->actingAs($user);
