@@ -627,6 +627,12 @@
                                                 <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $template->instagram_publish_status === 'published' ? 'bg-emerald-100 text-emerald-700' : ($template->instagram_publish_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600') }}">
                                                     Instagram: {{ $template->instagram_publish_status }}
                                                 </span>
+                                                @if ($template->instagram_publish_id)
+                                                    <p class="mt-2 max-w-xs text-xs text-slate-500">ID Instagram: {{ $template->instagram_publish_id }}</p>
+                                                @endif
+                                                @if ($template->instagram_last_published_at)
+                                                    <p class="mt-1 max-w-xs text-xs text-slate-500">Ultima publicacao: {{ $template->instagram_last_published_at->format('d/m/Y H:i') }}</p>
+                                                @endif
                                                 @if ($template->instagram_last_error)
                                                     <p class="mt-2 max-w-xs text-xs text-red-600">{{ $template->instagram_last_error }}</p>
                                                 @endif
@@ -637,6 +643,16 @@
                                                 <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $template->facebook_publish_status === 'published' ? 'bg-emerald-100 text-emerald-700' : ($template->facebook_publish_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600') }}">
                                                     Facebook: {{ $template->facebook_publish_status }}
                                                 </span>
+                                                <p class="mt-2 max-w-xs text-xs text-slate-500">Pagina: {{ $integration->facebook_page_name ?: 'Pagina conectada' }}</p>
+                                                @if ($template->facebook_publish_id)
+                                                    <p class="mt-1 max-w-xs break-all text-xs text-slate-500">ID Facebook: {{ $template->facebook_publish_id }}</p>
+                                                    <a href="https://www.facebook.com/{{ $template->facebook_publish_id }}" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                                                        Abrir publicacao no Facebook
+                                                    </a>
+                                                @endif
+                                                @if ($template->facebook_last_published_at)
+                                                    <p class="mt-1 max-w-xs text-xs text-slate-500">Ultima publicacao: {{ $template->facebook_last_published_at->format('d/m/Y H:i') }}</p>
+                                                @endif
                                                 @if ($template->facebook_last_error)
                                                     <p class="mt-2 max-w-xs text-xs text-red-600">{{ $template->facebook_last_error }}</p>
                                                 @endif
