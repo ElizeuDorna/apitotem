@@ -55,6 +55,7 @@ class InstagramGraphService
             empresa: $empresa,
             selectedAccount: $connectionData['accounts'][0],
             expiresIn: $connectionData['expires_in'],
+            metaUserAccessToken: $connectionData['meta_user_access_token'] ?? null,
         );
     }
 
@@ -67,22 +68,21 @@ class InstagramGraphService
         try {
             $shortLivedToken = $this->exchangeCode($code);
             $longLivedToken = $this->exchangeForLongLivedToken((string) Arr::get($shortLivedToken, 'access_token', ''));
+            $metaUserAccessToken = (string) Arr::get($longLivedToken, 'access_token', '');
 
             return [
                 'expires_in' => (int) Arr::get($longLivedToken, 'expires_in', 0),
-                'accounts' => $this->resolveInstagramBusinessAccounts((string) Arr::get($longLivedToken, 'access_token', '')),
+                'meta_user_access_token' => $metaUserAccessToken,
+                'accounts' => $this->resolveInstagramBusinessAccounts($metaUserAccessToken),
             ];
         } catch (Throwable $exception) {
             throw new RuntimeException($this->humanizeMetaException($exception));
         }
     }
 
-    public function connectEmpresaWithSelection(Empresa $empresa, array $selectedAccount, int $expiresIn): SocialMediaIntegration
+    public function connectEmpresaWithSelection(Empresa $empresa, array $selectedAccount, int $expiresIn, ?string $metaUserAccessToken = null): SocialMediaIntegration
     {
-        return SocialMediaIntegration::query()->updateOrCreate([
-            'empresa_id' => $empresa->id,
-            'provider' => 'instagram_graph',
-        ], [
+        $payload = [
             'status' => 'connected',
             'instagram_user_id' => (string) Arr::get($selectedAccount, 'instagram_user_id', ''),
             'instagram_username' => (string) Arr::get($selectedAccount, 'instagram_username', ''),
@@ -90,18 +90,25 @@ class InstagramGraphService
             'facebook_page_id' => (string) Arr::get($selectedAccount, 'facebook_page_id', ''),
             'facebook_page_name' => (string) Arr::get($selectedAccount, 'facebook_page_name', ''),
             'access_token' => (string) Arr::get($selectedAccount, 'access_token', ''),
-            'access_token_expires_at' => now()->addSeconds($expiresIn),
+            'access_token_expires_at' => $this->resolveExpirationDate($expiresIn),
             'last_synced_at' => now(),
             'last_error' => null,
-        ]);
+        ];
+
+        if ($this->supportsMetaUserTokenPersistence()) {
+            $payload['meta_user_access_token'] = $metaUserAccessToken;
+            $payload['meta_user_access_token_expires_at'] = $this->resolveExpirationDate($expiresIn);
+        }
+
+        return SocialMediaIntegration::query()->updateOrCreate([
+            'empresa_id' => $empresa->id,
+            'provider' => 'instagram_graph',
+        ], $payload);
     }
 
     public function disconnectEmpresa(Empresa $empresa): void
     {
-        SocialMediaIntegration::query()->updateOrCreate([
-            'empresa_id' => $empresa->id,
-            'provider' => 'instagram_graph',
-        ], [
+        $payload = [
             'status' => 'disconnected',
             'instagram_user_id' => null,
             'instagram_username' => null,
@@ -112,12 +119,22 @@ class InstagramGraphService
             'access_token_expires_at' => null,
             'last_synced_at' => now(),
             'last_error' => null,
-        ]);
+        ];
+
+        if ($this->supportsMetaUserTokenPersistence()) {
+            $payload['meta_user_access_token'] = null;
+            $payload['meta_user_access_token_expires_at'] = null;
+        }
+
+        SocialMediaIntegration::query()->updateOrCreate([
+            'empresa_id' => $empresa->id,
+            'provider' => 'instagram_graph',
+        ], $payload);
     }
 
     public function testIntegration(SocialMediaIntegration $integration): array
     {
-        $this->assertIntegrationReady($integration, requireInstagram: true, requireFacebook: false);
+        $integration = $this->assertIntegrationReady($integration, requireInstagram: true, requireFacebook: false);
 
         try {
             $instagramAccount = Http::get($this->graphUrl('/'.$integration->instagram_business_account_id), [
@@ -238,7 +255,7 @@ class InstagramGraphService
             ->where('provider', 'instagram_graph')
             ->first();
 
-        $this->assertIntegrationReady($integration, requireInstagram: true, requireFacebook: false);
+        $integration = $this->assertIntegrationReady($integration, requireInstagram: true, requireFacebook: false);
 
         $imageUrl = $this->templateService->toAbsoluteImageUrl($this->templateService->resolveTemplateImageUrl($template));
         if ($imageUrl === '') {
@@ -317,7 +334,7 @@ class InstagramGraphService
             ->where('provider', 'instagram_graph')
             ->first();
 
-        $this->assertIntegrationReady($integration, requireInstagram: false, requireFacebook: true);
+        $integration = $this->assertIntegrationReady($integration, requireInstagram: false, requireFacebook: true);
 
         $imageUrl = $this->templateService->toAbsoluteImageUrl($this->templateService->resolveTemplateImageUrl($template));
         if ($imageUrl === '') {
@@ -480,16 +497,13 @@ class InstagramGraphService
         return $channels;
     }
 
-    private function assertIntegrationReady(?SocialMediaIntegration $integration, bool $requireInstagram, bool $requireFacebook): void
+    private function assertIntegrationReady(?SocialMediaIntegration $integration, bool $requireInstagram, bool $requireFacebook): SocialMediaIntegration
     {
         if (! $integration || $integration->status !== 'connected' || ! $integration->access_token) {
             throw new RuntimeException('A empresa ainda nao possui uma integracao Meta conectada.');
         }
 
-        if ($this->isExpired($integration)) {
-            $this->markIntegrationError($integration, 'Token da Meta expirado. Reconecte a conta desta empresa para voltar a publicar.', 'expired');
-            throw new RuntimeException('Token da Meta expirado. Reconecte a conta desta empresa para voltar a publicar.');
-        }
+        $integration = $this->refreshIntegrationTokenIfNeeded($integration);
 
         if ($requireInstagram && ! $integration->instagram_business_account_id) {
             throw new RuntimeException('A integracao Meta nao possui uma conta comercial do Instagram vinculada.');
@@ -498,12 +512,69 @@ class InstagramGraphService
         if ($requireFacebook && ! $integration->facebook_page_id) {
             throw new RuntimeException('A integracao Meta nao possui uma pagina do Facebook vinculada para publicar.');
         }
+
+        return $integration;
+    }
+
+    private function refreshIntegrationTokenIfNeeded(SocialMediaIntegration $integration): SocialMediaIntegration
+    {
+        if (! $this->isExpired($integration)) {
+            return $integration;
+        }
+
+        if (! $this->supportsMetaUserTokenPersistence() || ! filled($integration->meta_user_access_token)) {
+            $this->markIntegrationError($integration, 'Token da Meta expirado. Reconecte a conta desta empresa para voltar a publicar.', 'expired');
+            throw new RuntimeException('Token da Meta expirado. Reconecte a conta desta empresa para voltar a publicar.');
+        }
+
+        try {
+            $refreshedUserToken = $this->exchangeForLongLivedToken((string) $integration->meta_user_access_token);
+            $expiresIn = (int) Arr::get($refreshedUserToken, 'expires_in', 0);
+            $metaUserAccessToken = (string) Arr::get($refreshedUserToken, 'access_token', '');
+            $availableAccounts = $this->resolveInstagramBusinessAccounts($metaUserAccessToken);
+            $selectedAccount = collect($availableAccounts)->firstWhere('facebook_page_id', (string) $integration->facebook_page_id);
+
+            if (! $selectedAccount) {
+                throw new RuntimeException('A pagina do Facebook vinculada nao foi encontrada na conta Meta renovada. Reconecte a integracao.');
+            }
+
+            $this->connectEmpresaWithSelection(
+                $integration->empresa,
+                $selectedAccount,
+                $expiresIn,
+                $metaUserAccessToken,
+            );
+
+            return $integration->refresh();
+        } catch (Throwable $exception) {
+            $message = $this->humanizeMetaException($exception);
+            $this->markIntegrationError($integration, $message, 'expired');
+
+            throw new RuntimeException($message);
+        }
     }
 
     private function isExpired(SocialMediaIntegration $integration): bool
     {
         return $integration->access_token_expires_at !== null
             && $integration->access_token_expires_at->lessThanOrEqualTo(now());
+    }
+
+    private function resolveExpirationDate(int $expiresIn)
+    {
+        if ($expiresIn <= 0) {
+            return null;
+        }
+
+        return now()->addSeconds($expiresIn);
+    }
+
+    private function supportsMetaUserTokenPersistence(): bool
+    {
+        return Schema::hasColumns('social_media_integrations', [
+            'meta_user_access_token',
+            'meta_user_access_token_expires_at',
+        ]);
     }
 
     private function markIntegrationError(SocialMediaIntegration $integration, string $message, ?string $status = null): void

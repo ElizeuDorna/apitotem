@@ -83,6 +83,7 @@ class InstagramIntegrationController extends Controller
                     self::PENDING_SELECTION_SESSION_KEY => [
                         'empresa_id' => $empresa->id,
                         'expires_in' => $connectionData['expires_in'],
+                        'meta_user_access_token' => $connectionData['meta_user_access_token'] ?? null,
                         'accounts' => $connectionData['accounts'],
                     ],
                 ]);
@@ -92,7 +93,12 @@ class InstagramIntegrationController extends Controller
                     ->with('success', 'Selecione a pagina do Facebook e a conta Instagram corretas para concluir a conexao.');
             }
 
-            $instagramService->connectEmpresaWithSelection($empresa, $connectionData['accounts'][0], $connectionData['expires_in']);
+            $instagramService->connectEmpresaWithSelection(
+                $empresa,
+                $connectionData['accounts'][0],
+                $connectionData['expires_in'],
+                $connectionData['meta_user_access_token'] ?? null,
+            );
             session()->forget(self::PENDING_SELECTION_SESSION_KEY);
 
             return redirect()
@@ -137,6 +143,7 @@ class InstagramIntegrationController extends Controller
             empresa: $empresa,
             selectedAccount: $selectedAccount,
             expiresIn: (int) ($pendingSelection['expires_in'] ?? 0),
+            metaUserAccessToken: $pendingSelection['meta_user_access_token'] ?? null,
         );
 
         session()->forget(self::PENDING_SELECTION_SESSION_KEY);
