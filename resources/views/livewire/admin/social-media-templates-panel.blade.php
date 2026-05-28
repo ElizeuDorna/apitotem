@@ -227,7 +227,13 @@
                         @error('legenda')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div
+                        x-data="{
+                            publishToInstagram: $wire.entangle('publishToInstagram', true),
+                            publishToFacebook: $wire.entangle('publishToFacebook', true),
+                        }"
+                        class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
                         <div>
                             <h3 class="text-sm font-semibold text-slate-900">Redes para divulgar</h3>
                             <p class="text-xs text-slate-500">Escolha onde este template sera publicado depois de pronto.</p>
@@ -236,7 +242,7 @@
                         <div class="mt-4 grid gap-4 md:grid-cols-2">
                             <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
                                 <label class="inline-flex items-start gap-3">
-                                    <input type="checkbox" wire:model="publishToInstagram" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                    <input type="checkbox" x-model="publishToInstagram" wire:model.live="publishToInstagram" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
                                     <span>
                                         <span class="block text-sm font-semibold text-slate-900">Instagram</span>
                                         <span class="block text-xs text-slate-500">Publica na conta Instagram da empresa conectada.</span>
@@ -244,7 +250,7 @@
                                 </label>
 
                                 <label class="mt-4 inline-flex items-start gap-3">
-                                    <input type="checkbox" wire:model="instagramAutoPublish" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" @disabled(! $publishToInstagram) />
+                                    <input type="checkbox" wire:model="instagramAutoPublish" x-bind:disabled="!publishToInstagram" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" @disabled(! $publishToInstagram) />
                                     <span>
                                         <span class="block text-sm font-semibold text-slate-900">Agendar para Instagram</span>
                                         <span class="block text-xs text-slate-500">Usa a janela de agendamento deste template para publicar automaticamente.</span>
@@ -254,7 +260,7 @@
 
                             <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
                                 <label class="inline-flex items-start gap-3">
-                                    <input type="checkbox" wire:model="publishToFacebook" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                    <input type="checkbox" x-model="publishToFacebook" wire:model.live="publishToFacebook" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
                                     <span>
                                         <span class="block text-sm font-semibold text-slate-900">Facebook</span>
                                         <span class="block text-xs text-slate-500">Publica na pagina Facebook da empresa conectada via Meta.</span>
@@ -262,7 +268,7 @@
                                 </label>
 
                                 <label class="mt-4 inline-flex items-start gap-3">
-                                    <input type="checkbox" wire:model="facebookAutoPublish" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" @disabled(! $publishToFacebook) />
+                                    <input type="checkbox" wire:model="facebookAutoPublish" x-bind:disabled="!publishToFacebook" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" @disabled(! $publishToFacebook) />
                                     <span>
                                         <span class="block text-sm font-semibold text-slate-900">Agendar para Facebook</span>
                                         <span class="block text-xs text-slate-500">Usa a janela de agendamento deste template para publicar automaticamente.</span>
