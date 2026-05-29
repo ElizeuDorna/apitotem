@@ -246,11 +246,14 @@ class WhatsAppCampaignsPanel extends Component
         $contacts = $whatsAppService->contactsQueryForUser($user)->get();
         $campaigns = $whatsAppService->campaignsQueryForUser($user)->get();
 
+        $embeddedSignupMissingKeys = $embeddedSignupService->missingConfigurationKeys();
+
         return view('livewire.admin.whatsapp-campaigns-panel', [
             'integration' => $integration,
             'contacts' => $contacts,
             'campaigns' => $campaigns,
-            'embeddedSignupConfigured' => $embeddedSignupService->isConfigured(),
+            'embeddedSignupConfigured' => $embeddedSignupMissingKeys === [],
+            'embeddedSignupMissingKeys' => $embeddedSignupMissingKeys,
             'embeddedSignupUrl' => route('admin.social-media.whatsapp.embedded-signup.show'),
         ]);
     }

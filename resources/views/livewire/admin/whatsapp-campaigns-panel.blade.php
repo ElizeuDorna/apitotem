@@ -37,6 +37,10 @@
                     <a href="{{ $embeddedSignupUrl }}" class="inline-flex items-center rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700">
                         Conectar pela Meta
                     </a>
+                @else
+                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        Conectar pela Meta indisponivel
+                    </span>
                 @endif
             </div>
         </div>
@@ -52,11 +56,18 @@
                         Abrir onboarding da Meta
                     </a>
                 @else
-                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800">
-                        Configure META_APP_ID, META_APP_SECRET e WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID para habilitar o onboarding automatico.
-                    </div>
+                    <a href="{{ $embeddedSignupUrl }}" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
+                        Ver diagnostico do onboarding
+                    </a>
                 @endif
             </div>
+            @if (! $embeddedSignupConfigured)
+                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                    <div class="font-semibold">Fluxo automatico ainda nao habilitado neste ambiente.</div>
+                    <div class="mt-1">Variaveis faltando: {{ implode(', ', $embeddedSignupMissingKeys) }}</div>
+                    <div class="mt-1">Enquanto isso, o botao Salvar integracao continua exigindo o Access Token manual.</div>
+                </div>
+            @endif
         </div>
 
         <form wire:submit="saveIntegration" x-cloak x-show="integrationOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 md:grid-cols-2">

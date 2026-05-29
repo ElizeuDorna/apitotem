@@ -19,9 +19,26 @@ class WhatsAppEmbeddedSignupService
 
     public function isConfigured(): bool
     {
-        return $this->appId() !== ''
-            && $this->appSecret() !== ''
-            && $this->configurationId() !== '';
+        return $this->missingConfigurationKeys() === [];
+    }
+
+    public function missingConfigurationKeys(): array
+    {
+        $missing = [];
+
+        if ($this->appId() === '') {
+            $missing[] = 'META_APP_ID';
+        }
+
+        if ($this->appSecret() === '') {
+            $missing[] = 'META_APP_SECRET';
+        }
+
+        if ($this->configurationId() === '') {
+            $missing[] = 'WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID';
+        }
+
+        return $missing;
     }
 
     public function appId(): string

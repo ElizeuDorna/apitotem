@@ -59,7 +59,9 @@
                     <div class="space-y-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
                         @if (! $embeddedSignup['enabled'])
                             <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                                Configure no servidor: META_APP_ID, META_APP_SECRET e WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID. Sem isso a Meta nao abre o onboarding automatico.
+                                <div class="font-semibold">O onboarding automatico ainda nao pode abrir.</div>
+                                <div class="mt-2">Variaveis faltando no servidor: {{ implode(', ', $embeddedSignupMissingKeys) }}.</div>
+                                <div class="mt-2">Depois de preencher essas variaveis no .env, limpe o cache de configuracao com <span class="font-semibold">./vendor/bin/sail artisan optimize:clear</span>.</div>
                             </div>
                         @else
                             <div>

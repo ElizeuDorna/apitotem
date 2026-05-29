@@ -23,6 +23,7 @@ class WhatsAppEmbeddedSignupController extends Controller
         return view('admin.whatsapp-embedded-signup', [
             'empresa' => $empresa,
             'integration' => $whatsAppService->integrationForUser($user),
+            'embeddedSignupMissingKeys' => $embeddedSignupService->missingConfigurationKeys(),
             'embeddedSignup' => [
                 'enabled' => $embeddedSignupService->isConfigured(),
                 'appId' => $embeddedSignupService->appId(),
