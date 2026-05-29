@@ -11,30 +11,55 @@
         </div>
     @endif
 
-    <section class="rounded-2xl border border-emerald-300 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.22),_transparent_32%),linear-gradient(180deg,#d1fae5_0%,#ffffff_32%)] p-6 shadow-sm shadow-emerald-200/70">
+    <section class="rounded-2xl border border-emerald-300 bg-emerald-100 p-6 shadow-sm shadow-emerald-100/70">
         <div class="mb-5 flex items-start justify-between gap-4">
             <button
                 type="button"
                 @click="integrationOpen = !integrationOpen"
-                class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-emerald-500 bg-[linear-gradient(135deg,#34d399_0%,#6ee7b7_24%,#d1fae5_58%,#f0fdf4_100%)] px-4 py-4 text-left shadow-md transition hover:border-emerald-600 hover:shadow-emerald-200/70"
+                class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,#a7f3d0_0%,#d1fae5_48%,#ecfdf5_100%)] px-4 py-4 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-emerald-100/80"
             >
                 <span>
                     <span class="block text-base font-semibold text-slate-900">Integracao Meta WhatsApp</span>
                     <span class="mt-1 block text-sm text-slate-600">Preencha aqui os dados da Meta da empresa ativa que vai enviar as mensagens pelo proprio numero.</span>
                 </span>
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-500 bg-white text-emerald-800 shadow-sm">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-800 shadow-sm">
                     <span x-show="integrationOpen">-</span>
                     <span x-show="!integrationOpen">+</span>
                 </span>
             </button>
-            @if ($integration)
-                <div class="rounded-full px-3 py-1 text-xs font-semibold {{ $integration->status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700' }}">
-                    {{ strtoupper($integration->status) }}
-                </div>
-            @endif
+            <div class="flex flex-col items-end gap-2">
+                @if ($integration)
+                    <div class="rounded-full px-3 py-1 text-xs font-semibold {{ $integration->status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700' }}">
+                        {{ strtoupper($integration->status) }}
+                    </div>
+                @endif
+                @if ($embeddedSignupConfigured)
+                    <a href="{{ $embeddedSignupUrl }}" class="inline-flex items-center rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700">
+                        Conectar pela Meta
+                    </a>
+                @endif
+            </div>
         </div>
 
-        <form wire:submit="saveIntegration" x-cloak x-show="integrationOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-emerald-200 bg-white/88 p-4 backdrop-blur-sm md:grid-cols-2">
+        <div class="mb-4 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-4 text-sm text-slate-700">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="font-semibold text-slate-900">Fluxo recomendado</p>
+                    <p class="mt-1 text-sm text-slate-600">Use o onboarding automatico da Meta para buscar WABA ID, Phone Number ID e token sem colar segredo manualmente. O formulario abaixo continua disponivel como fallback.</p>
+                </div>
+                @if ($embeddedSignupConfigured)
+                    <a href="{{ $embeddedSignupUrl }}" class="inline-flex items-center justify-center rounded-xl border border-emerald-600 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+                        Abrir onboarding da Meta
+                    </a>
+                @else
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800">
+                        Configure META_APP_ID, META_APP_SECRET e WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID para habilitar o onboarding automatico.
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <form wire:submit="saveIntegration" x-cloak x-show="integrationOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 md:grid-cols-2">
             <div>
                 <label class="mb-1 block text-sm font-semibold text-slate-800">WhatsApp Business Account ID da empresa</label>
                 <input type="text" wire:model="metaBusinessAccountId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
@@ -71,18 +96,18 @@
         </form>
     </section>
 
-    <section class="rounded-2xl border border-indigo-300 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.22),_transparent_34%),linear-gradient(180deg,#e0e7ff_0%,#ffffff_32%)] p-6 shadow-sm shadow-indigo-200/70">
+    <section class="rounded-2xl border border-sky-300 bg-sky-100 p-6 shadow-sm shadow-sky-100/70">
         <div class="mb-5 flex items-start justify-between gap-4">
             <button
                 type="button"
                 @click="contactsOpen = !contactsOpen"
-                class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-indigo-500 bg-[linear-gradient(135deg,#6366f1_0%,#818cf8_20%,#c7d2fe_56%,#eef2ff_100%)] px-4 py-4 text-left shadow-md transition hover:border-indigo-600 hover:shadow-indigo-200/70"
+                class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-sky-300 bg-[linear-gradient(135deg,#bae6fd_0%,#dbeafe_52%,#f0f9ff_100%)] px-4 py-4 text-left shadow-sm transition hover:border-sky-400 hover:shadow-sky-100/80"
             >
                 <span>
                     <span class="block text-base font-semibold text-slate-900">Contatos WhatsApp</span>
                     <span class="mt-1 block text-sm text-slate-600">Somente contatos com opt-in ativo entram nos disparos.</span>
                 </span>
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-indigo-500 bg-white text-indigo-800 shadow-sm">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sky-400 bg-white text-sky-800 shadow-sm">
                     <span x-show="contactsOpen">-</span>
                     <span x-show="!contactsOpen">+</span>
                 </span>
@@ -90,7 +115,7 @@
             <div class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{{ $contacts->count() }} contato(s)</div>
         </div>
 
-        <form wire:submit="saveContact" x-cloak x-show="contactsOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-indigo-200 bg-white/88 p-4 backdrop-blur-sm md:grid-cols-2">
+        <form wire:submit="saveContact" x-cloak x-show="contactsOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 md:grid-cols-2">
             <div>
                 <label class="mb-1 block text-sm font-semibold text-slate-800">Nome</label>
                 <input type="text" wire:model="contactName" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
@@ -130,7 +155,7 @@
             </div>
         </form>
 
-        <div x-cloak x-show="contactsOpen" x-transition class="mt-6 overflow-x-auto rounded-xl border border-indigo-200 bg-white/92">
+        <div x-cloak x-show="contactsOpen" x-transition class="mt-6 overflow-x-auto rounded-xl border border-sky-200 bg-sky-50">
             <table class="min-w-full divide-y divide-slate-200">
                 <thead class="bg-slate-50">
                     <tr>
@@ -168,18 +193,18 @@
         </div>
     </section>
 
-    <section class="rounded-2xl border border-amber-300 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.22),_transparent_34%),linear-gradient(180deg,#ffedd5_0%,#ffffff_32%)] p-6 shadow-sm shadow-amber-200/70">
+    <section class="rounded-2xl border border-amber-300 bg-amber-100 p-6 shadow-sm shadow-amber-100/70">
         <div class="mb-5 flex items-start justify-between gap-4">
             <button
                 type="button"
                 @click="campaignsOpen = !campaignsOpen"
-                class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-amber-500 bg-[linear-gradient(135deg,#f59e0b_0%,#fbbf24_18%,#fdba74_54%,#fff7ed_100%)] px-4 py-4 text-left shadow-md transition hover:border-amber-600 hover:shadow-amber-200/70"
+                class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-amber-300 bg-[linear-gradient(135deg,#fde68a_0%,#fed7aa_46%,#fff7ed_100%)] px-4 py-4 text-left shadow-sm transition hover:border-amber-400 hover:shadow-amber-100/80"
             >
                 <span>
                     <span class="block text-base font-semibold text-slate-900">Campanhas WhatsApp</span>
                     <span class="mt-1 block text-sm text-slate-600">Campanhas livres usam a janela de 24 horas. Fora dela, o sistema exige template aprovado na Meta.</span>
                 </span>
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-500 bg-white text-amber-800 shadow-sm">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-400 bg-white text-amber-800 shadow-sm">
                     <span x-show="campaignsOpen">-</span>
                     <span x-show="!campaignsOpen">+</span>
                 </span>
@@ -187,7 +212,7 @@
             <div class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{{ $campaigns->count() }} campanha(s)</div>
         </div>
 
-        <form wire:submit="saveCampaign" x-cloak x-show="campaignsOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-amber-200 bg-white/88 p-4 backdrop-blur-sm md:grid-cols-2">
+        <form wire:submit="saveCampaign" x-cloak x-show="campaignsOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 md:grid-cols-2">
             <div>
                 <label class="mb-1 block text-sm font-semibold text-slate-800">Nome da campanha</label>
                 <input type="text" wire:model="campaignName" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
@@ -244,7 +269,7 @@
             </div>
         </form>
 
-        <div x-cloak x-show="campaignsOpen" x-transition class="mt-6 overflow-x-auto rounded-xl border border-amber-200 bg-white/92">
+        <div x-cloak x-show="campaignsOpen" x-transition class="mt-6 overflow-x-auto rounded-xl border border-amber-200 bg-amber-50">
             <table class="min-w-full divide-y divide-slate-200">
                 <thead class="bg-slate-50">
                     <tr>

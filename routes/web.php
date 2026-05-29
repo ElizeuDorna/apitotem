@@ -270,6 +270,12 @@ Route::middleware('auth')->group(function () {
         Route::get('rede-social/whatsapp', [\App\Http\Controllers\Admin\SocialMediaTemplateController::class, 'index'])
             ->name('admin.social-media.whatsapp.index')
             ->middleware('menu.access:rede_social_whatsapp');
+        Route::get('rede-social/whatsapp/connect', [\App\Http\Controllers\Admin\WhatsAppEmbeddedSignupController::class, 'show'])
+            ->name('admin.social-media.whatsapp.embedded-signup.show')
+            ->middleware('menu.access:rede_social_whatsapp');
+        Route::post('rede-social/whatsapp/embedded-signup/onboard', [\App\Http\Controllers\Admin\WhatsAppEmbeddedSignupController::class, 'onboard'])
+            ->name('admin.social-media.whatsapp.embedded-signup.onboard')
+            ->middleware('menu.access:rede_social_whatsapp');
         Route::get('rede-social/instagram/connect', [\App\Http\Controllers\Admin\InstagramIntegrationController::class, 'redirect'])
             ->name('admin.social-media.instagram.connect')
             ->middleware('menu.access:rede_social_meta');

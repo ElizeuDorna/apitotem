@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\WhatsAppCampaign;
 use App\Models\WhatsAppContact;
+use App\Services\WhatsAppEmbeddedSignupService;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -236,7 +237,7 @@ class WhatsAppCampaignsPanel extends Component
         $this->errorMessage = null;
     }
 
-    public function render(WhatsAppService $whatsAppService)
+    public function render(WhatsAppService $whatsAppService, WhatsAppEmbeddedSignupService $embeddedSignupService)
     {
         $user = Auth::user();
         abort_unless($user?->hasMenuAccess('rede_social'), 403);
@@ -249,6 +250,8 @@ class WhatsAppCampaignsPanel extends Component
             'integration' => $integration,
             'contacts' => $contacts,
             'campaigns' => $campaigns,
+            'embeddedSignupConfigured' => $embeddedSignupService->isConfigured(),
+            'embeddedSignupUrl' => route('admin.social-media.whatsapp.embedded-signup.show'),
         ]);
     }
 

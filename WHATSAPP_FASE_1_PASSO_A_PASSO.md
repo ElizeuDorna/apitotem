@@ -1,6 +1,20 @@
 
 Siga este passo a passo para criar um app só para WhatsApp na Meta.
 
+Novo fluxo recomendado
+
+Agora o sistema tambem suporta onboarding automatico via Embedded Signup da Meta.
+
+- O fluxo manual abaixo continua funcionando e deve ficar como fallback.
+- O fluxo recomendado para multiempresa e usar o botao Conectar pela Meta no painel WhatsApp.
+- Nesse fluxo, a empresa faz login na Meta, escolhe ou cria a WABA, escolhe ou cria o numero e o Laravel salva a integracao automaticamente.
+- O backend troca o code por business token, assina os webhooks da WABA e registra o numero no Cloud API.
+
+Quando usar cada fluxo
+
+- Use Embedded Signup quando quiser facilitar o onboarding da empresa cliente e evitar copiar token manualmente.
+- Use o preenchimento manual apenas como contingencia, suporte interno ou quando a configuracao Meta ainda nao estiver pronta.
+
 Fluxo validado em teste
 
 O fluxo abaixo foi validado com sucesso no Laravel usando a conta de teste da Meta.
@@ -66,12 +80,46 @@ No seu servidor, deixe no .env:
 
 WHATSAPP_GRAPH_VERSION=v25.0
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=defina_um_token_forte
+META_APP_ID=seu_meta_app_id
+META_APP_SECRET=seu_meta_app_secret
+WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID=id_da_configuracao_facebook_login_for_business
 
 Depois limpe cache de configuracao.
 
 Se estiver usando Docker/Sail:
 
 ./vendor/bin/sail artisan optimize:clear
+
+Preparar Embedded Signup na Meta
+
+Para habilitar o botao Conectar pela Meta no Laravel, configure antes no App Dashboard:
+
+1. Em Facebook Login for Business > Settings, habilite Client OAuth Login, Web OAuth Login, Enforce HTTPS, Embedded Browser OAuth Login, Strict Mode for redirect URIs e Login with the JavaScript SDK.
+2. Em Allowed domains e Valid OAuth redirect URIs, inclua o dominio onde o painel Laravel sera aberto.
+3. Em Facebook Login for Business > Configurations, crie uma configuracao do tipo WhatsApp Embedded Signup.
+4. Guarde o Configuration ID dessa configuracao e coloque em WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID.
+5. Garanta que o app tenha as permissoes necessarias para WhatsApp e que o callback de webhook ja esteja configurado na plataforma.
+
+Fluxo automatico no Laravel
+
+No painel WhatsApp da empresa ativa no Laravel:
+
+1. Clique em Conectar pela Meta.
+2. Informe um PIN de 6 digitos para registro do numero no Cloud API.
+3. Finalize o popup da Meta escolhendo a conta da empresa.
+4. Ao concluir, o sistema salva automaticamente:
+	- WABA ID
+	- Phone Number ID
+	- business token
+	- numero exibido, quando a Meta retornar esse dado
+5. Depois volte ao painel e teste uma campanha normalmente.
+
+Observacoes do fluxo automatico
+
+- O code retornado pela Meta expira rapido, por isso a troca por token precisa acontecer imediatamente no servidor.
+- O webhook continua centralizado na mesma URL publica da plataforma.
+- O numero precisa ser registrado com PIN de 6 digitos; guarde esse PIN para suporte futuro.
+- Em producao, empresas onboarded como Tech Provider/Tech Partner ainda precisam adicionar metodo de pagamento na WABA para uso real.
 
 Preenchimento no Laravel
 

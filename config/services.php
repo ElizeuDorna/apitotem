@@ -39,6 +39,9 @@ return [
     ],
 
     'whatsapp_graph' => [
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'embedded_signup_configuration_id' => env('WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID'),
         'version' => env('WHATSAPP_GRAPH_VERSION', 'v25.0'),
         'verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
     ],
