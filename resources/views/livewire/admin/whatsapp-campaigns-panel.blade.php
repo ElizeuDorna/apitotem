@@ -228,6 +228,10 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200 bg-white">
                     @forelse ($campaigns as $campaign)
+                        @php
+                            $failedRecipients = $campaign->recipients->where('status', 'failed')->values();
+                            $latestRecipientError = $failedRecipients->first();
+                        @endphp
                         <tr>
                             <td class="px-4 py-3 align-top text-sm text-slate-700">
                                 <div class="font-semibold text-slate-900">{{ $campaign->name }}</div>
@@ -236,14 +240,42 @@
                                 @endif
                                 @if ($campaign->last_error)
                                     <p class="mt-1 text-xs text-rose-600">{{ $campaign->last_error }}</p>
+                                @elseif ($latestRecipientError?->error_message)
+                                    <p class="mt-1 text-xs text-rose-600">{{ $latestRecipientError->error_message }}</p>
                                 @endif
                             </td>
                             <td class="px-4 py-3 align-top text-sm text-slate-700">{{ $campaign->message_type === 'template' ? 'Template Meta' : 'Livre 24h' }}</td>
                             <td class="px-4 py-3 align-top text-sm text-slate-700">{{ $campaign->scheduled_at?->format('d/m/Y H:i') ?? 'Sem agendamento' }}</td>
-                            <td class="px-4 py-3 align-top text-sm text-slate-700">{{ strtoupper($campaign->status) }}</td>
+                            <td class="px-4 py-3 align-top text-sm text-slate-700">
+                                <div>{{ strtoupper($campaign->status) }}</div>
+                                @if ($campaign->status === 'failed' && ($campaign->last_error || $latestRecipientError?->error_message))
+                                    <p class="mt-1 max-w-xs text-xs text-rose-600">
+                                        {{ $campaign->last_error ?: $latestRecipientError?->error_message }}
+                                    </p>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 align-top text-sm text-slate-700">
                                 <div>{{ $campaign->recipients->count() }} total</div>
                                 <div class="text-xs text-slate-500">Enviados: {{ $campaign->recipients->whereIn('status', ['sent', 'delivered', 'read'])->count() }} | Falhas: {{ $campaign->recipients->where('status', 'failed')->count() }}</div>
+                                @if ($failedRecipients->isNotEmpty())
+                                    <div class="mt-2 space-y-2 rounded-lg border border-rose-200 bg-rose-50 p-2">
+                                        @foreach ($failedRecipients->take(3) as $recipient)
+                                            <div class="text-xs text-rose-700">
+                                                <div class="font-semibold text-rose-800">{{ $recipient->recipient_name ?: $recipient->recipient_number_e164 }}</div>
+                                                <div>{{ $recipient->recipient_number_e164 }}</div>
+                                                @if ($recipient->error_message)
+                                                    <div class="mt-1">{{ $recipient->error_message }}</div>
+                                                @endif
+                                                @if ($recipient->error_code)
+                                                    <div class="mt-1">Codigo Meta: {{ $recipient->error_code }}</div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                        @if ($failedRecipients->count() > 3)
+                                            <div class="text-xs text-rose-700">Mais {{ $failedRecipients->count() - 3 }} falha(s) nao exibidas.</div>
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-4 py-3 align-top text-sm text-slate-700">
                                 <div class="flex flex-wrap items-center gap-3">
