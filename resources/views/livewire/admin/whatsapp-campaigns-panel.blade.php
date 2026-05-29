@@ -60,21 +60,25 @@
         </div>
 
         <form wire:submit="saveIntegration" x-cloak x-show="integrationOpen" x-transition class="grid grid-cols-1 gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 md:grid-cols-2">
+            <div class="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
+                Na Meta, use esta correspondencia: "ID da conta comercial do WhatsApp" = campo abaixo de WABA ID, "Numero de telefone ID" = campo abaixo de Phone Number ID e "Numero para contato" = campo abaixo de Numero exibido.
+            </div>
             <div>
-                <label class="mb-1 block text-sm font-semibold text-slate-800">WhatsApp Business Account ID da empresa</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">WABA ID (ID da conta comercial do WhatsApp)</label>
                 <input type="text" wire:model="metaBusinessAccountId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
-                <p class="mt-1 text-xs text-slate-500">A empresa pega este ID na propria conta Meta Business / WhatsApp.</p>
+                <p class="mt-1 text-xs text-slate-500">Na Meta esse valor aparece como "ID da conta comercial do WhatsApp". Exemplo: 2167540823786272.</p>
                 @error('meta_business_account_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             <div>
-                <label class="mb-1 block text-sm font-semibold text-slate-800">Phone Number ID do numero da empresa</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">Phone Number ID (Numero de telefone ID)</label>
                 <input type="text" wire:model="metaPhoneNumberId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
-                <p class="mt-1 text-xs text-slate-500">Esse e o identificador do numero de WhatsApp conectado na Meta.</p>
+                <p class="mt-1 text-xs text-slate-500">Na Meta esse valor aparece como "Numero de telefone ID". Exemplo: 1164184836776801.</p>
                 @error('meta_phone_number_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
             <div>
-                <label class="mb-1 block text-sm font-semibold text-slate-800">Numero exibido no WhatsApp da empresa</label>
+                <label class="mb-1 block text-sm font-semibold text-slate-800">Numero exibido (Numero para contato)</label>
                 <input type="text" wire:model="displayPhoneNumber" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm">
+                <p class="mt-1 text-xs text-slate-500">Na Meta esse valor aparece como "Numero para contato". Exemplo: +1 555 650 5720.</p>
             </div>
             <div>
                 <label class="mb-1 block text-sm font-semibold text-slate-800">Expiracao do token</label>
