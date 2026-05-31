@@ -330,7 +330,7 @@
                         </div>
 
                         <div class="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-                            <div class="rounded-2xl border border-indigo-200 bg-gradient-to-r from-white via-indigo-50/70 to-sky-50 p-3 shadow-sm">
+                            <div class="rounded-2xl border border-indigo-300 bg-gradient-to-r from-indigo-100 via-sky-100 to-cyan-100 p-3 shadow-md shadow-indigo-100/80">
                                 <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Pesquisar produto</label>
                                 <input
                                     type="text"
@@ -340,18 +340,18 @@
                                 />
 
                                 @if ($productToAdd !== '' && $selectedProductOption)
-                                    <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
+                                    <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-900">
                                         Produto escolhido: {{ $selectedProductOption->NOME }} @if($selectedProductOption->CODIGO) | {{ $selectedProductOption->CODIGO }} @endif
                                     </div>
                                 @endif
 
-                                <div class="mt-3 rounded-2xl border border-indigo-100 bg-white/70 p-2">
+                                <div class="mt-3 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-2 shadow-inner">
                                     <div class="flex flex-col gap-2 pr-2" style="height: 23rem; overflow-y: scroll; scrollbar-gutter: stable;">
                                         @forelse ($filteredProducts as $product)
                                             <button
                                                 type="button"
                                                 wire:click="selectProduct({{ $product->id }})"
-                                                class="flex w-full shrink-0 items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-400 bg-indigo-100' : 'border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/70' }}"
+                                                class="flex w-full shrink-0 items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-500 bg-indigo-200' : 'border-indigo-100 bg-white/95 hover:border-indigo-300 hover:bg-indigo-100/80' }}"
                                                 style="min-height: 4.2rem;"
                                             >
                                                 <span class="min-w-0 flex-1">
