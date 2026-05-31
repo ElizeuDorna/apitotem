@@ -42,6 +42,10 @@ class SocialMediaTemplateService
         return SocialMediaTemplate::query()
             ->with(['templateProducts.produto'])
             ->where('empresa_id', $this->ensureAccess($user))
+            ->when(
+                Schema::hasColumn('social_media_templates', 'source_type'),
+                fn (Builder $query) => $query->where('source_type', 'manual')
+            )
             ->orderByDesc('id');
     }
 

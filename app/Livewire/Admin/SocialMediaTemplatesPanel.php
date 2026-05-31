@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\SocialMediaTemplate;
+use App\Services\SocialMediaAutomationService;
 use App\Services\InstagramGraphService;
 use App\Services\SocialMediaTemplateService;
 use Illuminate\Support\Facades\Auth;
@@ -40,11 +41,40 @@ class SocialMediaTemplatesPanel extends Component
 
     public string $productSearch = '';
 
+    public bool $automationEnabled = false;
+
+    public string $automationMode = 'daily_offers';
+
+    public bool $automationPublishToInstagram = true;
+
+    public bool $automationPublishToFacebook = false;
+
+    public array $automationPublishTimes = ['09:00'];
+
+    public int $automationMaxProductsPerPost = 10;
+
+    public bool $automationRequireImage = true;
+
+    public int $automationRepublishAfterHours = 24;
+
+    public string $automationTitlePrefix = 'Ofertas do dia';
+
+    public string $automationCaptionPrefix = 'Confira as ofertas selecionadas de hoje.';
+
     public array $selectedProducts = [];
 
     public ?string $statusMessage = null;
 
     public ?string $errorMessage = null;
+
+    public function mount(SocialMediaAutomationService $automationService, SocialMediaTemplateService $templateService): void
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+
+        $settings = $automationService->settingsForUser($user, $templateService);
+        $this->fillAutomationState($settings);
+    }
 
     public function addProduct(SocialMediaTemplateService $templateService): void
     {
@@ -265,6 +295,48 @@ class SocialMediaTemplatesPanel extends Component
         }
     }
 
+    public function addAutomationPublishTime(): void
+    {
+        $this->automationPublishTimes[] = '';
+    }
+
+    public function removeAutomationPublishTime(int $index): void
+    {
+        if (! isset($this->automationPublishTimes[$index])) {
+            return;
+        }
+
+        unset($this->automationPublishTimes[$index]);
+        $this->automationPublishTimes = array_values($this->automationPublishTimes);
+
+        if ($this->automationPublishTimes === []) {
+            $this->automationPublishTimes = ['09:00'];
+        }
+    }
+
+    public function saveAutomationSettings(SocialMediaAutomationService $automationService, SocialMediaTemplateService $templateService): void
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+
+        $settings = $automationService->saveSettingsForUser($user, $templateService, [
+            'enabled' => $this->automationEnabled,
+            'mode' => $this->automationMode,
+            'publish_to_instagram' => $this->automationPublishToInstagram,
+            'publish_to_facebook' => $this->automationPublishToFacebook,
+            'publish_times' => $this->automationPublishTimes,
+            'max_products_per_post' => $this->automationMaxProductsPerPost,
+            'require_image' => $this->automationRequireImage,
+            'republish_after_hours' => $this->automationRepublishAfterHours,
+            'title_prefix' => $this->automationTitlePrefix,
+            'caption_prefix' => $this->automationCaptionPrefix,
+        ]);
+
+        $this->fillAutomationState($settings);
+        $this->statusMessage = 'Automacao social atualizada com sucesso.';
+        $this->errorMessage = null;
+    }
+
     public function resetForm(): void
     {
         $this->reset([
@@ -295,11 +367,31 @@ class SocialMediaTemplatesPanel extends Component
         $this->selectedProducts = [];
     }
 
-    public function render(SocialMediaTemplateService $templateService, InstagramGraphService $instagramService)
+    private function fillAutomationState($settings): void
+    {
+        $this->automationEnabled = (bool) $settings->enabled;
+        $this->automationMode = (string) ($settings->mode ?: 'daily_offers');
+        $this->automationPublishToInstagram = (bool) $settings->publish_to_instagram;
+        $this->automationPublishToFacebook = (bool) $settings->publish_to_facebook;
+        $this->automationPublishTimes = collect($settings->publish_times ?? ['09:00'])
+            ->map(fn ($time) => trim((string) $time))
+            ->filter()
+            ->values()
+            ->all();
+        $this->automationPublishTimes = $this->automationPublishTimes === [] ? ['09:00'] : $this->automationPublishTimes;
+        $this->automationMaxProductsPerPost = (int) ($settings->max_products_per_post ?: 10);
+        $this->automationRequireImage = (bool) $settings->require_image;
+        $this->automationRepublishAfterHours = (int) ($settings->republish_after_hours ?: 24);
+        $this->automationTitlePrefix = (string) ($settings->title_prefix ?? '');
+        $this->automationCaptionPrefix = (string) ($settings->caption_prefix ?? '');
+    }
+
+    public function render(SocialMediaTemplateService $templateService, InstagramGraphService $instagramService, SocialMediaAutomationService $automationService)
     {
         $user = Auth::user();
         abort_unless($user, 403);
 
+        $empresaId = $templateService->ensureAccess($user);
         $templates = $templateService->templatesQueryForUser($user)->get();
         $availableProducts = $templateService->availableProductsForUser($user);
         $productsById = $availableProducts->keyBy('id');
@@ -326,7 +418,7 @@ class SocialMediaTemplatesPanel extends Component
         $selectedProductOption = $this->productToAdd !== ''
             ? $availableProducts->firstWhere('id', (int) $this->productToAdd)
             : null;
-        $integration = $templateService->integrationForUser($user);
+        $integration = $templateService->integrationForEmpresaId($empresaId);
         $integrationCanAutoRefresh = $instagramService->canAttemptAutomaticRefresh($integration);
         $integrationReady = $integration->status === 'connected' || $integrationCanAutoRefresh;
 
@@ -358,6 +450,7 @@ class SocialMediaTemplatesPanel extends Component
             'filteredProducts' => $filteredProducts,
             'selectedProductOption' => $selectedProductOption,
             'previewProducts' => $previewProducts,
+            'automationRecentPublications' => $automationService->recentPublicationsForEmpresaId($empresaId),
             'previewCaption' => $templateService->buildCaptionPreview($this->titulo, $this->legenda, $previewProducts),
             'previewImageUrl' => $this->coverImageUrl !== ''
                 ? $this->coverImageUrl

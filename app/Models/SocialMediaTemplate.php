@@ -19,6 +19,8 @@ class SocialMediaTemplate extends Model
         'layout_mode',
         'cover_image_url',
         'image_publish_mode',
+        'source_type',
+        'automation_batch_key',
         'scheduled_start_at',
         'scheduled_end_at',
         'instagram_auto_publish',

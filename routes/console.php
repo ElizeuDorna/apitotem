@@ -9,5 +9,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command('devices:cleanup-activations')->everyFiveMinutes();
+Schedule::command('social-media:dispatch-automation')->everyMinute();
 Schedule::command('social-media:publish-scheduled')->everyMinute();
 Schedule::command('whatsapp:dispatch-scheduled')->everyMinute();
