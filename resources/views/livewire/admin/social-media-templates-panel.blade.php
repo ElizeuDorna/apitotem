@@ -346,12 +346,12 @@
                                 @endif
 
                                 <div class="mt-3 rounded-2xl border border-indigo-100 bg-white/70 p-2">
-                                    <div class="grid max-h-[26rem] grid-cols-1 gap-2 overflow-y-auto pr-1">
+                                    <div class="flex h-[24rem] flex-col gap-2 overflow-y-scroll pr-2" style="scrollbar-gutter: stable;">
                                         @forelse ($filteredProducts as $product)
                                             <button
                                                 type="button"
                                                 wire:click="selectProduct({{ $product->id }})"
-                                                class="flex min-h-[4.5rem] w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-400 bg-indigo-100' : 'border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/70' }}"
+                                                class="flex h-[4.4rem] w-full shrink-0 items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-400 bg-indigo-100' : 'border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/70' }}"
                                             >
                                                 <span class="min-w-0 flex-1">
                                                     <span class="block truncate text-sm font-semibold text-slate-900">{{ $product->NOME }}</span>
@@ -367,7 +367,7 @@
                                     </div>
                                 </div>
 
-                                <p class="mt-3 text-xs text-slate-500">A lista mostra cerca de 5 produtos por vez. Para ver os demais, desca pela barra vertical.</p>
+                                <p class="mt-3 text-xs text-slate-500">A lista exibe 5 produtos por vez. Para ver os demais, use a barra vertical ao lado.</p>
                             </div>
 
                             <button type="button" wire:click="addProduct" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 lg:mt-7">
