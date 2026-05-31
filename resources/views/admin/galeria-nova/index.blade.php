@@ -114,16 +114,16 @@
                                 }
                             @endphp
 
-                            <div class="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
+                            <div class="mt-2 rounded border border-sky-200 bg-gradient-to-br from-sky-50 via-cyan-50 to-white p-2 shadow-sm">
                                 @if ($selectionAttribute)
                                     <button
                                         type="button"
-                                        class="block w-full overflow-hidden rounded border border-transparent text-left transition hover:border-indigo-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        class="block w-full overflow-hidden rounded-xl border border-cyan-200 bg-white/80 p-1 text-left transition hover:border-cyan-400 hover:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
                                         {{ $selectionAttribute }}="{{ $resolvedUrl }}"
                                         title="Clique para selecionar esta imagem"
                                     >
                                         <img src="{{ $resolvedUrl }}" alt="Imagem {{ $gallery->name }}" class="h-28 w-full rounded object-cover border">
-                                        <p class="mt-2 text-xs font-medium text-indigo-600">Clique na imagem para selecionar</p>
+                                        <p class="mt-2 text-xs font-semibold text-cyan-700">Clique na imagem para selecionar</p>
                                         <p class="mt-1 text-xs text-gray-600 break-all">{{ $gallery->source_type === 'link' ? 'Link externo' : 'Upload' }}</p>
                                     </button>
                                 @else
@@ -134,7 +134,7 @@
                                 @if (request()->boolean('selecionar_produto'))
                                     <button
                                         type="button"
-                                        class="mt-2 w-full rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                                        class="mt-2 w-full rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500"
                                         data-select-produto-image-url="{{ $resolvedUrl }}"
                                     >
                                         Selecionar para produto
@@ -144,7 +144,7 @@
                                 @if (request()->boolean('selecionar_social_media'))
                                     <button
                                         type="button"
-                                        class="mt-2 w-full rounded bg-cyan-600 px-2 py-1 text-xs font-semibold text-white hover:bg-cyan-500"
+                                        class="mt-2 w-full rounded bg-cyan-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-cyan-500"
                                         data-select-social-media-image-url="{{ $resolvedUrl }}"
                                     >
                                         Selecionar para imagem principal do post
@@ -154,7 +154,7 @@
                                 @if (request()->boolean('selecionar_slide'))
                                     <button
                                         type="button"
-                                        class="mt-2 w-full rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+                                        class="mt-2 w-full rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
                                         data-select-slide-image-url="{{ $resolvedUrl }}"
                                     >
                                         Selecionar para slide lateral

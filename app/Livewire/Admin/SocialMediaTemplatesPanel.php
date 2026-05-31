@@ -38,6 +38,8 @@ class SocialMediaTemplatesPanel extends Component
 
     public string $productToAdd = '';
 
+    public string $productSearch = '';
+
     public array $selectedProducts = [];
 
     public ?string $statusMessage = null;
@@ -84,6 +86,23 @@ class SocialMediaTemplatesPanel extends Component
         }
 
         $this->productToAdd = '';
+        $this->productSearch = '';
+        $this->errorMessage = null;
+    }
+
+    public function selectProduct(int $productId, SocialMediaTemplateService $templateService): void
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+
+        $product = $templateService->availableProductsForUser($user)->firstWhere('id', $productId);
+        if (! $product) {
+            $this->errorMessage = 'Produto nao encontrado para a empresa ativa.';
+            return;
+        }
+
+        $this->productToAdd = (string) $product->id;
+        $this->productSearch = trim((string) $product->NOME.' '.($product->CODIGO ? '| '.$product->CODIGO : ''));
         $this->errorMessage = null;
     }
 
@@ -263,11 +282,12 @@ class SocialMediaTemplatesPanel extends Component
             'publishToInstagram',
             'publishToFacebook',
             'productToAdd',
+            'productSearch',
             'selectedProducts',
         ]);
 
         $this->layoutMode = 'product_list';
-    $this->imagePublishMode = 'single';
+        $this->imagePublishMode = 'single';
         $this->instagramAutoPublish = false;
         $this->facebookAutoPublish = false;
         $this->publishToInstagram = true;
@@ -283,6 +303,29 @@ class SocialMediaTemplatesPanel extends Component
         $templates = $templateService->templatesQueryForUser($user)->get();
         $availableProducts = $templateService->availableProductsForUser($user);
         $productsById = $availableProducts->keyBy('id');
+        $selectedProductIds = collect($this->selectedProducts)
+            ->pluck('produto_id')
+            ->map(fn ($productId) => (int) $productId)
+            ->all();
+        $searchTerm = trim($this->productSearch);
+        $filteredProducts = $availableProducts
+            ->filter(function ($product) use ($searchTerm, $selectedProductIds): bool {
+                if (in_array((int) $product->id, $selectedProductIds, true)) {
+                    return false;
+                }
+
+                if ($searchTerm === '') {
+                    return true;
+                }
+
+                $haystack = mb_strtolower(trim((string) $product->NOME.' '.(string) $product->CODIGO));
+                return str_contains($haystack, mb_strtolower($searchTerm));
+            })
+            ->take($searchTerm === '' ? 40 : 80)
+            ->values();
+        $selectedProductOption = $this->productToAdd !== ''
+            ? $availableProducts->firstWhere('id', (int) $this->productToAdd)
+            : null;
         $integration = $templateService->integrationForUser($user);
         $integrationCanAutoRefresh = $instagramService->canAttemptAutomaticRefresh($integration);
         $integrationReady = $integration->status === 'connected' || $integrationCanAutoRefresh;
@@ -312,6 +355,8 @@ class SocialMediaTemplatesPanel extends Component
         return view('livewire.admin.social-media-templates-panel', [
             'templates' => $templates,
             'availableProducts' => $availableProducts,
+            'filteredProducts' => $filteredProducts,
+            'selectedProductOption' => $selectedProductOption,
             'previewProducts' => $previewProducts,
             'previewCaption' => $templateService->buildCaptionPreview($this->titulo, $this->legenda, $previewProducts),
             'previewImageUrl' => $this->coverImageUrl !== ''

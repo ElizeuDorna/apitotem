@@ -4,7 +4,7 @@
         templatesSectionOpen: true,
         integrationOpen: {{ (! $instagramConfigured || ! $integrationReady || session()->has('error')) ? 'true' : 'false' }}
     }"
-    class="space-y-6"
+    class="space-y-6 rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(103,232,249,0.2),_transparent_32%),linear-gradient(180deg,#f0fdfa_0%,#f8fafc_38%,#eef6ff_100%)] px-4 py-5 md:px-6"
 >
     <div class="max-w-7xl mx-auto space-y-6">
         @if (session('success'))
@@ -23,7 +23,7 @@
             <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errorMessage }}</div>
         @endif
 
-        <section class="rounded-3xl border border-cyan-200 bg-white p-5 shadow-sm shadow-cyan-100/60">
+        <section class="rounded-3xl border border-cyan-200 bg-white/90 p-5 shadow-sm shadow-cyan-100/60 backdrop-blur-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <button
                     type="button"
@@ -60,7 +60,7 @@
 
             <p x-show="socialSectionOpen" class="mt-1 text-sm text-slate-500">A integracao fica separada da criacao de templates. Depois de configurada, voce escolhe em cada template se quer divulgar no Instagram, no Facebook ou nos dois.</p>
 
-            <div x-cloak x-show="socialSectionOpen && integrationOpen" x-transition class="mt-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5">
+            <div x-cloak x-show="socialSectionOpen && integrationOpen" x-transition class="mt-5 rounded-[2rem] border border-cyan-100 bg-gradient-to-br from-white via-cyan-50/70 to-sky-50 p-5">
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-2xl">
                         <h3 class="text-lg font-bold text-slate-900">Configuracao Meta, Instagram e Facebook</h3>
@@ -221,6 +221,33 @@
                         @error('titulo')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
+                    <div class="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-fuchsia-50 to-white p-4 shadow-sm">
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-900">Modo de publicacao da imagem</h3>
+                            <p class="text-xs text-slate-600">Escolha se o post vai sair com uma imagem unica ou como carrossel com as imagens dos produtos selecionados.</p>
+                        </div>
+
+                        <div class="mt-4 grid gap-3 md:grid-cols-2">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-violet-200 bg-white/90 px-4 py-4 shadow-sm transition hover:border-violet-300">
+                                <input type="radio" wire:model="imagePublishMode" value="single" class="mt-1 border-slate-300 text-violet-600 focus:ring-violet-500" />
+                                <span>
+                                    <span class="block text-sm font-semibold text-slate-900">Imagem unica</span>
+                                    <span class="mt-1 block text-xs text-slate-500">Usa a imagem principal do post como capa unica da publicacao.</span>
+                                </span>
+                            </label>
+
+                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-fuchsia-200 bg-white/90 px-4 py-4 shadow-sm transition hover:border-fuchsia-300">
+                                <input type="radio" wire:model="imagePublishMode" value="product_images" class="mt-1 border-slate-300 text-fuchsia-600 focus:ring-fuchsia-500" />
+                                <span>
+                                    <span class="block text-sm font-semibold text-slate-900">Carrossel com imagens dos produtos</span>
+                                    <span class="mt-1 block text-xs text-slate-500">Publica varias imagens usando as fotos dos produtos adicionados neste template.</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        @error('image_publish_mode')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+
                     <div>
                         <label class="block text-sm font-semibold text-slate-800">Legenda</label>
                         <textarea wire:model="legenda" rows="4" class="mt-1 w-full rounded-2xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Descreva a campanha, destaque a oferta e complete com hashtags se quiser."></textarea>
@@ -274,14 +301,14 @@
                         @error('publish_channels')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
-                    <div>
+                    <div class="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 via-sky-50 to-white p-4 shadow-sm">
                         <label class="block text-sm font-semibold text-slate-800">Imagem principal do post</label>
                         <div class="mt-1 flex items-stretch gap-2 md:max-w-2xl">
-                            <input id="socialMediaCoverImageInput" type="text" wire:model="coverImageUrl" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Se deixar vazio, a primeira imagem do produto sera usada automaticamente" />
+                            <input id="socialMediaCoverImageInput" type="text" wire:model="coverImageUrl" class="w-full rounded-xl border-cyan-200 bg-white/90 shadow-sm focus:border-cyan-500 focus:ring-cyan-500" placeholder="Se deixar vazio, a primeira imagem do produto sera usada automaticamente" />
                             <a
                                 href="{{ route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_social_media' => 1]) }}"
                                 target="_blank"
-                                class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                                class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-100 text-cyan-700 shadow-sm hover:bg-cyan-200"
                                 title="Buscar imagem na Galeria de Imagem"
                                 aria-label="Buscar imagem na Galeria de Imagem"
                             >
@@ -290,7 +317,7 @@
                                 </svg>
                             </a>
                         </div>
-                        <p class="mt-1 text-xs text-slate-500">Quando voce adiciona o primeiro produto, a imagem dele ja vira base do template. Se quiser, pode trocar aqui ou por item.</p>
+                        <p class="mt-2 text-xs text-slate-600">Quando voce adiciona o primeiro produto, a imagem dele ja vira base do template. Se quiser, pode trocar aqui ou por item.</p>
                         @error('cover_image_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
 
@@ -302,15 +329,48 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 flex flex-col gap-3 md:flex-row">
-                            <select wire:model="productToAdd" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Selecione um produto</option>
-                                @foreach ($availableProducts as $product)
-                                    <option value="{{ $product->id }}">{{ $product->NOME }} @if($product->CODIGO) | {{ $product->CODIGO }} @endif</option>
-                                @endforeach
-                            </select>
+                        <div class="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                            <div class="rounded-2xl border border-indigo-200 bg-gradient-to-r from-white via-indigo-50/70 to-sky-50 p-3 shadow-sm">
+                                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Pesquisar produto</label>
+                                <input
+                                    type="text"
+                                    wire:model.live.debounce.300ms="productSearch"
+                                    class="mt-2 w-full rounded-xl border-indigo-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="Digite nome ou codigo do produto"
+                                />
 
-                            <button type="button" wire:click="addProduct" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                                @if ($productToAdd !== '' && $selectedProductOption)
+                                    <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
+                                        Produto escolhido: {{ $selectedProductOption->NOME }} @if($selectedProductOption->CODIGO) | {{ $selectedProductOption->CODIGO }} @endif
+                                    </div>
+                                @endif
+
+                                <div class="mt-3 rounded-2xl border border-indigo-100 bg-white/70 p-2">
+                                    <div class="grid max-h-[23rem] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                                        @forelse ($filteredProducts as $product)
+                                            <button
+                                                type="button"
+                                                wire:click="selectProduct({{ $product->id }})"
+                                                class="flex min-h-[4.5rem] w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-400 bg-indigo-100' : 'border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/70' }}"
+                                            >
+                                                <span class="min-w-0 flex-1">
+                                                    <span class="block truncate text-sm font-semibold text-slate-900">{{ $product->NOME }}</span>
+                                                    <span class="mt-1 block text-xs text-slate-500">{{ $product->CODIGO ?: 'Sem codigo' }}</span>
+                                                </span>
+                                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">Selecionar</span>
+                                            </button>
+                                        @empty
+                                            <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-500 sm:col-span-2">
+                                                Nenhum produto encontrado com essa busca.
+                                            </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+
+                                <p class="mt-3 text-xs text-slate-500">A lista fica com altura fixa e barra vertical. Sem busca, aparecem os primeiros produtos disponiveis e voce pode descer para ver os restantes.</p>
+                            </div>
+
+                            <button type="button" wire:click="addProduct" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 lg:mt-7">
                                 Adicionar produto
                             </button>
                         </div>

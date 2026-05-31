@@ -243,7 +243,7 @@ Route::middleware('auth')->group(function () {
 
         Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class, ['as' => 'admin'])
             ->scoped(['produto' => 'id'])
-            ->only(['index', 'edit'])
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('menu.access:produtos');
         Route::resource('empresas', \App\Http\Controllers\Admin\EmpresaController::class, ['as' => 'admin'])
             ->middleware('menu.access:empresas')
