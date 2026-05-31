@@ -107,6 +107,7 @@
                 errorMessage: '',
                 code: null,
                 sessionData: null,
+                waitingForSessionDataTimeoutId: null,
                 init() {
                     window.addEventListener('message', (event) => {
                         if (! String(event.origin || '').endsWith('facebook.com')) {
@@ -114,7 +115,14 @@
                         }
 
                         try {
-                            const payload = JSON.parse(event.data);
+                            const payload = typeof event.data === 'string'
+                                ? JSON.parse(event.data)
+                                : event.data;
+
+                            if (! payload || typeof payload !== 'object') {
+                                return;
+                            }
+
                             if (payload.type !== 'WA_EMBEDDED_SIGNUP') {
                                 return;
                             }
@@ -159,12 +167,14 @@
                 },
                 handleEmbeddedEvent(payload) {
                     if (String(payload.event || '').startsWith('FINISH')) {
+                        this.clearWaitingForSessionDataTimeout();
                         this.sessionData = payload.data || {};
                         this.statusMessage = 'A Meta retornou os dados da empresa. Finalizando cadastro no servidor...';
                         this.tryFinalize();
                         return;
                     }
 
+                    this.clearWaitingForSessionDataTimeout();
                     this.busy = false;
 
                     if (payload.data && payload.data.error_message) {
@@ -183,10 +193,12 @@
                     if (response && response.authResponse && response.authResponse.code) {
                         this.code = response.authResponse.code;
                         this.statusMessage = 'Meta autorizou o app. Aguardando os IDs do numero e da WABA...';
+                        this.startWaitingForSessionDataTimeout();
                         this.tryFinalize();
                         return;
                     }
 
+                    this.clearWaitingForSessionDataTimeout();
                     this.busy = false;
                     this.errorMessage = 'A Meta nao retornou um codigo de autorizacao valido.';
                 },
@@ -220,11 +232,31 @@
                             throw new Error(payload.message || 'Falha ao concluir o onboarding da Meta.');
                         }
 
+                        this.clearWaitingForSessionDataTimeout();
                         this.statusMessage = payload.message || 'WhatsApp conectado com sucesso.';
                         window.location.href = config.redirectUrl;
                     } catch (error) {
+                        this.clearWaitingForSessionDataTimeout();
                         this.busy = false;
                         this.errorMessage = error.message || 'Falha ao concluir o onboarding da Meta.';
+                    }
+                },
+                startWaitingForSessionDataTimeout() {
+                    this.clearWaitingForSessionDataTimeout();
+
+                    this.waitingForSessionDataTimeoutId = window.setTimeout(() => {
+                        if (this.sessionData && this.sessionData.phone_number_id && this.sessionData.waba_id) {
+                            return;
+                        }
+
+                        this.busy = false;
+                        this.errorMessage = 'A Meta autorizou o app, mas nao devolveu os IDs do numero e da WABA. Confirme que o fluxo foi concluido na tela final da Meta e revise Allowed Domains, URIs de redirecionamento OAuth validas e SDK JavaScript.';
+                    }, 20000);
+                },
+                clearWaitingForSessionDataTimeout() {
+                    if (this.waitingForSessionDataTimeoutId) {
+                        window.clearTimeout(this.waitingForSessionDataTimeoutId);
+                        this.waitingForSessionDataTimeoutId = null;
                     }
                 },
                 ensureSdkLoaded() {
