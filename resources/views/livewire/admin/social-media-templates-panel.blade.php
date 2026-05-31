@@ -276,7 +276,20 @@
 
                     <div>
                         <label class="block text-sm font-semibold text-slate-800">Imagem principal do post</label>
-                        <input type="text" wire:model="coverImageUrl" class="mt-1 w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Se deixar vazio, a primeira imagem do produto sera usada automaticamente" />
+                        <div class="mt-1 flex items-stretch gap-2 md:max-w-2xl">
+                            <input id="socialMediaCoverImageInput" type="text" wire:model="coverImageUrl" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Se deixar vazio, a primeira imagem do produto sera usada automaticamente" />
+                            <a
+                                href="{{ route('admin.galeria-imagem.index', ['abrir_form' => 1, 'selecionar_social_media' => 1]) }}"
+                                target="_blank"
+                                class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                                title="Buscar imagem na Galeria de Imagem"
+                                aria-label="Buscar imagem na Galeria de Imagem"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+                                    <path fill-rule="evenodd" d="M9 3a6 6 0 1 0 3.873 10.582l3.272 3.273a1 1 0 0 0 1.414-1.414l-3.273-3.272A6 6 0 0 0 9 3Zm-4 6a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" />
+                                </svg>
+                            </a>
+                        </div>
                         <p class="mt-1 text-xs text-slate-500">Quando voce adiciona o primeiro produto, a imagem dele ja vira base do template. Se quiser, pode trocar aqui ou por item.</p>
                         @error('cover_image_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
@@ -616,3 +629,57 @@
         </section>
     </div>
 </div>
+
+<script>
+    const socialMediaCoverImageInput = document.getElementById('socialMediaCoverImageInput');
+    const socialMediaCoverImagemSelecionadaStorageKey = 'social_media_cover_image_url_selected';
+
+    function aplicarImagemPrincipalSocialMedia(url) {
+        const normalizedUrl = String(url || '').trim();
+
+        if (!socialMediaCoverImageInput || normalizedUrl === '') {
+            return;
+        }
+
+        socialMediaCoverImageInput.value = normalizedUrl;
+        socialMediaCoverImageInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function sincronizarImagemPrincipalSocialMediaDaGaleria() {
+        const imagemSelecionada = localStorage.getItem(socialMediaCoverImagemSelecionadaStorageKey);
+        if (!imagemSelecionada) {
+            return;
+        }
+
+        aplicarImagemPrincipalSocialMedia(imagemSelecionada);
+        localStorage.removeItem(socialMediaCoverImagemSelecionadaStorageKey);
+    }
+
+    window.addEventListener('message', (event) => {
+        if (event.origin !== window.location.origin) {
+            return;
+        }
+
+        const payload = event.data || {};
+        if (payload.type !== 'galeriaNovaSelectSocialMediaCoverImage') {
+            return;
+        }
+
+        aplicarImagemPrincipalSocialMedia(payload.url);
+    });
+
+    const imagemPrincipalSocialMediaPendente = localStorage.getItem(socialMediaCoverImagemSelecionadaStorageKey);
+    if (imagemPrincipalSocialMediaPendente) {
+        aplicarImagemPrincipalSocialMedia(imagemPrincipalSocialMediaPendente);
+        localStorage.removeItem(socialMediaCoverImagemSelecionadaStorageKey);
+    }
+
+    window.addEventListener('focus', sincronizarImagemPrincipalSocialMediaDaGaleria);
+    window.addEventListener('storage', (event) => {
+        if (event.key !== socialMediaCoverImagemSelecionadaStorageKey) {
+            return;
+        }
+
+        sincronizarImagemPrincipalSocialMediaDaGaleria();
+    });
+</script>

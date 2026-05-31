@@ -102,9 +102,34 @@
                         </div>
 
                         @if ($resolvedUrl)
+                            @php
+                                $selectionAttribute = null;
+
+                                if (request()->boolean('selecionar_produto')) {
+                                    $selectionAttribute = 'data-select-produto-image-url';
+                                } elseif (request()->boolean('selecionar_social_media')) {
+                                    $selectionAttribute = 'data-select-social-media-image-url';
+                                } elseif (request()->boolean('selecionar_slide')) {
+                                    $selectionAttribute = 'data-select-slide-image-url';
+                                }
+                            @endphp
+
                             <div class="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
-                                <img src="{{ $resolvedUrl }}" alt="Imagem {{ $gallery->name }}" class="h-28 w-full rounded object-cover border">
-                                <p class="mt-2 text-xs text-gray-600 break-all">{{ $gallery->source_type === 'link' ? 'Link externo' : 'Upload' }}</p>
+                                @if ($selectionAttribute)
+                                    <button
+                                        type="button"
+                                        class="block w-full overflow-hidden rounded border border-transparent text-left transition hover:border-indigo-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        {{ $selectionAttribute }}="{{ $resolvedUrl }}"
+                                        title="Clique para selecionar esta imagem"
+                                    >
+                                        <img src="{{ $resolvedUrl }}" alt="Imagem {{ $gallery->name }}" class="h-28 w-full rounded object-cover border">
+                                        <p class="mt-2 text-xs font-medium text-indigo-600">Clique na imagem para selecionar</p>
+                                        <p class="mt-1 text-xs text-gray-600 break-all">{{ $gallery->source_type === 'link' ? 'Link externo' : 'Upload' }}</p>
+                                    </button>
+                                @else
+                                    <img src="{{ $resolvedUrl }}" alt="Imagem {{ $gallery->name }}" class="h-28 w-full rounded object-cover border">
+                                    <p class="mt-2 text-xs text-gray-600 break-all">{{ $gallery->source_type === 'link' ? 'Link externo' : 'Upload' }}</p>
+                                @endif
 
                                 @if (request()->boolean('selecionar_produto'))
                                     <button
