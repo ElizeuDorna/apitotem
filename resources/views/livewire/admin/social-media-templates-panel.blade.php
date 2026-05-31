@@ -346,12 +346,13 @@
                                 @endif
 
                                 <div class="mt-3 rounded-2xl border border-indigo-100 bg-white/70 p-2">
-                                    <div class="flex h-[24rem] flex-col gap-2 overflow-y-scroll pr-2" style="scrollbar-gutter: stable;">
+                                    <div class="flex flex-col gap-2 pr-2" style="height: 23rem; overflow-y: scroll; scrollbar-gutter: stable;">
                                         @forelse ($filteredProducts as $product)
                                             <button
                                                 type="button"
                                                 wire:click="selectProduct({{ $product->id }})"
-                                                class="flex h-[4.4rem] w-full shrink-0 items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-400 bg-indigo-100' : 'border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/70' }}"
+                                                class="flex w-full shrink-0 items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition {{ (string) $productToAdd === (string) $product->id ? 'border-indigo-400 bg-indigo-100' : 'border-white bg-white hover:border-indigo-200 hover:bg-indigo-50/70' }}"
+                                                style="min-height: 4.2rem;"
                                             >
                                                 <span class="min-w-0 flex-1">
                                                     <span class="block truncate text-sm font-semibold text-slate-900">{{ $product->NOME }}</span>
