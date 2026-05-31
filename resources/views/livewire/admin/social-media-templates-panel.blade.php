@@ -346,7 +346,7 @@
                                 @endif
 
                                 <div class="mt-3 rounded-2xl border border-indigo-100 bg-white/70 p-2">
-                                    <div class="grid max-h-[23rem] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                                    <div class="grid max-h-[26rem] grid-cols-1 gap-2 overflow-y-auto pr-1">
                                         @forelse ($filteredProducts as $product)
                                             <button
                                                 type="button"
@@ -360,14 +360,14 @@
                                                 <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">Selecionar</span>
                                             </button>
                                         @empty
-                                            <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-500 sm:col-span-2">
+                                            <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-500">
                                                 Nenhum produto encontrado com essa busca.
                                             </div>
                                         @endforelse
                                     </div>
                                 </div>
 
-                                <p class="mt-3 text-xs text-slate-500">A lista fica com altura fixa e barra vertical. Sem busca, aparecem os primeiros produtos disponiveis e voce pode descer para ver os restantes.</p>
+                                <p class="mt-3 text-xs text-slate-500">A lista mostra cerca de 5 produtos por vez. Para ver os demais, desca pela barra vertical.</p>
                             </div>
 
                             <button type="button" wire:click="addProduct" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 lg:mt-7">
