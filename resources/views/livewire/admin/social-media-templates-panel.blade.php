@@ -671,8 +671,20 @@
                                         <button type="button" wire:click="editTemplate({{ $template->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Editar</button>
                                         <button type="button" wire:click="deleteTemplate({{ $template->id }})" wire:confirm="Tem certeza?" class="rounded-xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">Excluir</button>
                                         @if ($integrationReady)
-                                            <button type="button" wire:click="publishNow({{ $template->id }})" class="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Publicar agora</button>
+                                            <button
+                                                type="button"
+                                                wire:click="publishNow({{ $template->id }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="publishNow({{ $template->id }})"
+                                                class="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-70"
+                                            >
+                                                <span wire:loading.remove wire:target="publishNow({{ $template->id }})">Publicar agora</span>
+                                                <span wire:loading wire:target="publishNow({{ $template->id }})">Publicando...</span>
+                                            </button>
                                             <span class="inline-flex rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800">Ignora o agendamento</span>
+                                            <span wire:loading.inline-flex wire:target="publishNow({{ $template->id }})" class="inline-flex rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                                                Aguardando a Meta publicar...
+                                            </span>
                                         @elseif ($integrationStatus['level'] === 'expired')
                                             <span class="inline-flex rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Reconecte a Meta para publicar</span>
                                         @endif
