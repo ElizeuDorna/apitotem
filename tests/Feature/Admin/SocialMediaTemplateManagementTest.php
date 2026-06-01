@@ -8,6 +8,7 @@ use App\Models\Empresa;
 use App\Models\GaleriaNova;
 use App\Models\Grupo;
 use App\Models\Produto;
+use App\Models\SocialMediaAutomationSetting;
 use App\Models\SocialMediaTemplate;
 use App\Models\SocialMediaTemplateProduct;
 use App\Models\SocialMediaIntegration;
@@ -16,6 +17,7 @@ use App\Support\EmpresaContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -737,6 +739,74 @@ class SocialMediaTemplateManagementTest extends TestCase
             'id' => $template->id,
             'facebook_publish_status' => 'published',
             'facebook_publish_id' => 'fb-post-scheduled',
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_offer_automation_generates_and_publishes_template_even_without_automation_columns(): void
+    {
+        Carbon::setTestNow('2026-06-01 09:00:00');
+
+        Schema::table('social_media_templates', function ($table): void {
+            $table->dropColumn(['source_type', 'automation_batch_key']);
+        });
+
+        $empresa = $this->createEmpresa('23.444.555/0001-67', 'Empresa Automacao Ofertas', 'tok-auto-ofertas');
+        $produto = $this->createProduto($empresa, '401', 'Cafe em Oferta', '/storage-images/cafe-auto.png', 15.90, 12.90);
+
+        SocialMediaIntegration::query()->create([
+            'empresa_id' => $empresa->id,
+            'provider' => 'instagram_graph',
+            'status' => 'connected',
+            'instagram_business_account_id' => 'ig-701',
+            'instagram_username' => 'mercado.auto',
+            'facebook_page_id' => 'page-701',
+            'facebook_page_name' => 'Pagina Automatica',
+            'access_token' => 'page-token',
+        ]);
+
+        SocialMediaAutomationSetting::query()->create([
+            'empresa_id' => $empresa->id,
+            'enabled' => true,
+            'mode' => 'daily_offers',
+            'publish_to_instagram' => true,
+            'publish_to_facebook' => true,
+            'publish_times' => ['09:00'],
+            'max_products_per_post' => 5,
+            'require_image' => true,
+            'republish_after_hours' => 24,
+            'title_prefix' => 'Ofertas do dia',
+            'caption_prefix' => 'Confira as ofertas selecionadas de hoje.',
+        ]);
+
+        Http::fake([
+            'https://graph.facebook.com/*/ig-701/media' => Http::response(['id' => 'ig-creation-auto'], 200),
+            'https://graph.facebook.com/*/ig-701/media_publish' => Http::response(['id' => 'ig-published-auto'], 200),
+            'https://graph.facebook.com/*/page-701/photos' => Http::response(['post_id' => 'fb-post-auto'], 200),
+        ]);
+
+        $this->artisan('social-media:dispatch-automation')
+            ->expectsOutput('Automacoes processadas: 1 | publicacoes geradas: 1')
+            ->assertSuccessful();
+
+        $template = SocialMediaTemplate::query()->firstOrFail();
+
+        $this->assertSame($empresa->id, $template->empresa_id);
+        $this->assertStringStartsWith('[Auto] Ofertas do dia', (string) $template->nome);
+
+        $this->assertDatabaseHas('social_media_templates', [
+            'id' => $template->id,
+            'instagram_publish_status' => 'published',
+            'facebook_publish_status' => 'published',
+            'instagram_publish_id' => 'ig-published-auto',
+            'facebook_publish_id' => 'fb-post-auto',
+        ]);
+
+        $this->assertDatabaseHas('social_media_automation_publications', [
+            'empresa_id' => $empresa->id,
+            'produto_id' => $produto->id,
+            'status' => 'published',
         ]);
 
         Carbon::setTestNow();

@@ -333,7 +333,7 @@ class SocialMediaAutomationService
             $defaultTitle = $individualMode ? 'Oferta automatica' : 'Ofertas do dia';
             $title = $titlePrefix !== '' ? $titlePrefix : $defaultTitle;
 
-            $template = SocialMediaTemplate::query()->create([
+            $templatePayload = [
                 'empresa_id' => $settings->empresa_id,
                 'nome' => '[Auto] '.$title.' '.$batchKey,
                 'titulo' => $title,
@@ -341,8 +341,6 @@ class SocialMediaAutomationService
                 'layout_mode' => $products->count() > 1 ? 'product_list' : 'mixed',
                 'cover_image_url' => (string) ($products->first()?->IMG ?? ''),
                 'image_publish_mode' => $products->count() > 1 ? 'product_images' : 'single',
-                'source_type' => 'automation',
-                'automation_batch_key' => $batchKey,
                 'scheduled_start_at' => null,
                 'scheduled_end_at' => null,
                 'instagram_auto_publish' => false,
@@ -351,7 +349,17 @@ class SocialMediaAutomationService
                 'publish_to_facebook' => (bool) $settings->publish_to_facebook,
                 'instagram_publish_status' => 'draft',
                 'facebook_publish_status' => 'draft',
-            ]);
+            ];
+
+            if (Schema::hasColumn('social_media_templates', 'source_type')) {
+                $templatePayload['source_type'] = 'automation';
+            }
+
+            if (Schema::hasColumn('social_media_templates', 'automation_batch_key')) {
+                $templatePayload['automation_batch_key'] = $batchKey;
+            }
+
+            $template = SocialMediaTemplate::query()->create($templatePayload);
 
             foreach ($products->values() as $index => $product) {
                 SocialMediaTemplateProduct::query()->create([
