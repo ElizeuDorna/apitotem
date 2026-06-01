@@ -2181,6 +2181,57 @@
         let pendingScheduleRowHighlightUrl = normalizeSlideUrlForCompare(requestedOpenRightSidebarImageScheduleUrl || '');
         let onGaleriaNovaSlideSelect = null;
 
+        function isFocusableElementVisible(element) {
+            if (!(element instanceof HTMLElement)) {
+                return false;
+            }
+
+            if (element.hidden || element.hasAttribute('disabled')) {
+                return false;
+            }
+
+            const style = window.getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+
+            return element.getClientRects().length > 0;
+        }
+
+        function listFocusableElements(scope) {
+            const root = scope instanceof HTMLElement ? scope : document;
+
+            return Array.from(root.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+                .filter((element) => {
+                    if (!(element instanceof HTMLElement)) {
+                        return false;
+                    }
+
+                    if (element instanceof HTMLInputElement && element.type === 'hidden') {
+                        return false;
+                    }
+
+                    return isFocusableElementVisible(element);
+                });
+        }
+
+        function moveTvRemoteFocusFromNumberInput(currentInput, direction) {
+            const scope = currentInput.closest('.config-panel') || webConfigForm || document.body;
+            const focusableElements = listFocusableElements(scope);
+            const currentIndex = focusableElements.indexOf(currentInput);
+
+            if (currentIndex === -1) {
+                return;
+            }
+
+            const nextIndex = currentIndex + direction;
+            if (nextIndex < 0 || nextIndex >= focusableElements.length) {
+                return;
+            }
+
+            focusableElements[nextIndex].focus();
+        }
+
         function resolveAdminPreviewFontFamily(fontKey) {
             switch (String(fontKey || 'arial').trim().toLowerCase()) {
                 case 'verdana':
@@ -2199,6 +2250,21 @@
                 default:
                     return 'Arial, Helvetica, sans-serif';
             }
+        }
+
+        if (webConfigForm) {
+            webConfigForm.addEventListener('keydown', (event) => {
+                if (!(event.target instanceof HTMLInputElement) || event.target.type !== 'number') {
+                    return;
+                }
+
+                if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+                    return;
+                }
+
+                event.preventDefault();
+                moveTvRemoteFocusFromNumberInput(event.target, event.key === 'ArrowDown' ? 1 : -1);
+            });
         }
 
         function applyOfferSlideFieldPreviews() {
