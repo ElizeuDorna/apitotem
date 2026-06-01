@@ -28,7 +28,7 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <button
                     type="button"
-                    @click="socialSectionOpen = !socialSectionOpen"
+                    x-on:click="socialSectionOpen = !socialSectionOpen"
                     class="flex flex-1 items-start justify-between gap-4 rounded-[1.75rem] border border-cyan-200 bg-[linear-gradient(135deg,#ecfeff_0%,#f0f9ff_100%)] px-4 py-4 text-left shadow-sm transition hover:border-cyan-300 hover:bg-[linear-gradient(135deg,#cffafe_0%,#e0f2fe_100%)]"
                 >
                     <div class="flex flex-wrap items-center gap-3">
@@ -49,7 +49,7 @@
                 <div class="flex flex-wrap gap-3">
                     <button
                         type="button"
-                        @click="integrationOpen = !integrationOpen"
+                        x-on:click="integrationOpen = !integrationOpen"
                         x-show="socialSectionOpen"
                         class="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                     >
@@ -154,184 +154,12 @@
             </div>
         </section>
 
-        <section class="rounded-3xl border border-violet-200 bg-white/95 p-6 shadow-sm shadow-violet-100/60">
-            <button
-                type="button"
-                @click="automationSectionOpen = !automationSectionOpen"
-                class="flex w-full items-start justify-between gap-4 rounded-[1.75rem] border border-violet-200 bg-[linear-gradient(135deg,#f5f3ff_0%,#fdf4ff_100%)] px-4 py-4 text-left shadow-sm transition hover:border-violet-300 hover:bg-[linear-gradient(135deg,#ede9fe_0%,#fae8ff_100%)]"
-            >
-                <div>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <h3 class="text-xl font-bold text-slate-900">Automacao de ofertas</h3>
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $automationEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                            {{ $automationEnabled ? 'Automacao ligada' : 'Automacao desligada' }}
-                        </span>
-                    </div>
-                    <p class="mt-1 text-sm text-slate-500">Essa automacao e separada da postagem manual. O botao "Publicar agora" e os templates manuais continuam funcionando normalmente.</p>
-                </div>
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-violet-300 bg-white text-violet-700 shadow-sm">
-                    <span x-show="automationSectionOpen">-</span>
-                    <span x-show="!automationSectionOpen">+</span>
-                </span>
-            </button>
-
-            <form wire:submit="saveAutomationSettings" x-cloak x-show="automationSectionOpen" x-transition class="mt-5 space-y-5">
-                <div class="grid gap-4 xl:grid-cols-[0.68fr_0.32fr]">
-                    <div class="space-y-4 rounded-[2rem] border border-violet-200 bg-gradient-to-br from-violet-50 via-fuchsia-50/80 to-white p-5 shadow-sm">
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <label class="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <input type="checkbox" wire:model="automationEnabled" class="mt-1 rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500" />
-                                <span>
-                                    <span class="block text-sm font-semibold text-slate-900">Ativar automacao</span>
-                                    <span class="mt-1 block text-xs text-slate-500">Quando ligada, o scheduler publica ofertas automaticamente nos horarios definidos abaixo.</span>
-                                </span>
-                            </label>
-
-                            <div class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <label class="block text-sm font-semibold text-slate-900">Modo automatico</label>
-                                <select wire:model="automationMode" class="mt-2 w-full rounded-xl border-violet-200 bg-white shadow-sm focus:border-violet-500 focus:ring-violet-500">
-                                    <option value="daily_offers">Agrupar ofertas do dia</option>
-                                    <option value="individual_offer">Publicar um produto por oferta</option>
-                                </select>
-                                <p class="mt-2 text-xs text-slate-500">No modo agrupado, o sistema cria um post/carrossel unico. No individual, ele publica cada oferta elegivel separadamente.</p>
-                            </div>
-                        </div>
-            </div>
-
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <div class="text-sm font-semibold text-slate-900">Canais automaticos</div>
-                                <div class="mt-3 flex flex-wrap gap-4 text-sm text-slate-700">
-                                    <label class="inline-flex items-center gap-2">
-                                        <input type="checkbox" wire:model="automationPublishToInstagram" class="rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500" />
-                                        <span>Instagram</span>
-                                    </label>
-                                    <label class="inline-flex items-center gap-2">
-                                        <input type="checkbox" wire:model="automationPublishToFacebook" class="rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500" />
-                                        <span>Facebook</span>
-                                    </label>
-                                </div>
-                                @error('automation_channels')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
-                            </div>
-
-                            <label class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <span class="block text-sm font-semibold text-slate-900">Limite de produtos por publicacao</span>
-                                <input type="number" min="1" max="30" wire:model="automationMaxProductsPerPost" class="mt-2 w-full rounded-xl border-violet-200 bg-white shadow-sm focus:border-violet-500 focus:ring-violet-500" />
-                                <span class="mt-2 block text-xs text-slate-500">No modo agrupado define quantos produtos entram no post. No individual, limita quantas ofertas sao disparadas por rodada.</span>
-                            </label>
-                        </div>
-
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <label class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <span class="block text-sm font-semibold text-slate-900">Repetir a mesma oferta somente apos</span>
-                                <input type="number" min="1" max="720" wire:model="automationRepublishAfterHours" class="mt-2 w-full rounded-xl border-violet-200 bg-white shadow-sm focus:border-violet-500 focus:ring-violet-500" />
-                                <span class="mt-2 block text-xs text-slate-500">Em horas. Se preco/oferta mudarem, a automacao pode publicar de novo com o novo conteudo.</span>
-                            </label>
-
-                            <label class="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <input type="checkbox" wire:model="automationRequireImage" class="mt-1 rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500" />
-                                <span>
-                                    <span class="block text-sm font-semibold text-slate-900">Publicar apenas com imagem valida</span>
-                                    <span class="mt-1 block text-xs text-slate-500">Mantem o post automatico profissional e evita disparar oferta sem foto de produto.</span>
-                                </span>
-                            </label>
-                        </div>
-
-                        <div class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                            <div class="flex items-center justify-between gap-3">
-                                <div>
-                                    <div class="text-sm font-semibold text-slate-900">Horarios de disparo</div>
-                                    <p class="mt-1 text-xs text-slate-500">Exemplos: 09:00, 12:00, 18:30. O scheduler roda por minuto e so dispara nos horarios cadastrados aqui.</p>
-                                </div>
-                                <button type="button" wire:click="addAutomationPublishTime" class="rounded-xl border border-violet-300 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-50">Adicionar horario</button>
-                            </div>
-
-                            <div class="mt-4 grid gap-3 md:grid-cols-3">
-                                @foreach ($automationPublishTimes as $index => $publishTime)
-                                    <div class="flex items-center gap-2 rounded-2xl border border-violet-100 bg-violet-50/70 px-3 py-3">
-                                        <input type="time" wire:model="automationPublishTimes.{{ $index }}" class="w-full rounded-xl border-violet-200 bg-white shadow-sm focus:border-violet-500 focus:ring-violet-500" />
-                                        <button type="button" wire:click="removeAutomationPublishTime({{ $index }})" class="rounded-lg border border-red-200 px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">X</button>
-                                    </div>
-                                @endforeach
-                            </div>
-                            @error('publish_times')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
-                            @error('publish_times.*')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
-                        </div>
-
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <label class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <span class="block text-sm font-semibold text-slate-900">Titulo padrao automatico</span>
-                                <input type="text" wire:model="automationTitlePrefix" class="mt-2 w-full rounded-xl border-violet-200 bg-white shadow-sm focus:border-violet-500 focus:ring-violet-500" placeholder="Ex.: Ofertas do dia" />
-                            </label>
-
-                            <label class="rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-sm">
-                                <span class="block text-sm font-semibold text-slate-900">Legenda base automatica</span>
-                                <textarea wire:model="automationCaptionPrefix" rows="3" class="mt-2 w-full rounded-2xl border-violet-200 bg-white shadow-sm focus:border-violet-500 focus:ring-violet-500" placeholder="Texto base usado antes da lista de produtos."></textarea>
-                            </label>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-3">
-                            <button type="submit" class="rounded-2xl bg-violet-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-800">Salvar automacao</button>
-                            <span class="rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-800">A postagem manual continua disponivel logo abaixo, sem depender desta automacao.</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4 rounded-[2rem] border border-violet-200 bg-gradient-to-br from-white via-violet-50 to-fuchsia-50 p-5 shadow-sm">
-                        <div>
-                            <h4 class="text-base font-bold text-slate-900">Resumo operacional</h4>
-                            <p class="mt-1 text-sm text-slate-500">Visao rapida do comportamento automatico para a empresa ativa.</p>
-                        </div>
-
-                        <div class="rounded-2xl border border-white/80 bg-white/85 px-4 py-4 shadow-sm text-sm text-slate-700">
-                            <p><span class="font-semibold">Modo:</span> {{ $automationMode === 'individual_offer' ? 'Produto individual em oferta' : 'Ofertas do dia agrupadas' }}</p>
-                            <p class="mt-2"><span class="font-semibold">Horarios:</span> {{ collect($automationPublishTimes)->filter()->join(', ') ?: 'Nenhum horario definido' }}</p>
-                            <p class="mt-2"><span class="font-semibold">Canais:</span>
-                                @if ($automationPublishToInstagram && $automationPublishToFacebook)
-                                    Instagram e Facebook
-                                @elseif ($automationPublishToInstagram)
-                                    Instagram
-                                @elseif ($automationPublishToFacebook)
-                                    Facebook
-                                @else
-                                    Nenhum canal
-                                @endif
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-white/80 bg-white/85 px-4 py-4 shadow-sm">
-                            <div class="text-sm font-semibold text-slate-900">Ultimas publicacoes automaticas</div>
-                            <div class="mt-3 space-y-3">
-                                @forelse ($automationRecentPublications as $publication)
-                                    <div class="rounded-2xl border px-3 py-3 text-sm {{ $publication->status === 'published' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-900' }}">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <span class="font-semibold">{{ $publication->produto?->NOME ?: 'Publicacao automatica' }}</span>
-                                            <span class="text-xs uppercase tracking-wide">{{ $publication->status }}</span>
-                                        </div>
-                                        <p class="mt-1 text-xs {{ $publication->status === 'published' ? 'text-emerald-700' : 'text-red-700' }}">
-                                            {{ $publication->published_at?->format('d/m/Y H:i') ?: 'Ainda sem horario de sucesso' }}
-                                        </p>
-                                        @if ($publication->error_message)
-                                            <p class="mt-2 text-xs text-red-700">{{ $publication->error_message }}</p>
-                                        @endif
-                                    </div>
-                                @empty
-                                    <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-500">
-                                        Ainda nao houve publicacao automatica para esta empresa.
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </section>
-
         <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <section class="rounded-3xl border border-amber-200 bg-white p-6 shadow-sm shadow-amber-100/60">
                 <div class="flex items-start justify-between gap-4">
                     <button
                         type="button"
-                        @click="templatesSectionOpen = !templatesSectionOpen"
+                        x-on:click="templatesSectionOpen = !templatesSectionOpen"
                         class="flex flex-1 items-start justify-between gap-4 rounded-[1.75rem] border border-amber-200 bg-[linear-gradient(135deg,#fff7ed_0%,#fffbeb_100%)] px-4 py-4 text-left shadow-sm transition hover:border-amber-300 hover:bg-[linear-gradient(135deg,#ffedd5_0%,#fef3c7_100%)]"
                     >
                         <div>
@@ -741,7 +569,6 @@
                                     {!! nl2br(e($previewCaption !== '' ? $previewCaption : 'A legenda montada a partir do titulo, texto e produtos aparecera aqui.')) !!}
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </section>
@@ -872,6 +699,188 @@
                     </tbody>
                 </table>
             </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-300 p-6 shadow-lg shadow-slate-200/70" style="background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 24%), linear-gradient(145deg, #f8fbff 0%, #eef4fb 38%, #e8eef7 100%);">
+            <button
+                type="button"
+                x-on:click="automationSectionOpen = !automationSectionOpen"
+                class="flex w-full items-start justify-between gap-4 rounded-[1.75rem] border border-slate-500 px-5 py-5 text-left shadow-lg shadow-slate-400/25 transition hover:border-indigo-400 hover:shadow-xl hover:shadow-slate-400/35"
+                style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 46%, #334155 100%);"
+            >
+                <div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h3 class="text-2xl font-black tracking-[0.01em] text-white">Automacao de ofertas</h3>
+                        <span class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] {{ $automationEnabled ? 'bg-emerald-200 text-emerald-950' : 'bg-white/90 text-slate-700' }}">
+                            {{ $automationEnabled ? 'Automacao ligada' : 'Automacao desligada' }}
+                        </span>
+                    </div>
+                    <p class="mt-2 max-w-3xl text-sm font-semibold text-slate-100">Essa automacao fica em um menu separado da integracao Meta e da postagem manual. O botao "Publicar agora" e os templates manuais continuam funcionando normalmente.</p>
+                </div>
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 text-xl font-bold text-white shadow-md backdrop-blur-sm">
+                    <span x-show="automationSectionOpen">-</span>
+                    <span x-show="!automationSectionOpen">+</span>
+                </span>
+            </button>
+
+            <form wire:submit="saveAutomationSettings" x-cloak x-show="automationSectionOpen" x-transition class="mt-5 space-y-5">
+                <div class="flex flex-col gap-3 rounded-[1.5rem] border border-sky-300 px-4 py-4 shadow-md shadow-sky-200/40 lg:flex-row lg:items-center lg:justify-between" style="background: linear-gradient(135deg, #eef6ff 0%, #e7eef9 40%, #dde7f3 100%);">
+                    <div>
+                        <div class="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Salve antes de sair da pagina</div>
+                        <p class="mt-1 text-sm font-semibold text-slate-800">Se voce marcar ou desmarcar a automacao e atualizar a pagina sem salvar, o estado volta para o ultimo valor gravado.</p>
+                    </div>
+                    <button type="submit" wire:loading.attr="disabled" wire:target="saveAutomationSettings" class="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-300/35 hover:brightness-105 disabled:cursor-wait disabled:opacity-70 lg:w-auto" style="background: linear-gradient(135deg, #1d4ed8 0%, #3730a3 100%);">
+                        <span wire:loading.remove wire:target="saveAutomationSettings">Salvar automacao agora</span>
+                        <span wire:loading wire:target="saveAutomationSettings">Salvando automacao...</span>
+                    </button>
+                </div>
+
+                <div class="grid gap-4 xl:grid-cols-[0.68fr_0.32fr]">
+                    <div class="space-y-4 rounded-[2rem] border border-slate-300 p-5 shadow-md shadow-slate-200/50" style="background: linear-gradient(160deg, #f7fbff 0%, #eef4fa 34%, #ffffff 100%);">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <input type="checkbox" wire:model="automationEnabled" class="mt-1 rounded border-slate-300 text-violet-600 shadow-sm focus:ring-violet-500" />
+                                <span>
+                                    <span class="block text-sm font-bold text-slate-900">Ativar automacao</span>
+                                    <span class="mt-1 block text-xs font-medium text-slate-600">Quando ligada, o scheduler publica ofertas automaticamente nos horarios definidos abaixo.</span>
+                                </span>
+                            </label>
+
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <label class="block text-sm font-bold text-slate-900">Modo automatico</label>
+                                <select wire:model="automationMode" class="mt-2 w-full rounded-xl border-slate-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="daily_offers">Agrupar ofertas do dia</option>
+                                    <option value="individual_offer">Publicar um produto por oferta</option>
+                                </select>
+                                <p class="mt-2 text-xs font-medium text-slate-600">No modo agrupado, o sistema cria um post/carrossel unico. No individual, ele publica cada oferta elegivel separadamente.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <div class="text-sm font-bold text-slate-900">Canais automaticos</div>
+                                <div class="mt-3 flex flex-wrap gap-4 text-sm text-slate-700">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="checkbox" wire:model="automationPublishToInstagram" class="rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                        <span>Instagram</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input type="checkbox" wire:model="automationPublishToFacebook" class="rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                        <span>Facebook</span>
+                                    </label>
+                                </div>
+                                @error('automation_channels')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                            </div>
+
+                            <label class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <span class="block text-sm font-bold text-slate-900">Limite de produtos por publicacao</span>
+                                <input type="number" min="1" max="30" wire:model="automationMaxProductsPerPost" class="mt-2 w-full rounded-xl border-slate-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                <span class="mt-2 block text-xs font-medium text-slate-600">No modo agrupado define quantos produtos entram no post. No individual, limita quantas ofertas sao disparadas por rodada.</span>
+                            </label>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <span class="block text-sm font-bold text-slate-900">Repetir a mesma oferta somente apos</span>
+                                <input type="number" min="1" max="720" wire:model="automationRepublishAfterHours" class="mt-2 w-full rounded-xl border-slate-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                <span class="mt-2 block text-xs font-medium text-slate-600">Em horas. Se preco/oferta mudarem, a automacao pode publicar de novo com o novo conteudo.</span>
+                            </label>
+
+                            <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <input type="checkbox" wire:model="automationRequireImage" class="mt-1 rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                                <span>
+                                    <span class="block text-sm font-bold text-slate-900">Publicar apenas com imagem valida</span>
+                                    <span class="mt-1 block text-xs font-medium text-slate-600">Mantem o post automatico profissional e evita disparar oferta sem foto de produto.</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-900">Horarios de disparo</div>
+                                    <p class="mt-1 text-xs font-semibold text-slate-700">Exemplos: 09:00, 12:00, 18:30. O scheduler roda por minuto e so dispara nos horarios cadastrados aqui.</p>
+                                </div>
+                                <button type="button" wire:click="addAutomationPublishTime" class="rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-100">Adicionar horario</button>
+                            </div>
+
+                            <div class="mt-4 grid gap-3 md:grid-cols-3">
+                                @foreach ($automationPublishTimes as $index => $publishTime)
+                                    <div class="flex items-center gap-2 rounded-2xl border border-sky-100 bg-sky-50/80 px-3 py-3">
+                                        <input type="time" wire:model="automationPublishTimes.{{ $index }}" class="w-full rounded-xl border-slate-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
+                                        <button type="button" wire:click="removeAutomationPublishTime({{ $index }})" class="rounded-lg border border-red-200 px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">X</button>
+                                    </div>
+                                @endforeach
+                            </div>
+                            @error('publish_times')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                            @error('publish_times.*')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <span class="block text-sm font-bold text-slate-900">Titulo padrao automatico</span>
+                                <input type="text" wire:model="automationTitlePrefix" class="mt-2 w-full rounded-xl border-slate-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ex.: Ofertas do dia" />
+                            </label>
+
+                            <label class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                                <span class="block text-sm font-bold text-slate-900">Legenda base automatica</span>
+                                <textarea wire:model="automationCaptionPrefix" rows="3" class="mt-2 w-full rounded-2xl border-slate-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Texto base usado antes da lista de produtos."></textarea>
+                            </label>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-bold text-slate-800">Use o botao azul do topo para salvar a automacao. A postagem manual continua disponivel acima, sem depender desta automacao.</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 rounded-[2rem] border border-slate-300 p-5 shadow-md shadow-slate-200/50" style="background: linear-gradient(155deg, #fdfefe 0%, #f2f6fb 32%, #e9eff7 100%);">
+                        <div>
+                            <h4 class="text-lg font-black text-slate-900">Resumo operacional</h4>
+                            <p class="mt-1 text-sm font-semibold text-slate-700">Visao rapida do comportamento automatico para a empresa ativa.</p>
+                        </div>
+
+                        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30 text-sm text-slate-800">
+                            <p><span class="font-semibold">Modo:</span> {{ $automationMode === 'individual_offer' ? 'Produto individual em oferta' : 'Ofertas do dia agrupadas' }}</p>
+                            <p class="mt-2"><span class="font-semibold">Horarios:</span> {{ collect($automationPublishTimes)->filter()->join(', ') ?: 'Nenhum horario definido' }}</p>
+                            <p class="mt-2"><span class="font-semibold">Canais:</span>
+                                @if ($automationPublishToInstagram && $automationPublishToFacebook)
+                                    Instagram e Facebook
+                                @elseif ($automationPublishToInstagram)
+                                    Instagram
+                                @elseif ($automationPublishToFacebook)
+                                    Facebook
+                                @else
+                                    Nenhum canal
+                                @endif
+                            </p>
+                        </div>
+
+                        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-200/30">
+                            <div class="text-sm font-bold text-slate-900">Ultimas publicacoes automaticas</div>
+                            <div class="mt-3 space-y-3">
+                                @forelse ($automationRecentPublications as $publication)
+                                    <div class="rounded-2xl border px-3 py-3 text-sm {{ $publication->status === 'published' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-900' }}">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="font-semibold">{{ $publication->produto?->NOME ?: 'Publicacao automatica' }}</span>
+                                            <span class="text-xs uppercase tracking-wide">{{ $publication->status }}</span>
+                                        </div>
+                                        <p class="mt-1 text-xs {{ $publication->status === 'published' ? 'text-emerald-700' : 'text-red-700' }}">
+                                            {{ $publication->published_at?->format('d/m/Y H:i') ?: 'Ainda sem horario de sucesso' }}
+                                        </p>
+                                        @if ($publication->error_message)
+                                            <p class="mt-2 text-xs text-red-700">{{ $publication->error_message }}</p>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-500">
+                                        Ainda nao houve publicacao automatica para esta empresa.
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </section>
     </div>
 </div>
