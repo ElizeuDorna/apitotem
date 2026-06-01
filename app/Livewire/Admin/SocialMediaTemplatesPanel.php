@@ -264,6 +264,7 @@ class SocialMediaTemplatesPanel extends Component
 
         try {
             $result = $instagramService->publishTemplate($template);
+            $template->refresh();
             $channels = array_map('strtolower', array_keys(array_intersect_key($result, array_flip(['instagram', 'facebook']))));
             $this->statusMessage = 'Template publicado com sucesso em '.implode(' e ', $channels).'.';
 
@@ -271,10 +272,47 @@ class SocialMediaTemplatesPanel extends Component
                 $this->statusMessage .= ' Com alerta: '.implode(' | ', $result['errors']);
             }
 
+            if ($diagnostics = $this->buildPublishDiagnostics($template)) {
+                $this->statusMessage .= ' '.$diagnostics;
+            }
+
             $this->errorMessage = null;
         } catch (\Throwable $exception) {
+            $template->refresh();
+
             $this->errorMessage = $exception->getMessage();
+
+            if ($diagnostics = $this->buildPublishDiagnostics($template)) {
+                $this->errorMessage .= ' '.$diagnostics;
+            }
         }
+    }
+
+    private function buildPublishDiagnostics(SocialMediaTemplate $template): ?string
+    {
+        $parts = [];
+
+        if (($template->publish_to_instagram ?? true)) {
+            $instagramDetails = ['Instagram: '.(string) ($template->instagram_publish_status ?? 'desconhecido')];
+
+            if ($template->instagram_last_error) {
+                $instagramDetails[] = 'erro '.$template->instagram_last_error;
+            }
+
+            $parts[] = implode(' - ', $instagramDetails);
+        }
+
+        if (($template->publish_to_facebook ?? false)) {
+            $facebookDetails = ['Facebook: '.(string) ($template->facebook_publish_status ?? 'desconhecido')];
+
+            if ($template->facebook_last_error) {
+                $facebookDetails[] = 'erro '.$template->facebook_last_error;
+            }
+
+            $parts[] = implode(' - ', $facebookDetails);
+        }
+
+        return $parts === [] ? null : 'Detalhes: '.implode(' | ', $parts).'.';
     }
 
     public function testIntegration(SocialMediaTemplateService $templateService, InstagramGraphService $instagramService): void
