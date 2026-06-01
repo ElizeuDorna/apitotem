@@ -32,15 +32,15 @@ return [
     ],
 
     'instagram_graph' => [
-        'app_id' => env('META_APP_ID'),
-        'app_secret' => env('META_APP_SECRET'),
-        'redirect_uri' => env('META_REDIRECT_URI'),
-        'version' => env('META_GRAPH_VERSION', 'v22.0'),
+        'app_id' => env('INSTAGRAM_META_APP_ID', env('META_APP_ID')),
+        'app_secret' => env('INSTAGRAM_META_APP_SECRET', env('META_APP_SECRET')),
+        'redirect_uri' => env('INSTAGRAM_META_REDIRECT_URI', env('META_REDIRECT_URI')),
+        'version' => env('INSTAGRAM_META_GRAPH_VERSION', env('META_GRAPH_VERSION', 'v22.0')),
     ],
 
     'whatsapp_graph' => [
-        'app_id' => env('META_APP_ID'),
-        'app_secret' => env('META_APP_SECRET'),
+        'app_id' => env('WHATSAPP_META_APP_ID', env('META_APP_ID')),
+        'app_secret' => env('WHATSAPP_META_APP_SECRET', env('META_APP_SECRET')),
         'embedded_signup_configuration_id' => env('WHATSAPP_EMBEDDED_SIGNUP_CONFIGURATION_ID'),
         'version' => env('WHATSAPP_GRAPH_VERSION', 'v25.0'),
         'verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
