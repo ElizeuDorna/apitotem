@@ -15,7 +15,7 @@
         <div class="mb-5 flex items-start justify-between gap-4">
             <button
                 type="button"
-                @click="integrationOpen = !integrationOpen"
+                x-on:click="integrationOpen = !integrationOpen"
                 class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,#a7f3d0_0%,#d1fae5_48%,#ecfdf5_100%)] px-4 py-4 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-emerald-100/80"
             >
                 <span>
@@ -115,7 +115,7 @@
         <div class="mb-5 flex items-start justify-between gap-4">
             <button
                 type="button"
-                @click="contactsOpen = !contactsOpen"
+                x-on:click="contactsOpen = !contactsOpen"
                 class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-sky-300 bg-[linear-gradient(135deg,#bae6fd_0%,#dbeafe_52%,#f0f9ff_100%)] px-4 py-4 text-left shadow-sm transition hover:border-sky-400 hover:shadow-sky-100/80"
             >
                 <span>
@@ -212,7 +212,7 @@
         <div class="mb-5 flex items-start justify-between gap-4">
             <button
                 type="button"
-                @click="campaignsOpen = !campaignsOpen"
+                x-on:click="campaignsOpen = !campaignsOpen"
                 class="flex flex-1 items-start justify-between gap-4 rounded-2xl border border-amber-300 bg-[linear-gradient(135deg,#fde68a_0%,#fed7aa_46%,#fff7ed_100%)] px-4 py-4 text-left shadow-sm transition hover:border-amber-400 hover:shadow-amber-100/80"
             >
                 <span>
