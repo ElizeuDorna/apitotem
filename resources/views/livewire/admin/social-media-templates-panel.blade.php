@@ -3,7 +3,8 @@
         socialSectionOpen: true,
         automationSectionOpen: true,
         templatesSectionOpen: true,
-        integrationOpen: {{ (! $instagramConfigured || ! $integrationReady || session()->has('error')) ? 'true' : 'false' }}
+        integrationOpen: {{ (! $instagramConfigured || ! $integrationReady || session()->has('error')) ? 'true' : 'false' }},
+        activeWorkspaceSection: 'integracao'
     }"
     class="space-y-6 rounded-[2rem] bg-[radial-gradient(circle_at_top_left,_rgba(103,232,249,0.2),_transparent_32%),linear-gradient(180deg,#f0fdfa_0%,#f8fafc_38%,#eef6ff_100%)] px-4 py-5 md:px-6"
 >
@@ -24,7 +25,23 @@
             <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $errorMessage }}</div>
         @endif
 
-        <section class="rounded-3xl border border-cyan-200 bg-white/90 p-5 shadow-sm shadow-cyan-100/60 backdrop-blur-sm">
+        <section class="sticky top-4 z-20 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm shadow-slate-200/70 backdrop-blur">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900">Facebook / Instagram</h2>
+                    <p class="mt-1 text-sm text-slate-500">Use os atalhos abaixo para ir direto ao bloco que voce quer configurar.</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2 text-sm font-semibold">
+                    <button type="button" x-on:click="activeWorkspaceSection = 'integracao'" :class="activeWorkspaceSection === 'integracao' ? 'border-cyan-400 bg-cyan-100 text-cyan-950 shadow-sm' : 'border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100'" class="rounded-2xl border px-4 py-2 transition">Integracao Meta</button>
+                    <button type="button" x-on:click="activeWorkspaceSection = 'criar-template'" :class="activeWorkspaceSection === 'criar-template' ? 'border-amber-400 bg-amber-100 text-amber-950 shadow-sm' : 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100'" class="rounded-2xl border px-4 py-2 transition">Criar template</button>
+                    <button type="button" x-on:click="activeWorkspaceSection = 'templates-salvos'" :class="activeWorkspaceSection === 'templates-salvos' ? 'border-slate-400 bg-slate-200 text-slate-950 shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100'" class="rounded-2xl border px-4 py-2 transition">Templates salvos</button>
+                    <button type="button" x-on:click="activeWorkspaceSection = 'automacao-ofertas'" :class="activeWorkspaceSection === 'automacao-ofertas' ? 'border-sky-400 bg-sky-100 text-sky-950 shadow-sm' : 'border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100'" class="rounded-2xl border px-4 py-2 transition">Automacao de ofertas</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="secao-integracao-meta" x-show="activeWorkspaceSection === 'integracao'" x-cloak class="scroll-mt-28 rounded-3xl border border-cyan-200 bg-white/90 p-5 shadow-sm shadow-cyan-100/60 backdrop-blur-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <button
                     type="button"
@@ -154,8 +171,8 @@
             </div>
         </section>
 
-        <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-            <section class="rounded-3xl border border-amber-200 bg-white p-6 shadow-sm shadow-amber-100/60">
+        <div x-show="activeWorkspaceSection === 'criar-template'" x-cloak class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+            <section id="secao-criar-template" class="scroll-mt-28 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm shadow-amber-100/60">
                 <div class="flex items-start justify-between gap-4">
                     <button
                         type="button"
@@ -575,7 +592,7 @@
             </div>
         </div>
 
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section id="secao-templates-salvos" x-show="activeWorkspaceSection === 'templates-salvos'" x-cloak class="scroll-mt-28 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-xl font-bold text-slate-900">Templates salvos</h3>
@@ -701,7 +718,7 @@
             </div>
         </section>
 
-        <section class="rounded-3xl border border-slate-300 p-6 shadow-lg shadow-slate-200/70" style="background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 24%), linear-gradient(145deg, #f8fbff 0%, #eef4fb 38%, #e8eef7 100%);">
+        <section id="secao-automacao-ofertas" x-show="activeWorkspaceSection === 'automacao-ofertas'" x-cloak class="scroll-mt-28 rounded-3xl border border-slate-300 p-6 shadow-lg shadow-slate-200/70" style="background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 24%), linear-gradient(145deg, #f8fbff 0%, #eef4fb 38%, #e8eef7 100%);">
             <button
                 type="button"
                 x-on:click="automationSectionOpen = !automationSectionOpen"

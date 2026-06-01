@@ -18,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 class SocialMediaAutomationService
 {
+    private const RECENT_PUBLICATIONS_LIMIT = 10;
+
     public function settingsForUser(User $user, SocialMediaTemplateService $templateService): SocialMediaAutomationSetting
     {
         return $this->settingsForEmpresaId($templateService->ensureAccess($user));
@@ -57,7 +59,7 @@ class SocialMediaAutomationService
         ]);
     }
 
-    public function recentPublicationsForEmpresaId(int $empresaId, int $limit = 8): Collection
+    public function recentPublicationsForEmpresaId(int $empresaId, int $limit = self::RECENT_PUBLICATIONS_LIMIT): Collection
     {
         if (! Schema::hasTable('social_media_automation_publications')) {
             return collect();
@@ -303,6 +305,8 @@ class SocialMediaAutomationService
                 ]);
             }
 
+            $this->pruneRecentPublicationsForEmpresaId((int) $settings->empresa_id);
+
             return true;
         } catch (\Throwable $exception) {
             foreach ($products as $product) {
@@ -321,8 +325,29 @@ class SocialMediaAutomationService
                 ]);
             }
 
+            $this->pruneRecentPublicationsForEmpresaId((int) $settings->empresa_id);
+
             return false;
         }
+    }
+
+    private function pruneRecentPublicationsForEmpresaId(int $empresaId): void
+    {
+        $idsToKeep = SocialMediaAutomationPublication::query()
+            ->where('empresa_id', $empresaId)
+            ->latest('published_at')
+            ->latest('id')
+            ->limit(self::RECENT_PUBLICATIONS_LIMIT)
+            ->pluck('id');
+
+        if ($idsToKeep->isEmpty()) {
+            return;
+        }
+
+        SocialMediaAutomationPublication::query()
+            ->where('empresa_id', $empresaId)
+            ->whereNotIn('id', $idsToKeep->all())
+            ->delete();
     }
 
     private function createAutomationTemplate(SocialMediaAutomationSetting $settings, Collection $products, string $batchKey, bool $individualMode): SocialMediaTemplate
