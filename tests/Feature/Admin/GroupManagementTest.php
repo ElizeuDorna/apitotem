@@ -59,6 +59,36 @@ class GroupManagementTest extends TestCase
         ]);
     }
 
+    public function test_default_admin_can_create_legacy_group_without_active_company(): void
+    {
+        $departamento = Departamento::query()->create([
+            'empresa_id' => null,
+            'nome' => 'Legado',
+        ]);
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(GroupsManagementPanel::class)
+            ->set('nome', 'Grupo Legado')
+            ->set('departamentoId', (string) $departamento->id)
+            ->call('save')
+            ->assertSet('nome', '')
+            ->assertSet('departamentoId', '')
+            ->assertSee('Grupo criado com sucesso.')
+            ->assertSee('Grupo Legado');
+
+        $this->assertDatabaseHas('grupos', [
+            'empresa_id' => null,
+            'departamento_id' => $departamento->id,
+            'nome' => 'Grupo Legado',
+        ]);
+    }
+
     public function test_group_livewire_component_validates_unique_name_per_company(): void
     {
         $empresa = Empresa::query()->create([

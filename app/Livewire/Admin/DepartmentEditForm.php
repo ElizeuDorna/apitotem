@@ -32,11 +32,7 @@ class DepartmentEditForm extends Component
 
         $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if ($user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Selecione uma empresa ativa em Empresas para atualizar departamento.');
-        }
-
-        $departamentoService->updateForEmpresa($this->departamento, (int) $empresaId, [
+        $departamentoService->updateForEmpresa($this->departamento, $empresaId, [
             'nome' => $this->nome,
         ]);
 

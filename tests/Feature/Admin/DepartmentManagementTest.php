@@ -50,6 +50,28 @@ class DepartmentManagementTest extends TestCase
         ]);
     }
 
+    public function test_default_admin_can_create_legacy_department_without_active_company(): void
+    {
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(DepartmentsManagementPanel::class)
+            ->set('nome', 'Legado Sem Empresa')
+            ->call('save')
+            ->assertSet('nome', '')
+            ->assertSee('Departamento criado com sucesso.')
+            ->assertSee('Legado Sem Empresa');
+
+        $this->assertDatabaseHas('departamentos', [
+            'empresa_id' => null,
+            'nome' => 'Legado Sem Empresa',
+        ]);
+    }
+
     public function test_department_livewire_component_validates_unique_name_per_company(): void
     {
         $empresa = Empresa::query()->create([

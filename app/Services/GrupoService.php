@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 class GrupoService
 {
-    public function createForEmpresa(int $empresaId, array $data): Grupo
+    public function createForEmpresa(?int $empresaId, array $data): Grupo
     {
         $validated = $this->validate($empresaId, $data);
 
@@ -21,7 +21,7 @@ class GrupoService
         ]);
     }
 
-    public function updateForEmpresa(Grupo $grupo, int $empresaId, array $data): Grupo
+    public function updateForEmpresa(Grupo $grupo, ?int $empresaId, array $data): Grupo
     {
         $validated = $this->validate($empresaId, $data, $grupo);
 
@@ -34,7 +34,7 @@ class GrupoService
         return $grupo;
     }
 
-    private function validate(int $empresaId, array $data, ?Grupo $grupo = null): array
+    private function validate(?int $empresaId, array $data, ?Grupo $grupo = null): array
     {
         $validated = Validator::make(
             $data,
@@ -44,7 +44,9 @@ class GrupoService
                     'string',
                     'max:255',
                     Rule::unique('grupos', 'nome')
-                        ->where(fn ($query) => $query->where('empresa_id', $empresaId))
+                        ->where(fn ($query) => $empresaId !== null
+                            ? $query->where('empresa_id', $empresaId)
+                            : $query->whereNull('empresa_id'))
                         ->ignore($grupo?->id),
                 ],
                 'departamento_id' => ['required', 'integer', 'exists:departamentos,id'],
@@ -57,7 +59,8 @@ class GrupoService
 
         $departamento = Departamento::query()->findOrFail($validated['departamento_id']);
 
-        if ((int) $departamento->empresa_id !== $empresaId) {
+        if (($empresaId === null && $departamento->empresa_id !== null)
+            || ($empresaId !== null && (int) $departamento->empresa_id !== $empresaId)) {
             throw ValidationException::withMessages([
                 'departamento_id' => 'Departamento nao pertence a empresa ativa.',
             ]);

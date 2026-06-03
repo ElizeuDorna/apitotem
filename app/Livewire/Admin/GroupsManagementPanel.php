@@ -31,6 +31,10 @@ class GroupsManagementPanel extends Component
             return false;
         }
 
+        if ($user->isDefaultAdmin()) {
+            return true;
+        }
+
         return (bool) EmpresaContext::resolveEmpresaIdForUser($user);
     }
 
@@ -43,10 +47,6 @@ class GroupsManagementPanel extends Component
 
         if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
-        }
-
-        if ($user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar grupo.');
         }
 
         $grupoService->createForEmpresa($empresaId, [
@@ -98,19 +98,35 @@ class GroupsManagementPanel extends Component
         $grupos = Grupo::query()
             ->with(['departamento', 'empresa:id,cnpj_cpf'])
             ->withCount('produtos')
-            ->when($empresaId, function ($query) use ($empresaId) {
-                $query->where('empresa_id', $empresaId);
-            })
+            ->when(
+                $user->isDefaultAdmin(),
+                fn ($query) => $query->when(
+                    $empresaId !== null,
+                    fn ($innerQuery) => $innerQuery->where('empresa_id', $empresaId),
+                    fn ($innerQuery) => $innerQuery->whereNull('empresa_id')
+                ),
+                fn ($query) => $query->where('empresa_id', $empresaId)
+            )
             ->orderBy('nome')
             ->paginate(15);
 
-        $departamentos = $empresaId
-            ? Departamento::query()
+        $departamentos = match (true) {
+            $user->isDefaultAdmin() => Departamento::query()
+                ->when(
+                    $empresaId !== null,
+                    fn ($query) => $query->where('empresa_id', $empresaId),
+                    fn ($query) => $query->whereNull('empresa_id')
+                )
+                ->with('empresa:id,cnpj_cpf')
+                ->orderBy('nome')
+                ->get(),
+            $empresaId !== null => Departamento::query()
                 ->where('empresa_id', $empresaId)
                 ->with('empresa:id,cnpj_cpf')
                 ->orderBy('nome')
-                ->get()
-            : new Collection();
+                ->get(),
+            default => new Collection(),
+        };
 
         return view('livewire.admin.groups-management-panel', [
             'grupos' => $grupos,

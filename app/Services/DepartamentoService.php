@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 
 class DepartamentoService
 {
-    public function createForEmpresa(int $empresaId, array $data): Departamento
+    public function createForEmpresa(?int $empresaId, array $data): Departamento
     {
         $validated = $this->validate($empresaId, $data);
 
@@ -18,18 +18,19 @@ class DepartamentoService
         ]);
     }
 
-    public function updateForEmpresa(Departamento $departamento, int $empresaId, array $data): Departamento
+    public function updateForEmpresa(Departamento $departamento, ?int $empresaId, array $data): Departamento
     {
         $validated = $this->validate($empresaId, $data, $departamento);
 
         $departamento->update([
+            'empresa_id' => $empresaId,
             'nome' => trim($validated['nome']),
         ]);
 
         return $departamento;
     }
 
-    private function validate(int $empresaId, array $data, ?Departamento $departamento = null): array
+    private function validate(?int $empresaId, array $data, ?Departamento $departamento = null): array
     {
         $validated = Validator::make(
             $data,
@@ -40,7 +41,12 @@ class DepartamentoService
                     'max:255',
                     Rule::unique('departamentos', 'nome')
                         ->where(function ($query) use ($empresaId) {
-                            $query->where('empresa_id', $empresaId);
+                            if ($empresaId !== null) {
+                                $query->where('empresa_id', $empresaId);
+                                return;
+                            }
+
+                            $query->whereNull('empresa_id');
                         })
                         ->ignore($departamento?->id),
                 ],

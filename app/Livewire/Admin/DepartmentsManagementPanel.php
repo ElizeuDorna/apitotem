@@ -27,6 +27,10 @@ class DepartmentsManagementPanel extends Component
             return false;
         }
 
+        if ($user->isDefaultAdmin()) {
+            return true;
+        }
+
         return (bool) EmpresaContext::resolveEmpresaIdForUser($user);
     }
 
@@ -39,10 +43,6 @@ class DepartmentsManagementPanel extends Component
 
         if (! $user->isDefaultAdmin() && ! $empresaId) {
             abort(403, 'Usuário sem empresa vinculada.');
-        }
-
-        if ($user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Selecione uma empresa ativa em Empresas para cadastrar departamento.');
         }
 
         $departamentoService->createForEmpresa($empresaId, [
@@ -93,9 +93,15 @@ class DepartmentsManagementPanel extends Component
         $departamentos = Departamento::query()
             ->with('empresa:id,cnpj_cpf')
             ->withCount('grupos', 'produtos')
-            ->when($empresaId, function ($query) use ($empresaId) {
-                $query->where('empresa_id', $empresaId);
-            })
+            ->when(
+                $user->isDefaultAdmin(),
+                fn ($query) => $query->when(
+                    $empresaId !== null,
+                    fn ($innerQuery) => $innerQuery->where('empresa_id', $empresaId),
+                    fn ($innerQuery) => $innerQuery->whereNull('empresa_id')
+                ),
+                fn ($query) => $query->where('empresa_id', $empresaId)
+            )
             ->orderBy('nome')
             ->paginate(15);
 

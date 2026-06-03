@@ -1,4 +1,4 @@
-<div class="space-y-6" x-data="{ formEnabled: false }" x-on:departments-create.window="formEnabled = true">
+<div class="space-y-6">
     @if (($statusMessage ?? null) || session('success'))
         <div class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             {{ $statusMessage ?? session('success') }}
@@ -17,6 +17,13 @@
                 <h3 class="text-lg font-semibold text-slate-900">Novo departamento</h3>
                 <p class="text-sm text-slate-600">Piloto em Livewire para cadastrar sem recarregar a página.</p>
             </div>
+
+            <button
+                type="button"
+                class="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
+            >
+                Novo departamento
+            </button>
         </div>
 
         @unless($canCreate)
@@ -26,10 +33,6 @@
         @endunless
 
         <form wire:submit="save" class="space-y-4">
-            <div x-show="!formEnabled" x-cloak class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Clique em <span class="font-semibold">Novo departamento</span> para habilitar o cadastro.
-            </div>
-
             <div>
                 <label class="block font-semibold text-slate-800">CNPJ/CPF DA EMPRESA</label>
                 <input type="text" value="{{ $empresaCnpjCpf ? preg_replace('/\D/', '', $empresaCnpjCpf) : 'Nao vinculado' }}" class="w-full rounded border border-slate-300 bg-slate-100 px-3 py-2 text-sm" readonly />
@@ -41,8 +44,8 @@
                     id="lw-departamento-nome"
                     type="text"
                     wire:model="nome"
-                    x-bind:disabled="!formEnabled || {{ $canCreate ? 'false' : 'true' }}"
                     class="w-full rounded border border-slate-300 px-3 py-2 text-sm @error('nome') border-red-500 @enderror"
+                    @disabled(! $canCreate)
                     required
                 />
                 @error('nome')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -53,8 +56,8 @@
                     type="submit"
                     wire:loading.attr="disabled"
                     wire:target="save"
-                    x-bind:disabled="!formEnabled || {{ $canCreate ? 'false' : 'true' }}"
                     class="rounded bg-indigo-600 px-6 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    @disabled(! $canCreate)
                 >
                     Salvar
                 </button>

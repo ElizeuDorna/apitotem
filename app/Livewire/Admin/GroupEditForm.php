@@ -37,11 +37,7 @@ class GroupEditForm extends Component
 
         $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
-        if ($user->isDefaultAdmin() && ! $empresaId) {
-            abort(403, 'Selecione uma empresa ativa em Empresas para atualizar grupo.');
-        }
-
-        $grupoService->updateForEmpresa($this->grupo, (int) $empresaId, [
+        $grupoService->updateForEmpresa($this->grupo, $empresaId, [
             'nome' => $this->nome,
             'departamento_id' => $this->departamentoId,
         ]);
@@ -59,13 +55,23 @@ class GroupEditForm extends Component
 
         $empresaId = EmpresaContext::resolveEmpresaIdForUser($user);
 
-        $departamentos = $empresaId
-            ? Departamento::query()
+        $departamentos = match (true) {
+            $user->isDefaultAdmin() => Departamento::query()
+                ->when(
+                    $empresaId !== null,
+                    fn ($query) => $query->where('empresa_id', $empresaId),
+                    fn ($query) => $query->whereNull('empresa_id')
+                )
+                ->with('empresa:id,cnpj_cpf')
+                ->orderBy('nome')
+                ->get(),
+            $empresaId !== null => Departamento::query()
                 ->where('empresa_id', $empresaId)
                 ->with('empresa:id,cnpj_cpf')
                 ->orderBy('nome')
-                ->get()
-            : new Collection();
+                ->get(),
+            default => new Collection(),
+        };
 
         return view('livewire.admin.group-edit-form', [
             'departamentos' => $departamentos,
