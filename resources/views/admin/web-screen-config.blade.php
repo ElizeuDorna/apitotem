@@ -735,6 +735,24 @@
                             </div>
 
                             <div class="rounded-md border border-gray-200 bg-white p-4 space-y-4">
+                                @php
+                                    $rightSidebarProductFontOptions = [
+                                        'arial' => 'Arial',
+                                        'verdana' => 'Verdana',
+                                        'tahoma' => 'Tahoma',
+                                        'trebuchet' => 'Trebuchet MS',
+                                        'georgia' => 'Georgia',
+                                        'courier' => 'Courier New',
+                                        'system' => 'System UI',
+                                        'impact_shadow' => 'Impacto Sombra',
+                                        'neon_glow' => 'Neon Glow',
+                                        'serif_elegant' => 'Serif Elegante',
+                                        'gold_lux' => 'Dourado Luxo',
+                                        'retro_arcade' => 'Retro Arcade',
+                                        'crystal_frost' => 'Cristal Frost',
+                                    ];
+                                @endphp
+
                                 <h4 class="text-sm font-semibold text-gray-800">Lateral direita: carrossel de produtos</h4>
                                 <p class="text-xs text-gray-600">Exibe produtos um por vez dentro do retângulo lateral direito, com nome, imagem e preço.</p>
 
@@ -836,6 +854,44 @@
                                             <option value="bottom" @selected(old('rightSidebarProductPricePosition', $config->rightSidebarProductPricePosition ?? 'bottom') === 'bottom')>Parte de baixo</option>
                                             <option value="top" @selected(old('rightSidebarProductPricePosition', $config->rightSidebarProductPricePosition ?? 'bottom') === 'top')>Parte de cima</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2 rounded border border-gray-200 bg-gray-50 p-3">
+                                        <h5 class="text-sm font-semibold text-gray-800">Fonte do nome</h5>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do nome (px)</label>
+                                            <input type="number" name="rightSidebarProductNameFontSize" min="8" max="120" value="{{ old('rightSidebarProductNameFontSize', $config->rightSidebarProductNameFontSize ?? 16) }}" class="w-full border rounded px-3 py-2">
+                                            @error('rightSidebarProductNameFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Família da fonte do nome</label>
+                                            <select name="rightSidebarProductNameFontFamily" class="w-full border rounded px-3 py-2 bg-white">
+                                                @foreach($rightSidebarProductFontOptions as $fontValue => $fontLabel)
+                                                    <option value="{{ $fontValue }}" @selected(old('rightSidebarProductNameFontFamily', $config->rightSidebarProductNameFontFamily ?? 'arial') === $fontValue)>{{ $fontLabel }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('rightSidebarProductNameFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2 rounded border border-gray-200 bg-gray-50 p-3">
+                                        <h5 class="text-sm font-semibold text-gray-800">Fonte do preço</h5>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Tamanho da fonte do preço (px)</label>
+                                            <input type="number" name="rightSidebarProductPriceFontSize" min="8" max="120" value="{{ old('rightSidebarProductPriceFontSize', $config->rightSidebarProductPriceFontSize ?? 16) }}" class="w-full border rounded px-3 py-2">
+                                            @error('rightSidebarProductPriceFontSize')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Família da fonte do preço</label>
+                                            <select name="rightSidebarProductPriceFontFamily" class="w-full border rounded px-3 py-2 bg-white">
+                                                @foreach($rightSidebarProductFontOptions as $fontValue => $fontLabel)
+                                                    <option value="{{ $fontValue }}" @selected(old('rightSidebarProductPriceFontFamily', $config->rightSidebarProductPriceFontFamily ?? 'arial') === $fontValue)>{{ $fontLabel }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('rightSidebarProductPriceFontFamily')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        </div>
                                     </div>
                                 </div>
 
