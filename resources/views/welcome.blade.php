@@ -15,7 +15,6 @@
             </div>
             <nav class="hidden md:flex items-center gap-6 text-sm text-white/80">
                 <a href="{{ url('/') }}" class="hover:text-white">Início</a>
-                <a href="{{ url('/contato') }}" class="hover:text-white">Contato</a>
                 @auth
                     <a href="{{ route('dashboard') }}" class="rounded-full border border-white/20 px-4 py-2 hover:bg-white/10">Admin</a>
                 @else

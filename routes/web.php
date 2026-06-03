@@ -12,10 +12,6 @@ use Illuminate\Support\Facades\Schema;
 
 Route::get('/', HomeController::class)->name('home');
 
-Route::get('/contato', function () {
-    return view('contato');
-});
-
 Route::get('/r/{slug}', [RevendaSiteController::class, 'home'])->name('revenda.site.home');
 Route::get('/r/{slug}/sobre', [RevendaSiteController::class, 'about'])->name('revenda.site.about');
 Route::get('/r/{slug}/contato', [RevendaSiteController::class, 'contact'])->name('revenda.site.contact');
