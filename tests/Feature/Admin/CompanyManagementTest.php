@@ -76,6 +76,117 @@ class CompanyManagementTest extends TestCase
             ->assertSeeLivewire(CompaniesManagementPanel::class);
     }
 
+    public function test_revenda_can_open_company_index_and_only_see_linked_companies(): void
+    {
+        $revenda = Empresa::query()->create([
+            'codigo' => '910',
+            'nome' => 'Revenda Fluxo',
+            'fantasia' => 'Revenda Fluxo',
+            'razaosocial' => 'Revenda Fluxo LTDA',
+            'cnpj_cpf' => '08707221000106',
+            'email' => 'revenda-fluxo@example.com',
+            'fone' => '11999990000',
+            'nivel_acesso' => Empresa::NIVEL_REVENDA,
+            'api_token' => str_repeat('f', 60),
+            'urlimagem' => '',
+        ]);
+
+        $empresaVinculada = Empresa::query()->create([
+            'codigo' => '911',
+            'nome' => 'Cliente Vinculado',
+            'fantasia' => 'Cliente Vinculado',
+            'razaosocial' => 'Cliente Vinculado LTDA',
+            'cnpj_cpf' => '83198688000193',
+            'email' => 'cliente-vinculado@example.com',
+            'fone' => '11999991111',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'revenda_id' => $revenda->id,
+            'api_token' => str_repeat('v', 60),
+            'urlimagem' => '',
+        ]);
+
+        Empresa::query()->create([
+            'codigo' => '912',
+            'nome' => 'Cliente Externo',
+            'fantasia' => 'Cliente Externo',
+            'razaosocial' => 'Cliente Externo LTDA',
+            'cnpj_cpf' => '11222333000181',
+            'email' => 'cliente-externo@example.com',
+            'fone' => '11999992222',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'api_token' => str_repeat('x', 60),
+            'urlimagem' => '',
+        ]);
+
+        $revendaUser = User::factory()->create([
+            'empresa_id' => $revenda->id,
+            'menu_permissions' => [],
+        ]);
+
+        $this->actingAs($revendaUser)
+            ->get(route('admin.empresas.index'))
+            ->assertOk()
+            ->assertSeeLivewire(CompaniesManagementPanel::class)
+            ->assertSee($empresaVinculada->nome)
+            ->assertDontSee('Cliente Externo');
+    }
+
+    public function test_revenda_user_resolved_by_document_can_open_company_index_and_only_see_linked_companies(): void
+    {
+        $revenda = Empresa::query()->create([
+            'codigo' => '913',
+            'nome' => 'Revenda Documento',
+            'fantasia' => 'Revenda Documento',
+            'razaosocial' => 'Revenda Documento LTDA',
+            'cnpj_cpf' => '08707221000106',
+            'email' => 'revenda-documento@example.com',
+            'fone' => '11999993333',
+            'nivel_acesso' => Empresa::NIVEL_REVENDA,
+            'api_token' => str_repeat('d', 60),
+            'urlimagem' => '',
+        ]);
+
+        $empresaVinculada = Empresa::query()->create([
+            'codigo' => '914',
+            'nome' => 'Cliente Documento',
+            'fantasia' => 'Cliente Documento',
+            'razaosocial' => 'Cliente Documento LTDA',
+            'cnpj_cpf' => '83198688000193',
+            'email' => 'cliente-documento@example.com',
+            'fone' => '11999994444',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'revenda_id' => $revenda->id,
+            'api_token' => str_repeat('c', 60),
+            'urlimagem' => '',
+        ]);
+
+        Empresa::query()->create([
+            'codigo' => '915',
+            'nome' => 'Cliente Fora Documento',
+            'fantasia' => 'Cliente Fora Documento',
+            'razaosocial' => 'Cliente Fora Documento LTDA',
+            'cnpj_cpf' => '11222333000181',
+            'email' => 'cliente-fora-documento@example.com',
+            'fone' => '11999995555',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'api_token' => str_repeat('o', 60),
+            'urlimagem' => '',
+        ]);
+
+        $revendaUser = User::factory()->create([
+            'cpf' => '08707221000106',
+            'empresa_id' => null,
+            'menu_permissions' => ['produtos'],
+        ]);
+
+        $this->actingAs($revendaUser)
+            ->get(route('admin.empresas.index'))
+            ->assertOk()
+            ->assertSeeLivewire(CompaniesManagementPanel::class)
+            ->assertSee($empresaVinculada->nome)
+            ->assertDontSee('Cliente Fora Documento');
+    }
+
     public function test_default_admin_can_update_company_via_livewire_edit_component(): void
     {
         $admin = User::factory()->create([

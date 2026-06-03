@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\EmpresaContext;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,15 @@ class EnsureMenuAccess
     {
         $user = $request->user();
 
-        if (! $user || ! $user->hasMenuAccess($menu)) {
+        if (! $user) {
+            abort(403);
+        }
+
+        if ($menu === 'empresas' && EmpresaContext::requiresSelection($user)) {
+            return $next($request);
+        }
+
+        if (! $user->hasMenuAccess($menu)) {
             abort(403);
         }
 

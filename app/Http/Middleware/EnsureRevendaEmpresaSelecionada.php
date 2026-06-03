@@ -42,7 +42,7 @@ class EnsureRevendaEmpresaSelecionada
         }
 
         return redirect()
-            ->route('admin.empresas.index')
+            ->route('admin.revenda.empresas.index')
             ->with('warning', 'Selecione uma empresa para continuar.');
     }
 }

@@ -14,12 +14,13 @@ class RevendaEmpresaContextController extends Controller
     public function index(): View|RedirectResponse
     {
         $user = Auth::user();
+        $empresaRevenda = $user ? EmpresaContext::resolveEmpresaForUser($user) : null;
 
-        if (! EmpresaContext::requiresSelection($user)) {
+        if (! $user || ! EmpresaContext::requiresSelection($user) || ! $empresaRevenda) {
             return redirect()->route('dashboard');
         }
 
-        $revendaId = (int) $user->empresa->id;
+        $revendaId = (int) $empresaRevenda->id;
 
         $empresas = Empresa::query()
             ->where('revenda_id', $revendaId)

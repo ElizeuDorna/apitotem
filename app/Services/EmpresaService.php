@@ -19,14 +19,14 @@ class EmpresaService
 {
     public function canSearch(User $user): bool
     {
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
 
         return $user->isDefaultAdmin() || ($empresaVinculada && $empresaVinculada->isRevenda());
     }
 
     public function queryForUser(User $user, string $search = ''): Builder
     {
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
 
         $query = Empresa::query()
             ->with('revenda:id,nome,fantasia')
@@ -72,7 +72,7 @@ class EmpresaService
     public function availableRevendas(User $user): Collection
     {
         if (! $user->isDefaultAdmin()) {
-            $empresaVinculada = $user->empresa;
+            $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
             abort_unless($empresaVinculada && $empresaVinculada->isRevenda(), 403);
         }
 
@@ -96,7 +96,7 @@ class EmpresaService
 
     public function createForUser(User $user, array $data): Empresa
     {
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
 
         $validated = validator($data, [
             'nome' => ['required', 'string', 'max:255'],
@@ -207,7 +207,7 @@ class EmpresaService
             unset($validated['senha_integracao_api']);
         }
 
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
 
         if ($user->isDefaultAdmin()) {
             $validated['nivel_acesso'] = (int) ($validated['nivel_acesso'] ?? $empresa->nivel_acesso ?? Empresa::NIVEL_CLIENTE_FINAL);
@@ -265,7 +265,7 @@ class EmpresaService
             return;
         }
 
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
 
         if (! $empresaVinculada) {
             abort_unless($empresa->cnpj_cpf === $user->documento(), 403);

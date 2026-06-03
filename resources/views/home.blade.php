@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('partials.public-favicon')
     <title>@yield('title', 'Meu Site Laravel')</title>
     <!-- Tailwind via CDN para facilitar -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,9 +12,14 @@
     @php
         $authUser = auth()->user();
         $empresaAtiva = null;
+        $companiesRoute = route('admin.empresas.index');
 
         if ($authUser) {
             $empresaAtiva = \App\Support\EmpresaContext::activeEmpresa($authUser);
+
+            if (\App\Support\EmpresaContext::requiresSelection($authUser)) {
+                $companiesRoute = route('admin.revenda.empresas.index');
+            }
         }
     @endphp
 
@@ -23,13 +29,12 @@
             <h1 class="text-xl font-bold text-indigo-600">Meu Site Laravel</h1>
             <nav class="hidden md:flex space-x-4 items-center">
                 <a href="{{ url('/') }}" class="hover:text-indigo-600">Início</a>
-                <a href="{{ url('/sobre') }}" class="hover:text-indigo-600">Sobre</a>
                 <a href="{{ url('/contato') }}" class="hover:text-indigo-600">Contato</a>
                 <div class="inline-block relative group">
                     <button class="hover:text-indigo-600">Admin ▼</button>
                     <div class="absolute hidden group-hover:block bg-white shadow z-10 min-w-48">
                         <a href="{{ route('admin.produtos.index') }}" class="block px-4 py-2 hover:bg-gray-100">Produtos</a>
-                        <a href="{{ route('admin.empresas.index') }}" class="block px-4 py-2 hover:bg-gray-100">Empresas</a>
+                        <a href="{{ $companiesRoute }}" class="block px-4 py-2 hover:bg-gray-100">Empresas</a>
                         <a href="{{ route('admin.departamentos.index') }}" class="block px-4 py-2 hover:bg-gray-100">Departamentos</a>
                         <a href="{{ route('admin.grupos.index') }}" class="block px-4 py-2 hover:bg-gray-100">Grupos</a>
                         <a href="{{ route('admin.configadmin.edit') }}" class="block px-4 py-2 hover:bg-gray-100">Config Admin</a>
@@ -37,7 +42,7 @@
                 </div>
 
                 @if($authUser && \App\Support\EmpresaContext::requiresSelection($authUser))
-                    <a href="{{ route('admin.empresas.index') }}" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded">Trocar empresa</a>
+                    <a href="{{ $companiesRoute }}" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded">Trocar empresa</a>
                     @if($empresaAtiva)
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded text-sm">Ativa: {{ $empresaAtiva->nome }}</span>
                     @endif
@@ -56,16 +61,15 @@
                 <summary class="list-none cursor-pointer px-3 py-2 border rounded text-sm font-semibold">Menu</summary>
                 <div class="absolute right-0 mt-2 w-64 bg-white border rounded shadow z-20 p-2 space-y-1">
                     <a href="{{ url('/') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Início</a>
-                    <a href="{{ url('/sobre') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Sobre</a>
                     <a href="{{ url('/contato') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Contato</a>
                     <div class="px-3 pt-2 pb-1 text-xs font-bold uppercase text-gray-500">Admin</div>
                     <a href="{{ route('admin.produtos.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Produtos</a>
-                    <a href="{{ route('admin.empresas.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Empresas</a>
+                    <a href="{{ $companiesRoute }}" class="block px-3 py-2 rounded hover:bg-gray-100">Empresas</a>
                     <a href="{{ route('admin.departamentos.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Departamentos</a>
                     <a href="{{ route('admin.grupos.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Grupos</a>
                     <a href="{{ route('admin.configadmin.edit') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Config Admin</a>
                     @if($authUser && \App\Support\EmpresaContext::requiresSelection($authUser))
-                        <a href="{{ route('admin.empresas.index') }}" class="block px-3 py-2 rounded hover:bg-gray-100">Trocar empresa ativa</a>
+                        <a href="{{ $companiesRoute }}" class="block px-3 py-2 rounded hover:bg-gray-100">Trocar empresa ativa</a>
                         @if($empresaAtiva)
                             <div class="px-3 py-2 text-xs text-green-700">Ativa: {{ $empresaAtiva->nome }}</div>
                         @endif

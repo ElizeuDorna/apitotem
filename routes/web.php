@@ -12,10 +12,6 @@ use Illuminate\Support\Facades\Schema;
 
 Route::get('/', HomeController::class)->name('home');
 
-Route::get('/sobre', function () {
-    return view('sobre');
-});
-
 Route::get('/contato', function () {
     return view('contato');
 });
@@ -152,11 +148,9 @@ Route::middleware('auth')->group(function () {
         ->except(['show']);
 
     Route::get('/admin/revenda/empresas', [\App\Http\Controllers\Admin\RevendaEmpresaContextController::class, 'index'])
-        ->name('admin.revenda.empresas.index')
-        ->middleware('menu.access:empresas');
+        ->name('admin.revenda.empresas.index');
     Route::post('/admin/revenda/empresas/{empresa}/acessar', [\App\Http\Controllers\Admin\RevendaEmpresaContextController::class, 'acessar'])
-        ->name('admin.revenda.empresas.acessar')
-        ->middleware('menu.access:empresas');
+        ->name('admin.revenda.empresas.acessar');
 
     Route::middleware('revenda.empresa.selecionada')->group(function () {
 

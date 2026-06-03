@@ -107,7 +107,7 @@ class CompaniesManagementPanel extends Component
             'empresaAtivaId' => $empresaAtivaId,
             'empresaAtivaNome' => $empresaAtivaNome,
             'isDefaultAdmin' => $user->isDefaultAdmin(),
-            'empresaVinculada' => $user->empresa,
+            'empresaVinculada' => \App\Support\EmpresaContext::resolveEmpresaForUser($user),
             'podePesquisar' => $empresaService->canSearch($user),
             'revendas' => $empresaService->availableRevendas($user),
         ]);

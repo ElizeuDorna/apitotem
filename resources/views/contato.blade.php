@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('partials.public-favicon')
     <title>Contato | Tabela de Preço Digital</title>
     <meta name="description" content="Entre em contato para conhecer a solução de tabela de preço digital e solicitar uma demonstração.">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,7 +14,6 @@
             <a href="{{ route('home') }}" class="text-xl font-black tracking-[0.25em] uppercase text-white">Totem</a>
             <nav class="hidden items-center gap-6 text-sm text-white/80 md:flex">
                 <a href="{{ route('home') }}" class="hover:text-white">Início</a>
-                <a href="{{ url('/sobre') }}" class="hover:text-white">Sobre</a>
                 <a href="{{ url('/contato') }}" class="text-cyan-300">Contato</a>
             </nav>
         </div>

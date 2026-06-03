@@ -18,6 +18,7 @@
         $desktopNavBase = 'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white';
         $desktopNavActive = 'bg-slate-800 text-white ring-1 ring-slate-700';
         $panelBrandIconUrl = is_string($panelBrandIconUrl ?? null) ? trim($panelBrandIconUrl) : '';
+        $companiesRoute = $isRevendaNav ? route('admin.revenda.empresas.index') : route('admin.empresas.index');
     @endphp
 
     @php
@@ -104,8 +105,8 @@
                     </div>
                 @endif
 
-                @if (Auth::user()->hasMenuAccess('empresas'))
-                    <a href="/admin/empresas" class="{{ $desktopNavBase }} {{ request()->is('admin/empresas*') ? $desktopNavActive : '' }}">
+                @if (Auth::user()->hasMenuAccess('empresas') || $isRevendaNav)
+                    <a href="{{ $companiesRoute }}" class="{{ $desktopNavBase }} {{ request()->is('admin/empresas*') || request()->is('admin/revenda/empresas*') ? $desktopNavActive : '' }}">
                         <span>{{ __('Empresas') }}</span>
                     </a>
                 @endif
@@ -222,7 +223,7 @@
                     </a>
 
                     @if ($isRevendaNav)
-                        <a href="{{ route('admin.empresas.index') }}" class="inline-flex items-center justify-center rounded-lg border border-indigo-900 bg-indigo-900/60 px-2.5 py-1.5 text-[11px] font-medium text-indigo-100 transition hover:bg-indigo-800">
+                        <a href="{{ $companiesRoute }}" class="inline-flex items-center justify-center rounded-lg border border-indigo-900 bg-indigo-900/60 px-2.5 py-1.5 text-[11px] font-medium text-indigo-100 transition hover:bg-indigo-800">
                             TrocarEmp
                         </a>
                     @endif

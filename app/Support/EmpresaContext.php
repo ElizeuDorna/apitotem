@@ -10,9 +10,24 @@ class EmpresaContext
     public const SESSION_KEY = 'revenda.empresa_ativa_id';
     public const ADMIN_SESSION_KEY = 'admin.empresa_ativa_id';
 
+    public static function resolveEmpresaForUser(User $user): ?Empresa
+    {
+        if ($user->relationLoaded('empresa') && $user->empresa) {
+            return $user->empresa;
+        }
+
+        if ($user->empresa) {
+            return $user->empresa;
+        }
+
+        $empresaId = self::resolveEmpresaIdByUserDocument($user);
+
+        return $empresaId ? Empresa::query()->find($empresaId) : null;
+    }
+
     public static function requiresSelection(User $user): bool
     {
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = self::resolveEmpresaForUser($user);
 
         return $empresaVinculada !== null && $empresaVinculada->isRevenda();
     }
@@ -33,7 +48,7 @@ class EmpresaContext
             return $exists ? $empresaAtivaId : null;
         }
 
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = self::resolveEmpresaForUser($user);
 
         if (! $empresaVinculada) {
             return self::resolveEmpresaIdByUserDocument($user);
@@ -107,7 +122,7 @@ class EmpresaContext
             return true;
         }
 
-        $empresaVinculada = $user->empresa;
+        $empresaVinculada = self::resolveEmpresaForUser($user);
 
         if (! $empresaVinculada || ! $empresaVinculada->isRevenda()) {
             return false;
