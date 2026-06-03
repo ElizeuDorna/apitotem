@@ -120,7 +120,9 @@
 
                         <div class="flex items-center gap-3">
                             <x-primary-button>Salvar Organização</x-primary-button>
-                            <a href="{{ route('tv.totemweb') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Abrir Totem Web</a>
+                            @if(auth()->user()?->hasMenuAccess(\App\Models\User::MENU_ABRIR_TOTEM_WEB))
+                                <a href="{{ route('tv.totemweb') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Abrir Totem Web</a>
+                            @endif
                         </div>
                     </form>
                 </div>

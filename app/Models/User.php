@@ -32,6 +32,8 @@ class User extends Authenticatable
 
     public const MENU_CONFIG_TELA_WEB = 'config_tela_web';
 
+    public const MENU_ABRIR_TOTEM_WEB = 'abrir_totem_web';
+
     public const MENU_ORGANIZAR_LISTA = 'organizar_lista';
 
     public const MENU_TOKEN_API = 'token_api';
@@ -122,6 +124,7 @@ class User extends Authenticatable
             self::MENU_CONFIG_ADMIN => 'Config Admin',
             self::MENU_CONFIGURACAO => 'Configuração',
             self::MENU_CONFIG_TELA_WEB => 'Configuração Tela Web',
+            self::MENU_ABRIR_TOTEM_WEB => 'Abrir Totem Web',
             self::MENU_ORGANIZAR_LISTA => 'Organizar Lista',
             self::MENU_TOKEN_API => 'Gerar Token API',
             self::MENU_ATIVAR_TV => 'Ativar TV',

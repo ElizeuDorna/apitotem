@@ -2035,9 +2035,11 @@
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-3">
-                            <a href="{{ route('tv.totemweb') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Abrir Totem Web</a>
-                        </div>
+                        @if(auth()->user()?->hasMenuAccess(\App\Models\User::MENU_ABRIR_TOTEM_WEB))
+                            <div class="flex items-center gap-3">
+                                <a href="{{ route('tv.totemweb') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Abrir Totem Web</a>
+                            </div>
+                        @endif
                     </form>
                 </div>
             </div>
