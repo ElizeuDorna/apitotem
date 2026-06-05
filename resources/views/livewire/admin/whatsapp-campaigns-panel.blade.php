@@ -108,6 +108,12 @@
                 @endif
                 <p class="text-xs text-slate-500">Webhook esperado: {{ route('whatsapp.webhook.verify') }}</p>
             </div>
+            <div class="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                <div class="font-semibold">Observacao para configuracao na Meta</div>
+                <div class="mt-2">Politica de privacidade: {{ route('legal.privacy-policy') }}</div>
+                <div class="mt-1">Termos de servico: {{ route('legal.terms-of-service') }}</div>
+                <div class="mt-1">Exclusao de dados do usuario: {{ route('legal.data-deletion') }}</div>
+            </div>
         </form>
     </section>
 

@@ -16,6 +16,10 @@ Route::get('/r/{slug}', [RevendaSiteController::class, 'home'])->name('revenda.s
 Route::get('/r/{slug}/sobre', [RevendaSiteController::class, 'about'])->name('revenda.site.about');
 Route::get('/r/{slug}/contato', [RevendaSiteController::class, 'contact'])->name('revenda.site.contact');
 
+Route::view('/politica-de-privacidade', 'legal.privacy-policy')->name('legal.privacy-policy');
+Route::view('/termos-de-servico', 'legal.terms-of-service')->name('legal.terms-of-service');
+Route::view('/exclusao-de-dados', 'legal.data-deletion')->name('legal.data-deletion');
+
 Route::view('/tv/totemweb', 'tv.produtos')->name('tv.totemweb');
 Route::view('/tv/totemweb/configuracao', 'tv.configuracao')->name('tv.totemweb.configuracao');
 Route::redirect('/tv/telaweb01', '/tv/totemweb');
