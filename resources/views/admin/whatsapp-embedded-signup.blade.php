@@ -129,6 +129,9 @@
 
                             this.handleEmbeddedEvent(payload);
                         } catch (_) {
+                            if (typeof event.data === 'string' && event.data.includes('WA_EMBEDDED_SIGNUP')) {
+                                this.errorMessage = 'A Meta enviou um retorno de onboarding em formato inesperado. Abra o console do navegador para inspecionar o message event bruto.';
+                            }
                         }
                     });
                 },
@@ -167,10 +170,17 @@
                 },
                 handleEmbeddedEvent(payload) {
                     if (String(payload.event || '').startsWith('FINISH')) {
-                        this.clearWaitingForSessionDataTimeout();
-                        this.sessionData = payload.data || {};
+                        this.sessionData = this.normalizeSessionData(payload.data || {});
+                        if (this.hasCompleteSessionData()) {
+                            this.clearWaitingForSessionDataTimeout();
+                        }
                         this.statusMessage = 'A Meta retornou os dados da empresa. Finalizando cadastro no servidor...';
                         this.tryFinalize();
+
+                        if (! this.hasCompleteSessionData()) {
+                            this.startWaitingForSessionDataTimeout();
+                        }
+
                         return;
                     }
 
@@ -203,7 +213,7 @@
                     this.errorMessage = 'A Meta nao retornou um codigo de autorizacao valido.';
                 },
                 async tryFinalize() {
-                    if (! this.code || ! this.sessionData || ! this.sessionData.phone_number_id || ! this.sessionData.waba_id) {
+                    if (! this.code || ! this.hasCompleteSessionData()) {
                         return;
                     }
 
@@ -245,13 +255,75 @@
                     this.clearWaitingForSessionDataTimeout();
 
                     this.waitingForSessionDataTimeoutId = window.setTimeout(() => {
-                        if (this.sessionData && this.sessionData.phone_number_id && this.sessionData.waba_id) {
+                        if (this.hasCompleteSessionData()) {
                             return;
                         }
 
                         this.busy = false;
                         this.errorMessage = 'A Meta autorizou o app, mas nao devolveu os IDs do numero e da WABA. Confirme que o fluxo foi concluido na tela final da Meta e revise Allowed Domains, URIs de redirecionamento OAuth validas e SDK JavaScript.';
                     }, 20000);
+                },
+                hasCompleteSessionData() {
+                    return Boolean(this.sessionData && this.sessionData.phone_number_id && this.sessionData.waba_id);
+                },
+                normalizeSessionData(data) {
+                    const source = data && typeof data === 'object' ? data : {};
+                    const normalizeString = (value) => typeof value === 'string' ? value.trim() : '';
+                    const firstString = (...values) => {
+                        for (const value of values) {
+                            if (Array.isArray(value)) {
+                                for (const nested of value) {
+                                    const normalizedNested = normalizeString(nested);
+                                    if (normalizedNested !== '') {
+                                        return normalizedNested;
+                                    }
+                                }
+
+                                continue;
+                            }
+
+                            const normalized = normalizeString(value);
+                            if (normalized !== '') {
+                                return normalized;
+                            }
+                        }
+
+                        return '';
+                    };
+
+                    const normalized = {
+                        ...source,
+                        phone_number_id: firstString(
+                            source.phone_number_id,
+                            source.phoneNumberId,
+                            source.phone?.id,
+                            source.phone?.phone_number_id,
+                            source.sessionInfo?.phone_number_id,
+                            source.sessionInfo?.phoneNumberId,
+                            source.asset_ids?.phone_number_id,
+                            source.asset_ids?.phoneNumberId,
+                        ),
+                        waba_id: firstString(
+                            source.waba_id,
+                            source.wabaId,
+                            source.waba?.id,
+                            source.sessionInfo?.waba_id,
+                            source.sessionInfo?.wabaId,
+                            source.asset_ids?.waba_id,
+                            source.asset_ids?.wabaId,
+                            source.waba_ids,
+                            source.sessionInfo?.waba_ids,
+                        ),
+                        business_id: firstString(
+                            source.business_id,
+                            source.businessId,
+                            source.business?.id,
+                            source.sessionInfo?.business_id,
+                            source.sessionInfo?.businessId,
+                        ),
+                    };
+
+                    return normalized;
                 },
                 clearWaitingForSessionDataTimeout() {
                     if (this.waitingForSessionDataTimeoutId) {
