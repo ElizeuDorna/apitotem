@@ -91,6 +91,7 @@ export function createRightSidebarMediaModeModule(deps) {
     };
 
     api.applyRightSidebarMediaMode = async function applyRightSidebarMediaMode(token, productsForSidebar = null, options = {}) {
+        const shouldHandleDedicatedFullScreen = options.skipDedicatedFullScreen !== true;
         const currentDedicatedSignature = deps.buildDedicatedFullScreenSlideSignature();
         if (currentDedicatedSignature) {
             state.fullScreenSlideConfigSignature = currentDedicatedSignature;
@@ -104,13 +105,13 @@ export function createRightSidebarMediaModeModule(deps) {
             { ignoreLoadSkip: Boolean(options.ignoreDedicatedLoadSkip) }
         );
 
-        if (shouldSkipDedicatedForCurrentLoad) {
+        if (shouldHandleDedicatedFullScreen && shouldSkipDedicatedForCurrentLoad) {
             deps.markDedicatedFullScreenSlideCycleAsCompleted(state.fullScreenSlideConfigSignature);
             deps.stopDedicatedFullScreenSlideMode();
             deps.forceRestoreMainLayoutAfterDedicatedSlide();
         }
 
-        if (hasDedicatedFullScreenSlide && state.forceFullScreenSlideModeActive) {
+        if (shouldHandleDedicatedFullScreen && hasDedicatedFullScreenSlide && state.forceFullScreenSlideModeActive) {
             if (deps.hasStaleDedicatedFullScreenSlideSession()) {
                 deps.completeDedicatedFullScreenSlideCycle();
             }
@@ -118,11 +119,11 @@ export function createRightSidebarMediaModeModule(deps) {
         }
 
         // Fullscreen video has priority over dedicated fullscreen slide.
-        if (hasDedicatedFullScreenSlide && !state.forceFullScreenSlideModeActive && deps.isVideoFullscreenModeActive()) {
+        if (shouldHandleDedicatedFullScreen && hasDedicatedFullScreenSlide && !state.forceFullScreenSlideModeActive && deps.isVideoFullscreenModeActive()) {
             return;
         }
 
-        if (hasDedicatedFullScreenSlide && !state.forceFullScreenSlideModeActive && !shouldSkipDedicatedForCurrentLoad) {
+        if (shouldHandleDedicatedFullScreen && hasDedicatedFullScreenSlide && !state.forceFullScreenSlideModeActive && !shouldSkipDedicatedForCurrentLoad) {
             deps.clearSidebarProductTimer();
             state.sidebarMixedModeSignature = '';
             state.sidebarProductPassedBeforeImages = false;
@@ -144,7 +145,9 @@ export function createRightSidebarMediaModeModule(deps) {
             deps.markDedicatedFullScreenSlideCycleAsCompleted(state.fullScreenSlideConfigSignature);
         }
 
-        deps.stopDedicatedFullScreenSlideMode();
+        if (shouldHandleDedicatedFullScreen) {
+            deps.stopDedicatedFullScreenSlideMode();
+        }
 
         const isProductCarouselEnabled = deps.toBoolean(deps.visualConfig.rightSidebarProductCarouselEnabled, false);
         const transitionMode = String(deps.visualConfig.rightSidebarProductTransitionMode || 'products_only').toLowerCase();

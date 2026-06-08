@@ -195,6 +195,11 @@ const visualConfig = {
     videoMuted: false,
     videoPlaylist: [],
     showVideoPanel: true,
+    fullScreenCycleStartDelaySeconds: 0,
+    fullScreenVideoUrl: '',
+    fullScreenVideoMuted: false,
+    fullScreenVideoPlaylist: [],
+    showFullScreenVideoPanel: false,
     showRightSidebarPanel: true,
     enableResponsiveLayout: false,
     showRightSidebarLogo: false,
@@ -452,12 +457,18 @@ let dedicatedFullScreenSlideMaxExpectedMs = 0;
 let productsRefreshTimer = null;
 let latestProductsForPagination = [];
 let dedicatedFullScreenExternalTimersPaused = false;
+let currentVideoPresentationMode = 'sidebar';
 let offerSlideEntryTimer = null;
 let offerSlidePageTimer = null;
 let offerSlideActive = false;
 let offerSlidePages = [];
 let offerSlidePageIndex = 0;
 let offerSlideVisibilityTimer = null;
+let offerFullScreenSequenceModeActive = false;
+let fullScreenCycleDelayStartedAt = 0;
+let fullScreenCycleDelayTimer = null;
+let pendingProductsRefreshAfterFullscreenFlow = false;
+let skipFullScreenCycleDelayOnce = false;
 
 const dedicatedFullScreenSlideState = {
     get fullScreenSlideTimer() { return fullScreenSlideTimer; },
@@ -521,7 +532,18 @@ const dedicatedFullScreenSlideModule = createDedicatedFullScreenSlideModule({
     getReliableDeviceToken,
     getSidebarProductItems: () => sidebarProductItems,
     getLatestProductsForPagination: () => latestProductsForPagination,
-    canStartDedicatedFullScreen: () => !offerSlideActive,
+    canStartDedicatedFullScreen: () => {
+        if (startFullScreenCycleDelayWindowIfNeeded()) {
+            return false;
+        }
+
+        return !offerSlideActive && !isConfiguredFullScreenVideoPlaybackActive();
+    },
+    onDedicatedFullScreenSequenceCompleted: () => {
+        pendingProductsRefreshAfterFullscreenFlow = false;
+        restartProductsRefreshIntervalCountdown();
+    },
+    startFullScreenCycleDelayWindowIfNeeded,
     applyRightSidebarMediaMode,
 });
 
@@ -726,10 +748,26 @@ function applyProductsRefreshInterval(nextSeconds) {
     }
 
     productsRefreshTimer = setInterval(() => {
-        if (getReliableDeviceToken()) {
-            loadProducts();
+        if (!getReliableDeviceToken()) {
+            return;
         }
+
+        if (isAnyFullscreenFlowActive()) {
+            pendingProductsRefreshAfterFullscreenFlow = true;
+            return;
+        }
+
+        loadProducts();
     }, refreshSeconds * 1000);
+}
+
+function restartProductsRefreshIntervalCountdown() {
+    if (productsRefreshTimer) {
+        clearInterval(productsRefreshTimer);
+        productsRefreshTimer = null;
+    }
+
+    applyProductsRefreshInterval(refreshSeconds);
 }
 
 function isFullscreenSupported() {
@@ -969,6 +1007,251 @@ function clearAutoFullscreenRetryTimer() {
 
     clearTimeout(autoFullscreenRetryTimer);
     autoFullscreenRetryTimer = null;
+}
+
+function clearFullScreenCycleDelayTimer() {
+    if (!fullScreenCycleDelayTimer) {
+        return;
+    }
+
+    clearTimeout(fullScreenCycleDelayTimer);
+    fullScreenCycleDelayTimer = null;
+}
+
+function getFullScreenCycleStartDelayMs() {
+    return Math.max(0, Math.min(86400000, Number(visualConfig.fullScreenCycleStartDelaySeconds || 0) * 1000));
+}
+
+function hasConfiguredFullScreenCycleModes() {
+    return isConfiguredFullScreenVideoModeEnabled()
+        || parseConfiguredDedicatedFullScreenSlideUrls().length > 0
+        || ((toBoolean(visualConfig.offerSlideEnabled, false) || isOfferSlideTestModeEnabled()) && getOfferSlideItems().length > 0);
+}
+
+function getRemainingFullScreenCycleDelayMs() {
+    const delayMs = getFullScreenCycleStartDelayMs();
+    if (delayMs <= 0) {
+        return 0;
+    }
+
+    if (fullScreenCycleDelayStartedAt <= 0) {
+        return delayMs;
+    }
+
+    return Math.max(0, delayMs - (Date.now() - fullScreenCycleDelayStartedAt));
+}
+
+function scheduleFullScreenCycleStartRetry(delayMs = null) {
+    const effectiveDelayMs = delayMs === null
+        ? getRemainingFullScreenCycleDelayMs()
+        : Math.max(0, Number(delayMs) || 0);
+
+    if (effectiveDelayMs <= 0) {
+        clearFullScreenCycleDelayTimer();
+        return;
+    }
+
+    clearFullScreenCycleDelayTimer();
+    fullScreenCycleDelayTimer = setTimeout(() => {
+        fullScreenCycleDelayTimer = null;
+        loadProducts();
+    }, Math.max(500, effectiveDelayMs));
+}
+
+function startFullScreenCycleDelayWindowIfNeeded(forceReset = false) {
+    if (skipFullScreenCycleDelayOnce) {
+        skipFullScreenCycleDelayOnce = false;
+        fullScreenCycleDelayStartedAt = 0;
+        clearFullScreenCycleDelayTimer();
+        return false;
+    }
+
+    if (!hasConfiguredFullScreenCycleModes()) {
+        fullScreenCycleDelayStartedAt = 0;
+        clearFullScreenCycleDelayTimer();
+        return false;
+    }
+
+    const delayMs = getFullScreenCycleStartDelayMs();
+    if (delayMs <= 0) {
+        fullScreenCycleDelayStartedAt = 0;
+        clearFullScreenCycleDelayTimer();
+        return false;
+    }
+
+    if (forceReset || fullScreenCycleDelayStartedAt <= 0) {
+        fullScreenCycleDelayStartedAt = Date.now();
+    }
+
+    const remainingDelayMs = getRemainingFullScreenCycleDelayMs();
+    if (remainingDelayMs > 0) {
+        scheduleFullScreenCycleStartRetry(remainingDelayMs);
+        return true;
+    }
+
+    clearFullScreenCycleDelayTimer();
+    return false;
+}
+
+function isConfiguredFullScreenVideoPlaybackActive() {
+    return currentVideoPresentationMode === 'fullscreen' && isVideoFullscreenModeActive();
+}
+
+function isAnyFullscreenFlowActive() {
+    return offerSlideActive || forceFullScreenSlideModeActive || isConfiguredFullScreenVideoPlaybackActive();
+}
+
+function tryStartDedicatedFullScreenFlow() {
+    const currentDedicatedSignature = buildDedicatedFullScreenSlideSignature();
+    if (currentDedicatedSignature) {
+        fullScreenSlideConfigSignature = currentDedicatedSignature;
+    }
+
+    syncDedicatedFullScreenCompletionState();
+
+    const hasDedicatedFullScreenSlide = parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
+    if (!hasDedicatedFullScreenSlide) {
+        stopDedicatedFullScreenSlideMode();
+        return false;
+    }
+
+    const shouldSkipDedicatedForCurrentLoad = shouldSkipDedicatedFullScreenSlideForCurrentLoad(hasDedicatedFullScreenSlide);
+
+    if (shouldSkipDedicatedForCurrentLoad) {
+        markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
+        stopDedicatedFullScreenSlideMode();
+        forceRestoreMainLayoutAfterDedicatedSlide();
+        return false;
+    }
+
+    if (forceFullScreenSlideModeActive) {
+        if (hasStaleDedicatedFullScreenSlideSession()) {
+            completeDedicatedFullScreenSlideCycle();
+        }
+        return true;
+    }
+
+    if (isVideoFullscreenModeActive()) {
+        return false;
+    }
+
+    const startedDedicatedSlide = startDedicatedFullScreenSlideMode();
+    if (startedDedicatedSlide) {
+        return true;
+    }
+
+    markDedicatedFullScreenSlideCycleAsCompleted(fullScreenSlideConfigSignature);
+    return false;
+}
+
+function tryStartDedicatedFullScreenFlowWithOptions(options = {}) {
+    if (options.bypassDelay === true) {
+        skipFullScreenCycleDelayOnce = true;
+    }
+
+    return tryStartDedicatedFullScreenFlow();
+}
+
+function tryStartOfferFullScreenFlow() {
+    offerFullScreenSequenceModeActive = true;
+
+    if (!canStartOfferSlide()) {
+        offerFullScreenSequenceModeActive = false;
+        return false;
+    }
+
+    const started = startOfferSlide();
+    if (!started) {
+        offerFullScreenSequenceModeActive = false;
+    }
+
+    return started;
+}
+
+function hasOfferFullScreenContent() {
+    const offerEnabled = toBoolean(visualConfig.offerSlideEnabled, false) || isOfferSlideTestModeEnabled();
+    return offerEnabled && getOfferSlideItems().length > 0;
+}
+
+function hasConfiguredFullScreenVideoContent() {
+    return isConfiguredFullScreenVideoModeEnabled();
+}
+
+function hasDedicatedFullScreenContent() {
+    return parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
+}
+
+function tryStartConfiguredFullScreenVideoFlow(options = {}) {
+    if (!isConfiguredFullScreenVideoModeEnabled()) {
+        return false;
+    }
+
+    if (options.bypassDelay === true) {
+        skipFullScreenCycleDelayOnce = true;
+    }
+
+    return startConfiguredFullScreenVideoMode();
+}
+
+function tryStartAnyConfiguredFullScreenFlow(options = {}) {
+    const startOrder = String(options.startOrder || 'offer').toLowerCase();
+    const bypassDelay = options.bypassDelay === true;
+
+    if (startOrder === 'video') {
+        if (hasConfiguredFullScreenVideoContent()) {
+            return tryStartConfiguredFullScreenVideoFlow({ bypassDelay });
+        }
+
+        if (hasDedicatedFullScreenContent()) {
+            return tryStartDedicatedFullScreenFlowWithOptions({ bypassDelay });
+        }
+
+        return false;
+    }
+
+    if (hasOfferFullScreenContent()) {
+        return tryStartOfferFullScreenFlow();
+    }
+
+    if (hasConfiguredFullScreenVideoContent()) {
+        if (tryStartConfiguredFullScreenVideoFlow({ bypassDelay })) {
+            return true;
+        }
+    }
+
+    if (hasDedicatedFullScreenContent()) {
+        return tryStartDedicatedFullScreenFlowWithOptions({ bypassDelay });
+    }
+
+    return false;
+}
+
+function getResumeItemsAfterFullscreenFlow() {
+    if (Array.isArray(sidebarProductItems) && sidebarProductItems.length > 0) {
+        return sidebarProductItems;
+    }
+
+    return Array.isArray(latestProductsForPagination) ? latestProductsForPagination : [];
+}
+
+function completeConfiguredFullScreenVideoCycle() {
+    clearVideoFallbackTimer();
+    stopConfiguredFullScreenVideoMode();
+    stopVideoPlaybackForImageMode();
+
+    const token = getReliableDeviceToken();
+
+    if (tryStartDedicatedFullScreenFlowWithOptions({ bypassDelay: true })) {
+        return;
+    }
+
+    pendingProductsRefreshAfterFullscreenFlow = false;
+    restartProductsRefreshIntervalCountdown();
+    startFullScreenCycleDelayWindowIfNeeded(true);
+
+    if (token) {
+        applyRightSidebarMediaMode(token, getResumeItemsAfterFullscreenFlow(), { skipDedicatedFullScreen: true });
+    }
 }
 
 function shouldShowFullscreenBlockedWarning() {
@@ -1562,6 +1845,8 @@ function stopVideoPlaybackForImageMode() {
         tvEmbed.classList.add('hidden');
         tvEmbed.removeAttribute('src');
     }
+
+    currentVideoPresentationMode = 'sidebar';
 }
 
 function applyImageFullscreenShellOverrides() {
@@ -2388,7 +2673,7 @@ function scheduleVideoFallbackAdvance(durationSeconds) {
     clearVideoFallbackTimer();
 
     const seconds = Number(durationSeconds || 0);
-    if (seconds <= 0 || videoPlaylistItems.length <= 1) {
+    if (seconds <= 0 || (videoPlaylistItems.length <= 1 && currentVideoPresentationMode !== 'fullscreen')) {
         return;
     }
 
@@ -2550,12 +2835,7 @@ function bindYouTubeEndedEvent() {
                             const current = Number(youTubePlayer.getCurrentTime() || 0);
                             const duration = Number(youTubePlayer.getDuration() || 0);
 
-                            if (duration > 0 && current >= Math.max(0, duration - 0.5) && currentVideoItemShouldLoop()) {
-                                replayCurrentVideoInPlaylist();
-                                return;
-                            }
-
-                            if (duration > 0 && current >= Math.max(0, duration - 0.5) && videoPlaylistItems.length > 1) {
+                            if (duration > 0 && current >= Math.max(0, duration - 0.5) && (currentVideoPresentationMode === 'fullscreen' || videoPlaylistItems.length > 1)) {
                                 playNextVideoInPlaylist();
                             }
                         }
@@ -2971,6 +3251,83 @@ function parseConfiguredVideoUrls() {
         .map((url) => ({ url, muted: Boolean(visualConfig.videoMuted), active: true, durationSeconds: 0, heightPx: 0 }));
 }
 
+function parseConfiguredFullScreenVideoUrls() {
+    if (Array.isArray(visualConfig.fullScreenVideoPlaylist) && visualConfig.fullScreenVideoPlaylist.length > 0) {
+        return visualConfig.fullScreenVideoPlaylist
+            .map((item) => ({
+                url: extractVideoUrl(String(item?.url || '').trim()),
+                muted: toBoolean(item?.muted, false),
+                active: toBoolean(item?.active, true),
+                durationSeconds: Math.max(0, Number(item?.durationSeconds || 0)),
+                heightPx: Math.max(0, Number(item?.heightPx || 0)),
+            }))
+            .filter((item) => item.url !== '' && item.active);
+    }
+
+    const raw = String(visualConfig.fullScreenVideoUrl || '').trim();
+
+    if (!raw) {
+        return [];
+    }
+
+    return raw
+        .split(/\r?\n|,|;\s*/)
+        .map((item) => extractVideoUrl(item.trim()))
+        .filter(Boolean)
+        .map((url) => ({ url, muted: Boolean(visualConfig.fullScreenVideoMuted), active: true, durationSeconds: 0, heightPx: 0 }));
+}
+
+function isConfiguredFullScreenVideoModeEnabled() {
+    return toBoolean(visualConfig.showFullScreenVideoPanel, false)
+        && parseConfiguredFullScreenVideoUrls().length > 0;
+}
+
+function setVideoPresentationMode(mode = 'sidebar') {
+    currentVideoPresentationMode = mode === 'fullscreen' ? 'fullscreen' : 'sidebar';
+}
+
+function stopConfiguredFullScreenVideoMode() {
+    setVideoPresentationMode('sidebar');
+    forceVideoPlaylistApplyOnce = true;
+    document.body.classList.remove('tv-video-fullscreen');
+}
+
+function startConfiguredFullScreenVideoMode() {
+    if (!isConfiguredFullScreenVideoModeEnabled()) {
+        stopConfiguredFullScreenVideoMode();
+        return false;
+    }
+
+    if (offerSlideActive) {
+        return false;
+    }
+
+    if (currentVideoPresentationMode === 'fullscreen' && isVideoFullscreenModeActive()) {
+        startVideoPlaylist(parseConfiguredFullScreenVideoUrls());
+        return true;
+    }
+
+    if (startFullScreenCycleDelayWindowIfNeeded()) {
+        return false;
+    }
+
+    if (forceFullScreenSlideModeActive) {
+        stopDedicatedFullScreenSlideMode();
+        forceRestoreMainLayoutAfterDedicatedSlide();
+    }
+
+    clearSidebarProductTimer();
+    hideSidebarProductCard();
+    hideSlideTextOverlays();
+    stopImageSlideMode();
+    setImageSlideFullscreenMode(false);
+    setVideoPresentationMode('fullscreen');
+    forceVideoPlaylistApplyOnce = true;
+    startVideoPlaylist(parseConfiguredFullScreenVideoUrls());
+
+    return true;
+}
+
 function extractVideoUrl(input) {
     const value = String(input || '').trim();
     if (!value) {
@@ -3018,10 +3375,12 @@ function applyVideoSource(videoItem) {
     }
 
     clearVideoFallbackTimer();
-    document.body.classList.remove('tv-video-fullscreen');
-    applyCurrentVideoHeight(itemHeightPx);
+    const shouldUseFullscreenPresentation = currentVideoPresentationMode === 'fullscreen' && Boolean(videoUrl);
+    document.body.classList.toggle('tv-video-fullscreen', shouldUseFullscreenPresentation);
+    applyCurrentVideoHeight(shouldUseFullscreenPresentation ? 0 : itemHeightPx);
 
     if (!videoUrl) {
+        document.body.classList.remove('tv-video-fullscreen');
         if (tvVideo) {
             tvVideo.classList.remove('hidden');
             const source = tvVideo.querySelector('source');
@@ -3135,6 +3494,9 @@ function playNextVideoInPlaylist() {
 
     if (currentVideoIndex < videoPlaylistItems.length - 1) {
         currentVideoIndex += 1;
+    } else if (currentVideoPresentationMode === 'fullscreen') {
+        completeConfiguredFullScreenVideoCycle();
+        return;
     } else {
         currentVideoIndex = 0;
     }
@@ -3273,6 +3635,10 @@ function getOfferSlideItems() {
 }
 
 function getOfferSlideItemsPerPage() {
+    if (offerFullScreenSequenceModeActive) {
+        return 1;
+    }
+
     const layoutMode = getOfferSlideLayoutMode();
 
     if (layoutMode === 'single_item') {
@@ -3335,6 +3701,10 @@ function canStartOfferSlide() {
     }
 
     if (!toBoolean(visualConfig.offerSlideEnabled, false) && !isOfferSlideTestModeEnabled()) {
+        return false;
+    }
+
+    if (!isOfferSlideTestModeEnabled() && startFullScreenCycleDelayWindowIfNeeded()) {
         return false;
     }
 
@@ -3781,6 +4151,7 @@ function hideOfferSlide(scheduleNext = true) {
     clearOfferSlidePageTimer();
     clearOfferSlideVisibilityTimer();
     offerSlideActive = false;
+    offerFullScreenSequenceModeActive = false;
     offerSlidePages = [];
     offerSlidePageIndex = 0;
     const useSmoothTransition = isOfferSlideSmoothTransitionEnabled();
@@ -3804,8 +4175,14 @@ function hideOfferSlide(scheduleNext = true) {
     }
 
     if (scheduleNext) {
+        if (tryStartAnyConfiguredFullScreenFlow({ startOrder: 'video', bypassDelay: true })) {
+            return;
+        }
+
         scheduleOfferSlideEntry();
     }
+
+    startFullScreenCycleDelayWindowIfNeeded(true);
 }
 
 function startOfferSlide() {
@@ -3842,6 +4219,10 @@ function startOfferSlide() {
 }
 
 function syncOfferSlideSchedule() {
+    if (offerSlideActive && offerFullScreenSequenceModeActive) {
+        return;
+    }
+
     const testModeEnabled = isOfferSlideTestModeEnabled();
     const enabled = toBoolean(visualConfig.offerSlideEnabled, false) || testModeEnabled;
     const hasOffers = getOfferSlideItems().length > 0;
@@ -4011,6 +4392,7 @@ async function applyCachedVisualConfigIfAny() {
     }
 
     Object.assign(visualConfig, cachedConfig);
+    visualConfig.fullScreenCycleStartDelaySeconds = Math.max(0, Math.min(86400, Number(visualConfig.fullScreenCycleStartDelaySeconds || 0)));
     applyDocumentBackgroundFromVisualConfig({ suppressImage: offerSlideActive });
 
     applyProductsPanelBackground();
@@ -5086,7 +5468,6 @@ function pauseExternalTimersForDedicatedFullScreen() {
     }
 
     dedicatedFullScreenExternalTimersPaused = true;
-    clearPaginationTimer();
     clearSidebarProductTimer();
     clearImageSlideTimer();
 }
@@ -5102,15 +5483,6 @@ function resumeExternalTimersForDedicatedFullScreen() {
     }
 
     dedicatedFullScreenExternalTimersPaused = false;
-
-    const fallbackProducts = readCachedProducts();
-    const productsToResume = latestProductsForPagination.length > 0
-        ? latestProductsForPagination
-        : (Array.isArray(fallbackProducts) ? fallbackProducts : []);
-
-    if (productsToResume.length > 0) {
-        renderProductsWithPagination(productsToResume);
-    }
 }
 
 function splitTwoListItemsBySide(items) {
@@ -5391,6 +5763,7 @@ async function loadVisualConfig(token) {
 
         Object.assign(visualConfig, payload.data || {});
         visualConfig.apiRefreshInterval = Math.max(5, Math.min(3600, Number(visualConfig.apiRefreshInterval || refreshSeconds || 30)));
+        visualConfig.fullScreenCycleStartDelaySeconds = Math.max(0, Math.min(86400, Number(visualConfig.fullScreenCycleStartDelaySeconds || 0)));
         visualConfig.showImage = Boolean(visualConfig.showImage);
         visualConfig.showVideoPanel = toBoolean(visualConfig.showVideoPanel, true);
         visualConfig.showRightSidebarPanel = toBoolean(visualConfig.showRightSidebarPanel, true);
@@ -5443,6 +5816,12 @@ async function loadVisualConfig(token) {
         visualConfig.rightSidebarBorderWidth = Math.min(20, Math.max(0, Number(visualConfig.rightSidebarBorderWidth ?? 1)));
         visualConfig.rightSidebarMediaType = getRightSidebarMediaType();
         visualConfig.rightSidebarImageInterval = Math.max(1, Number(visualConfig.rightSidebarImageInterval || 8));
+        visualConfig.fullScreenVideoUrl = String(visualConfig.fullScreenVideoUrl || '').trim();
+        visualConfig.fullScreenVideoMuted = toBoolean(visualConfig.fullScreenVideoMuted, false);
+        visualConfig.fullScreenVideoPlaylist = Array.isArray(visualConfig.fullScreenVideoPlaylist)
+            ? visualConfig.fullScreenVideoPlaylist
+            : [];
+        visualConfig.showFullScreenVideoPanel = toBoolean(visualConfig.showFullScreenVideoPanel, false);
         visualConfig.fullScreenSlideImageUrls = String(visualConfig.fullScreenSlideImageUrls || '').trim();
         visualConfig.fullScreenSlideInterval = Math.max(1, Number(visualConfig.fullScreenSlideInterval || 8));
         visualConfig.fullScreenSlideReturnDelaySeconds = Math.max(0, Math.min(86400, Number(visualConfig.fullScreenSlideReturnDelaySeconds || 0)));
@@ -5575,6 +5954,11 @@ async function loadProducts() {
         return;
     }
 
+    if (isAnyFullscreenFlowActive()) {
+        pendingProductsRefreshAfterFullscreenFlow = true;
+        return;
+    }
+
     updateStatus('Carregando produtos...');
 
     const productsEndpoint = resolveSafeProductsApiEndpoint();
@@ -5633,7 +6017,14 @@ async function loadProducts() {
 
         const produtos = payload?.data?.produtos ?? [];
         renderProductsWithPagination(produtos);
-        await applyRightSidebarMediaMode(token, produtos);
+        startFullScreenCycleDelayWindowIfNeeded();
+
+        const fullScreenFlowStarted = tryStartAnyConfiguredFullScreenFlow({ startOrder: 'offer' });
+        if (!fullScreenFlowStarted) {
+            stopConfiguredFullScreenVideoMode();
+            await applyRightSidebarMediaMode(token, produtos, { skipDedicatedFullScreen: true });
+        }
+
         saveCachedProducts(produtos);
         setOfflineIndicatorVisible(false);
         try {
@@ -5646,7 +6037,12 @@ async function loadProducts() {
         setOfflineIndicatorVisible(true);
         if (reusedProducts) {
             const cached = readCachedProducts() || [];
-            await applyRightSidebarMediaMode(token, cached);
+            startFullScreenCycleDelayWindowIfNeeded();
+            const fullScreenFlowStarted = tryStartAnyConfiguredFullScreenFlow({ startOrder: 'offer' });
+            if (!fullScreenFlowStarted) {
+                stopConfiguredFullScreenVideoMode();
+                await applyRightSidebarMediaMode(token, cached, { skipDedicatedFullScreen: true });
+            }
             return;
         }
 
@@ -5774,7 +6170,7 @@ if (tvVideo) {
             }
         }
 
-        if (videoPlaylistItems.length > 1) {
+        if (currentVideoPresentationMode === 'fullscreen' || videoPlaylistItems.length > 1) {
             playNextVideoInPlaylist();
             return;
         }
@@ -5852,7 +6248,7 @@ window.addEventListener('message', (event) => {
         return;
     }
 
-    if (finished && videoPlaylistItems.length > 1) {
+    if (finished && (currentVideoPresentationMode === 'fullscreen' || videoPlaylistItems.length > 1)) {
         clearVideoFallbackTimer();
         playNextVideoInPlaylist();
         return;

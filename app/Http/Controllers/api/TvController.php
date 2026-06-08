@@ -603,8 +603,24 @@ class TvController extends Controller
             'data' => [
                 'videoUrl' => $config->videoUrl,
                 'apiRefreshInterval' => (int) ($config->apiRefreshInterval ?? 30),
+                'fullScreenCycleStartDelaySeconds' => (int) ($config->fullScreenCycleStartDelaySeconds ?? 0),
                 'videoMuted' => (bool) $config->videoMuted,
                 'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
+                'fullScreenVideoUrl' => (string) ($config->fullScreenVideoUrl ?? ''),
+                'fullScreenVideoMuted' => (bool) ($config->fullScreenVideoMuted ?? false),
+                'fullScreenVideoPlaylist' => collect($config->fullScreenVideoPlaylist ?? [])
+                    ->map(function ($item) {
+                        return [
+                            'url' => (string) ($item['url'] ?? ''),
+                            'muted' => (bool) ($item['muted'] ?? false),
+                            'active' => (bool) ($item['active'] ?? true),
+                            'durationSeconds' => (int) ($item['durationSeconds'] ?? 0),
+                            'heightPx' => (int) ($item['heightPx'] ?? 0),
+                        ];
+                    })
+                    ->filter(fn ($item) => $item['url'] !== '')
+                    ->values(),
+                'showFullScreenVideoPanel' => (bool) ($config->showFullScreenVideoPanel ?? false),
                 'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
                 'enableResponsiveLayout' => $this->isResponsiveModeEnabled((int) $device->empresa_id),
                 'showRightSidebarLogo' => (bool) ($config->showRightSidebarLogo ?? false),

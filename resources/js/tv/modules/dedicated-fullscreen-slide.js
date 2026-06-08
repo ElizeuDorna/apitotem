@@ -112,60 +112,6 @@ export function createDedicatedFullScreenSlideModule(deps) {
 
     api.scheduleDedicatedFullScreenSlideRestart = function scheduleDedicatedFullScreenSlideRestart() {
         deps.clearFullScreenSlideReturnTimer();
-
-        const delaySeconds = api.getDedicatedFullScreenSlideReturnDelaySeconds();
-        if (delaySeconds <= 0) {
-            return;
-        }
-
-        const hasDedicatedSlideUrls = api.parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
-        if (!hasDedicatedSlideUrls) {
-            return;
-        }
-
-        const tryRestart = () => {
-            if (state.forceFullScreenSlideModeActive) {
-                return;
-            }
-
-            const hasSlideUrls = api.parseConfiguredDedicatedFullScreenSlideUrls().length > 0;
-            if (!hasSlideUrls) {
-                return;
-            }
-
-            if (deps.isVideoFullscreenModeActive()) {
-                state.fullScreenSlideReturnTimer = setTimeout(tryRestart, 2000);
-                return;
-            }
-
-            state.dedicatedFullScreenCycleStartCount = 0;
-            state.hasCompletedDedicatedFullScreenSlideCycle = false;
-            state.fullScreenSlideCompletedSignatureMemory = '';
-            state.fullScreenSlideCompletedSignatureRuntime = '';
-            deps.storeCompletedFullscreenSlideSignature('');
-
-            const startedDedicatedSlide = api.startDedicatedFullScreenSlideMode();
-            if (startedDedicatedSlide) {
-                return;
-            }
-
-            const token = deps.getReliableDeviceToken();
-            if (!token) {
-                return;
-            }
-
-            const sidebarItems = Array.isArray(deps.getSidebarProductItems()) ? deps.getSidebarProductItems() : [];
-            const latestItems = typeof deps.getLatestProductsForPagination === 'function'
-                ? deps.getLatestProductsForPagination()
-                : [];
-            const resumeItems = sidebarItems.length > 0
-                ? sidebarItems
-                : (Array.isArray(latestItems) ? latestItems : []);
-
-            deps.applyRightSidebarMediaMode(token, resumeItems, { ignoreDedicatedLoadSkip: true });
-        };
-
-        state.fullScreenSlideReturnTimer = setTimeout(tryRestart, delaySeconds * 1000);
     };
 
     api.completeDedicatedFullScreenSlideCycle = function completeDedicatedFullScreenSlideCycle() {
@@ -177,7 +123,9 @@ export function createDedicatedFullScreenSlideModule(deps) {
         api.stopDedicatedFullScreenSlideMode();
         deps.forceRestoreMainLayoutAfterDedicatedSlide();
         deps.ensureRightSidebarMediaRestoredAfterDedicatedFullScreen();
-        api.scheduleDedicatedFullScreenSlideRestart();
+        if (typeof deps.startFullScreenCycleDelayWindowIfNeeded === 'function') {
+            deps.startFullScreenCycleDelayWindowIfNeeded(true);
+        }
 
         const token = deps.getReliableDeviceToken();
         if (token) {
@@ -190,6 +138,10 @@ export function createDedicatedFullScreenSlideModule(deps) {
                 : (Array.isArray(latestItems) ? latestItems : []);
 
             deps.applyRightSidebarMediaMode(token, resumeItems);
+        }
+
+        if (typeof deps.onDedicatedFullScreenSequenceCompleted === 'function') {
+            deps.onDedicatedFullScreenSequenceCompleted();
         }
 
         deps.resumeExternalTimersForDedicatedFullScreen();

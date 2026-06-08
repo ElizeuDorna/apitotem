@@ -420,6 +420,7 @@ class WebScreenConfigController extends Controller
         $shouldProcessRightSidebarMedia = in_array($saveSection, ['', 'companyGalleryConfigSection', 'fullScreenSlideConfig'], true);
         $shouldProcessGeneralConfig = in_array($saveSection, ['', 'generalConfigSection'], true);
         $shouldProcessVideoValidation = in_array($saveSection, ['', 'videoConfigSection'], true);
+        $shouldProcessFullScreenVideoValidation = in_array($saveSection, ['', 'fullScreenVideoConfigSection'], true);
         $slideSelectionSubmitted = (bool) $request->boolean('suggestedSlideSelectionSubmitted', false);
         $forceClearRightSidebarSlides = (bool) $request->boolean('forceClearRightSidebarSlides', false);
 
@@ -486,11 +487,71 @@ class WebScreenConfigController extends Controller
             'videoPlaylist' => $playlist->all(),
         ]);
 
+        $rawFullScreenVideoUrls = collect($request->input('full_screen_video_urls', []))
+            ->map(fn ($value) => $this->extractVideoUrlFromInput((string) $value))
+            ;
+
+        $rawFullScreenMutedFlags = collect($request->input('full_screen_video_muted_flags', []))
+            ->map(fn ($value) => (string) $value === '1')
+            ;
+
+        $rawFullScreenActiveFlags = collect($request->input('full_screen_video_active_flags', []))
+            ->map(fn ($value) => (string) $value === '1')
+            ;
+
+        $rawFullScreenDurationSeconds = collect($request->input('full_screen_video_duration_seconds', []))
+            ->map(function ($value) {
+                if ($value === null || $value === '') {
+                    return 0;
+                }
+
+                return max(0, (int) $value);
+            })
+            ;
+
+        $rawFullScreenVideoHeights = collect($request->input('full_screen_video_heights', []))
+            ->map(function ($value) {
+                if ($value === null || $value === '') {
+                    return 0;
+                }
+
+                return max(0, (int) $value);
+            })
+            ;
+
+        $fullScreenVideoPlaylist = collect(range(0, 9))
+            ->map(function (int $index) use ($rawFullScreenVideoUrls, $rawFullScreenMutedFlags, $rawFullScreenActiveFlags, $rawFullScreenDurationSeconds, $rawFullScreenVideoHeights) {
+                $url = trim((string) ($rawFullScreenVideoUrls->get($index) ?? ''));
+
+                $isActive = (bool) ($rawFullScreenActiveFlags->get($index) ?? false);
+
+                return [
+                    'url' => $url,
+                    'muted' => (bool) ($rawFullScreenMutedFlags->get($index) ?? false),
+                    'active' => $url !== '' ? $isActive : false,
+                    'durationSeconds' => $url !== '' ? (int) ($rawFullScreenDurationSeconds->get($index) ?? 0) : 0,
+                    'heightPx' => $url !== '' ? (int) ($rawFullScreenVideoHeights->get($index) ?? 0) : 0,
+                ];
+            })
+            ->values();
+
+        $request->merge([
+            'full_screen_video_urls' => $rawFullScreenVideoUrls->all(),
+            'full_screen_video_duration_seconds' => $rawFullScreenDurationSeconds->all(),
+            'full_screen_video_heights' => $rawFullScreenVideoHeights->all(),
+            'fullScreenVideoUrl' => $fullScreenVideoPlaylist
+                ->filter(fn ($item) => !empty($item['url']))
+                ->pluck('url')
+                ->implode("\n"),
+            'fullScreenVideoPlaylist' => $fullScreenVideoPlaylist->all(),
+        ]);
+
         $validated = $request->validate([
-            'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,fullScreenSlideConfig,imageSizeConfigSection,paginationConfigSection,offerSlideConfigSection'],
+            'saveSection' => ['nullable', 'in:generalConfigSection,videoConfigSection,fullScreenVideoConfigSection,colorConfigSection,rightSidebarConfigSection,companyGalleryConfigSection,fullScreenSlideConfig,imageSizeConfigSection,paginationConfigSection,offerSlideConfigSection'],
             'openCompanyGalleryTarget' => ['nullable', 'in:companyGalleryCodeBlock,companyGalleryLibraryBlock,rightSidebarImageConfig,fullScreenSlideConfig'],
             'forceClearRightSidebarSlides' => ['nullable', 'boolean'],
             'apiRefreshInterval' => ['nullable', 'integer', 'min:5', 'max:3600'],
+            'fullScreenCycleStartDelaySeconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'openRightSidebarImageScheduleUrl' => ['nullable', 'string', 'max:1000'],
             'rightSidebarImageHeight' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'rightSidebarImageWidth' => ['nullable', 'integer', 'min:0', 'max:1000'],
@@ -514,6 +575,21 @@ class WebScreenConfigController extends Controller
             'video_heights.*' => ['nullable', 'integer', 'min:0', 'max:2000'],
             'videoMuted' => ['nullable', 'boolean'],
             'showVideoPanel' => ['nullable', 'boolean'],
+            'fullScreenVideoUrl' => ['nullable', 'string', 'max:10000'],
+            'fullScreenVideoPlaylist' => ['nullable', 'array', 'max:10'],
+            'fullScreenVideoPlaylist.*.url' => ['nullable', 'url', 'max:1000'],
+            'fullScreenVideoPlaylist.*.muted' => ['required', 'boolean'],
+            'fullScreenVideoPlaylist.*.active' => ['required', 'boolean'],
+            'fullScreenVideoPlaylist.*.durationSeconds' => ['required', 'integer', 'min:0', 'max:86400'],
+            'fullScreenVideoPlaylist.*.heightPx' => ['required', 'integer', 'min:0', 'max:2000'],
+            'full_screen_video_urls' => ['nullable', 'array', 'max:10'],
+            'full_screen_video_urls.*' => ['nullable', 'url', 'max:1000'],
+            'full_screen_video_duration_seconds' => ['nullable', 'array', 'max:10'],
+            'full_screen_video_duration_seconds.*' => ['nullable', 'integer', 'min:0', 'max:86400'],
+            'full_screen_video_heights' => ['nullable', 'array', 'max:10'],
+            'full_screen_video_heights.*' => ['nullable', 'integer', 'min:0', 'max:2000'],
+            'fullScreenVideoMuted' => ['nullable', 'boolean'],
+            'showFullScreenVideoPanel' => ['nullable', 'boolean'],
             'showRightSidebarPanel' => ['nullable', 'boolean'],
             'showRightSidebarLogo' => ['nullable', 'boolean'],
             'rightSidebarLogoPosition' => ['nullable', 'in:sidebar_top,screen_right_vertical'],
@@ -788,6 +864,8 @@ class WebScreenConfigController extends Controller
         $validated['isListBorderTransparent'] = (bool) ($validated['isListBorderTransparent'] ?? false);
         $validated['isVideoPanelTransparent'] = (bool) ($validated['isVideoPanelTransparent'] ?? false);
         $validated['showVideoPanel'] = (bool) ($validated['showVideoPanel'] ?? true);
+        $validated['showFullScreenVideoPanel'] = (bool) ($validated['showFullScreenVideoPanel'] ?? false);
+        $validated['fullScreenVideoMuted'] = (bool) ($validated['fullScreenVideoMuted'] ?? false);
         $validated['showRightSidebarPanel'] = $request->has('showRightSidebarPanel')
             ? $this->resolveBooleanInput($request, 'showRightSidebarPanel')
             : (bool) ($currentConfig->showRightSidebarPanel ?? true);
@@ -819,7 +897,28 @@ class WebScreenConfigController extends Controller
         $validated['isRoundedCornersEnabled'] = (bool) ($validated['isRoundedCornersEnabled'] ?? true);
         $validated['showRightSidebarBorder'] = (bool) ($validated['showRightSidebarBorder'] ?? true);
         $validated['videoMuted'] = (bool) ($validated['videoMuted'] ?? false);
+        $validated['fullScreenVideoUrl'] = trim((string) ($validated['fullScreenVideoUrl'] ?? ''));
+        $validated['fullScreenVideoPlaylist'] = collect((array) ($validated['fullScreenVideoPlaylist'] ?? []))
+            ->map(function ($item) {
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $url = trim((string) ($item['url'] ?? ''));
+
+                return [
+                    'url' => $url,
+                    'muted' => (bool) ($item['muted'] ?? false),
+                    'active' => $url !== '' ? (bool) ($item['active'] ?? false) : false,
+                    'durationSeconds' => $url !== '' ? max(0, (int) ($item['durationSeconds'] ?? 0)) : 0,
+                    'heightPx' => $url !== '' ? max(0, (int) ($item['heightPx'] ?? 0)) : 0,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
         $validated['apiRefreshInterval'] = (int) ($validated['apiRefreshInterval'] ?? 30);
+        $validated['fullScreenCycleStartDelaySeconds'] = (int) ($validated['fullScreenCycleStartDelaySeconds'] ?? 0);
         $validated['isPaginationEnabled'] = (bool) ($validated['isPaginationEnabled'] ?? false);
         $validated['mainBorderColor'] = (string) ($validated['mainBorderColor'] ?? '#000000');
         $validated['mainBorderWidth'] = (int) ($validated['mainBorderWidth'] ?? 1);
@@ -847,6 +946,12 @@ class WebScreenConfigController extends Controller
         $validated['fullScreenSlideImageHeightWindows'] = max(0, min(2160, (int) ($validated['fullScreenSlideImageHeightWindows'] ?? 0)));
         $validated['fullScreenSlideImageWidthAndroid'] = max(0, min(3840, (int) ($validated['fullScreenSlideImageWidthAndroid'] ?? 0)));
         $validated['fullScreenSlideImageHeightAndroid'] = max(0, min(2160, (int) ($validated['fullScreenSlideImageHeightAndroid'] ?? 0)));
+
+        if ($validated['showFullScreenVideoPanel']) {
+            $validated['showVideoPanel'] = false;
+        } elseif ($validated['showVideoPanel']) {
+            $validated['showFullScreenVideoPanel'] = false;
+        }
         $validated['rightSidebarImageSchedules'] = collect((array) ($validated['rightSidebarImageSchedules'] ?? []))
             ->map(function (array $item) {
                 $normalizedUrl = $this->normalizeSingleImageUrl((string) ($item['url'] ?? ''));
@@ -1119,6 +1224,9 @@ class WebScreenConfigController extends Controller
         unset($validated['video_urls']);
         unset($validated['video_duration_seconds']);
         unset($validated['video_heights']);
+        unset($validated['full_screen_video_urls']);
+        unset($validated['full_screen_video_duration_seconds']);
+        unset($validated['full_screen_video_heights']);
         unset($validated['saveSection']);
         unset($validated['openCompanyGalleryTarget']);
         unset($validated['openRightSidebarImageScheduleUrl']);
@@ -1553,6 +1661,10 @@ class WebScreenConfigController extends Controller
             unset($validated['rightSidebarImageSchedules']);
         }
 
+        if (! Schema::hasColumn('configuracoes', 'fullScreenCycleStartDelaySeconds')) {
+            unset($validated['fullScreenCycleStartDelaySeconds']);
+        }
+
         if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageUrls')) {
             unset($validated['fullScreenSlideImageUrls']);
         }
@@ -1599,6 +1711,22 @@ class WebScreenConfigController extends Controller
 
         if (! Schema::hasColumn('configuracoes', 'fullScreenSlideImageHeightAndroid')) {
             unset($validated['fullScreenSlideImageHeightAndroid']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenVideoUrl')) {
+            unset($validated['fullScreenVideoUrl']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenVideoMuted')) {
+            unset($validated['fullScreenVideoMuted']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'fullScreenVideoPlaylist')) {
+            unset($validated['fullScreenVideoPlaylist']);
+        }
+
+        if (! Schema::hasColumn('configuracoes', 'showFullScreenVideoPanel')) {
+            unset($validated['showFullScreenVideoPanel']);
         }
 
         if (! Schema::hasColumn('configuracoes', 'rightSidebarProductCarouselEnabled')) {
@@ -1704,6 +1832,18 @@ class WebScreenConfigController extends Controller
                 ->map(fn (array $item) => (string) ($item['message'] ?? 'Bloqueio de incorporação detectado.'))
                 ->values()
                 ->all();
+        }
+
+        if ($shouldProcessFullScreenVideoValidation) {
+            $fullScreenVideoWarnings = collect($this->buildYouTubeEmbedStatuses($validated['fullScreenVideoPlaylist'] ?? []))
+                ->filter(fn (array $item) => ($item['status'] ?? null) === 'blocked')
+                ->map(fn (array $item) => (string) ($item['message'] ?? 'Bloqueio de incorporação detectado.'))
+                ->values()
+                ->all();
+
+            if ($fullScreenVideoWarnings !== []) {
+                $embedWarnings = array_values(array_unique([...$embedWarnings, ...$fullScreenVideoWarnings]));
+            }
         }
 
         $configPayload = $this->extractConfigPayload($validated);
@@ -1972,8 +2112,13 @@ class WebScreenConfigController extends Controller
         return [
             'videoUrl' => $config->videoUrl,
             'apiRefreshInterval' => (int) ($config->apiRefreshInterval ?? 30),
+            'fullScreenCycleStartDelaySeconds' => (int) ($config->fullScreenCycleStartDelaySeconds ?? 0),
             'videoMuted' => (bool) $config->videoMuted,
             'showVideoPanel' => (bool) ($config->showVideoPanel ?? true),
+            'fullScreenVideoUrl' => (string) ($config->fullScreenVideoUrl ?? ''),
+            'fullScreenVideoMuted' => (bool) ($config->fullScreenVideoMuted ?? false),
+            'fullScreenVideoPlaylist' => collect($config->fullScreenVideoPlaylist ?? [])->values()->all(),
+            'showFullScreenVideoPanel' => (bool) ($config->showFullScreenVideoPanel ?? false),
             'showRightSidebarPanel' => (bool) ($config->showRightSidebarPanel ?? true),
             'enableResponsiveLayout' => $this->isResponsiveModeEnabled((int) $empresa->id),
             'showRightSidebarLogo' => (bool) ($config->showRightSidebarLogo ?? false),
@@ -2282,7 +2427,12 @@ class WebScreenConfigController extends Controller
     {
         $scalarFields = [
             'apiRefreshInterval',
+            'fullScreenCycleStartDelaySeconds',
             'showVideoPanel',
+            'fullScreenVideoUrl',
+            'fullScreenVideoMuted',
+            'fullScreenVideoPlaylist',
+            'showFullScreenVideoPanel',
             'showRightSidebarPanel',
             'showRightSidebarLogo',
             'rightSidebarLogoPosition',
@@ -2498,6 +2648,15 @@ class WebScreenConfigController extends Controller
             $merge['video_active_flags'] = collect(range(0, 9))->map(fn (int $index) => (int) ((bool) ($playlist->get($index)['active'] ?? false)))->all();
             $merge['video_duration_seconds'] = collect(range(0, 9))->map(fn (int $index) => (int) ($playlist->get($index)['durationSeconds'] ?? 0))->all();
             $merge['video_heights'] = collect(range(0, 9))->map(fn (int $index) => (int) ($playlist->get($index)['heightPx'] ?? 0))->all();
+        }
+
+        if (! $request->has('full_screen_video_urls')) {
+            $playlist = collect($config->fullScreenVideoPlaylist ?? [])->values();
+            $merge['full_screen_video_urls'] = collect(range(0, 9))->map(fn (int $index) => (string) ($playlist->get($index)['url'] ?? ''))->all();
+            $merge['full_screen_video_muted_flags'] = collect(range(0, 9))->map(fn (int $index) => (int) ((bool) ($playlist->get($index)['muted'] ?? false)))->all();
+            $merge['full_screen_video_active_flags'] = collect(range(0, 9))->map(fn (int $index) => (int) ((bool) ($playlist->get($index)['active'] ?? false)))->all();
+            $merge['full_screen_video_duration_seconds'] = collect(range(0, 9))->map(fn (int $index) => (int) ($playlist->get($index)['durationSeconds'] ?? 0))->all();
+            $merge['full_screen_video_heights'] = collect(range(0, 9))->map(fn (int $index) => (int) ($playlist->get($index)['heightPx'] ?? 0))->all();
         }
 
         if (! empty($merge)) {

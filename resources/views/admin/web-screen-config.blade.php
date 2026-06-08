@@ -71,10 +71,35 @@
                             ];
                         });
 
+                        $savedFullScreenPlaylist = collect($config->fullScreenVideoPlaylist ?? []);
+                        if ($savedFullScreenPlaylist->isEmpty()) {
+                            $savedFullScreenPlaylist = collect(preg_split('/\r?\n|,|;\s*/', (string) ($config->fullScreenVideoUrl ?? '')))
+                                ->map(fn ($value) => trim((string) $value))
+                                ->filter()
+                                ->values()
+                                ->map(fn ($url) => ['url' => $url, 'muted' => (bool) ($config->fullScreenVideoMuted ?? false), 'active' => true]);
+                        }
+
+                        $savedFullScreenPlaylist = collect(range(0, 9))->map(function ($index) use ($savedFullScreenPlaylist) {
+                            $item = $savedFullScreenPlaylist->get($index, []);
+
+                            return [
+                                'url' => (string) ($item['url'] ?? ''),
+                                'muted' => (bool) ($item['muted'] ?? false),
+                                'active' => (bool) ($item['active'] ?? false),
+                                'durationSeconds' => (int) ($item['durationSeconds'] ?? 0),
+                                'heightPx' => (int) ($item['heightPx'] ?? 0),
+                            ];
+                        });
+
                         $hasVideoValidationErrors = !empty($errors->get('video_urls.*'))
                             || $errors->has('videoUrl')
                             || $errors->has('videoPlaylist')
                             || $errors->has('videoBackgroundColor');
+                        $hasFullScreenVideoValidationErrors = !empty($errors->get('full_screen_video_urls.*'))
+                            || $errors->has('fullScreenVideoUrl')
+                            || $errors->has('fullScreenVideoPlaylist')
+                            || $errors->has('showFullScreenVideoPanel');
 
                     @endphp
 
@@ -94,6 +119,7 @@
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="generalConfigSection" @disabled($configMenusLocked)>Configuração geral</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="rightSidebarConfigSection" @disabled($configMenusLocked)>Configuração Tela Lateral Direita</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="videoConfigSection" @disabled($configMenusLocked)>Configuração de Vídeos lateral direita</button>
+                                <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="fullScreenVideoConfigSection" @disabled($configMenusLocked)>Configuração de Vídeos tela cheia</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="companyGalleryConfigSection" @disabled($configMenusLocked)>Configuraçao de Slide</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="imageSizeConfigSection" @disabled($configMenusLocked)>Configuracao da lista produto</button>
                                 <button type="button" class="config-menu-btn w-full text-left rounded-md border px-3 py-2 text-sm font-medium {{ $configMenusLocked ? 'opacity-50 cursor-not-allowed' : '' }}" data-target="offerSlideConfigSection" @disabled($configMenusLocked)>Slide de oferta</button>
@@ -257,6 +283,21 @@
                                     >
                                     <p class="text-xs text-gray-500 mt-1">Define de quanto em quanto tempo a tela consulta a API novamente.</p>
                                     @error('apiRefreshInterval')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1" for="fullScreenCycleStartDelaySeconds">Tempo com lista de produtos antes de iniciar telas cheias (segundos)</label>
+                                    <input
+                                        type="number"
+                                        id="fullScreenCycleStartDelaySeconds"
+                                        name="fullScreenCycleStartDelaySeconds"
+                                        min="0"
+                                        max="86400"
+                                        value="{{ old('fullScreenCycleStartDelaySeconds', $config->fullScreenCycleStartDelaySeconds ?? 0) }}"
+                                        class="w-full border rounded px-3 py-2"
+                                    >
+                                    <p class="text-xs text-gray-500 mt-1">Segura o inicio do ciclo de tela cheia depois que a lista de produtos voltar a rodar. Valor 0 inicia sem espera.</p>
+                                    @error('fullScreenCycleStartDelaySeconds')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -665,6 +706,96 @@
                                     </div>
                                 @endfor
                                 <p class="text-xs text-gray-500">A reprodução na TV segue a ordem: Vídeo 1 até Vídeo 10.</p>
+                            </div>
+                        </div>
+
+                        <div id="fullScreenVideoConfigSection" class="config-panel rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-base font-semibold text-gray-800">Configuração de Vídeos tela cheia</h3>
+                                <button type="button" data-save-section="fullScreenVideoConfigSection" class="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Salvar este menu</button>
+                            </div>
+
+                            <div class="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                                <p class="font-semibold">Fluxo isolado</p>
+                                <p>Este menu não mistura dados com o vídeo da lateral direita.</p>
+                                <p>Quando o vídeo em tela cheia estiver ativo, o vídeo da lateral direita fica desativado automaticamente.</p>
+                            </div>
+
+                            <label class="inline-flex items-center gap-2">
+                                <input type="hidden" name="showFullScreenVideoPanel" value="0">
+                                <input type="checkbox" id="showFullScreenVideoPanel" name="showFullScreenVideoPanel" value="1" class="rounded border-gray-300 text-indigo-600" @checked(old('showFullScreenVideoPanel', $config->showFullScreenVideoPanel ?? false))>
+                                <span class="text-sm text-gray-700">Ativar vídeos tela cheia</span>
+                            </label>
+                            @error('showFullScreenVideoPanel')<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+
+                            <div class="grid grid-cols-1 gap-3">
+                                @for ($index = 0; $index < 10; $index++)
+                                    <div class="rounded-md border border-gray-300 bg-white p-3">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Vídeo fullscreen {{ $index + 1 }}</label>
+                                        <input
+                                            type="text"
+                                            name="full_screen_video_urls[{{ $index }}]"
+                                            value="{{ old('full_screen_video_urls.' . $index, $savedFullScreenPlaylist[$index]['url'] ?? '') }}"
+                                            placeholder="https://... ou <iframe ...>"
+                                            class="w-full border rounded px-3 py-2"
+                                        >
+                                        @error('full_screen_video_urls.' . $index)<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                        <p class="text-[11px] text-gray-500 mt-1">Aceita link direto ou código de incorporação (iframe). O sistema extrai automaticamente o <code>src</code>.</p>
+
+                                        <label class="mt-2 inline-flex items-center gap-2">
+                                            <input type="hidden" name="full_screen_video_active_flags[{{ $index }}]" value="0">
+                                            <input
+                                                type="checkbox"
+                                                name="full_screen_video_active_flags[{{ $index }}]"
+                                                value="1"
+                                                class="rounded border-gray-300 text-indigo-600"
+                                                @checked(old('full_screen_video_active_flags.' . $index, ($savedFullScreenPlaylist[$index]['url'] ?? '') !== '' ? ($savedFullScreenPlaylist[$index]['active'] ?? false) : false))
+                                            >
+                                            <span class="text-xs text-gray-700">Ativar vídeo</span>
+                                        </label>
+
+                                        <label class="mt-2 inline-flex items-center gap-2">
+                                            <input type="hidden" name="full_screen_video_muted_flags[{{ $index }}]" value="0">
+                                            <input
+                                                type="checkbox"
+                                                name="full_screen_video_muted_flags[{{ $index }}]"
+                                                value="1"
+                                                class="rounded border-gray-300 text-indigo-600"
+                                                @checked(old('full_screen_video_muted_flags.' . $index, $savedFullScreenPlaylist[$index]['muted'] ?? false))
+                                            >
+                                            <span class="text-xs text-gray-600">Rodar sem áudio (somente este vídeo)</span>
+                                        </label>
+
+                                        <div class="mt-2">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Tempo fallback (segundos)</label>
+                                            <input
+                                                type="number"
+                                                name="full_screen_video_duration_seconds[{{ $index }}]"
+                                                min="0"
+                                                max="86400"
+                                                value="{{ old('full_screen_video_duration_seconds.' . $index, $savedFullScreenPlaylist[$index]['durationSeconds'] ?? 0) }}"
+                                                class="w-full border rounded px-3 py-2"
+                                            >
+                                            @error('full_screen_video_duration_seconds.' . $index)<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            <p class="mt-1 text-[11px] text-gray-500">Use para fontes sem detecção de fim. 0 = desativado.</p>
+                                        </div>
+
+                                        <div class="mt-2">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Altura do vídeo (px)</label>
+                                            <input
+                                                type="number"
+                                                name="full_screen_video_heights[{{ $index }}]"
+                                                min="0"
+                                                max="2000"
+                                                value="{{ old('full_screen_video_heights.' . $index, $savedFullScreenPlaylist[$index]['heightPx'] ?? 0) }}"
+                                                class="w-full border rounded px-3 py-2"
+                                            >
+                                            @error('full_screen_video_heights.' . $index)<p class="text-red-600 text-sm mt-1">{{ $message }}</p>@enderror
+                                            <p class="mt-1 text-[11px] text-gray-500">0 = ocupar a tela inteira.</p>
+                                        </div>
+                                    </div>
+                                @endfor
+                                <p class="text-xs text-gray-500">A reprodução em tela cheia segue a ordem: Vídeo 1 até Vídeo 10.</p>
                             </div>
                         </div>
 
@@ -5139,7 +5270,7 @@
         const requestedInitialPanel = @json(session('openConfigSection'));
         const requestedCompanyGalleryTarget = @json(session('openCompanyGalleryTarget'));
         const hasSelectedModel = @json($hasSelectedModel);
-        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : null) || 'modelsSection';
+        const initialTarget = requestedInitialPanel || @json($hasVideoValidationErrors ? 'videoConfigSection' : ($hasFullScreenVideoValidationErrors ? 'fullScreenVideoConfigSection' : null)) || 'modelsSection';
         const initialTopLevelTarget = initialTarget === 'fullScreenSlideConfig'
             ? 'companyGalleryConfigSection'
             : initialTarget;
@@ -5229,5 +5360,42 @@
                 webConfigForm.requestSubmit();
             });
         }
+    </script>
+    <script>
+        (function () {
+            const lateralVideoInput = document.querySelector('input[name="showVideoPanel"]:not([type="hidden"])');
+            const fullscreenVideoInput = document.querySelector('input[name="showFullScreenVideoPanel"]:not([type="hidden"])');
+
+            if (!(lateralVideoInput instanceof HTMLInputElement) || !(fullscreenVideoInput instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const syncExclusiveVideoToggles = (source = '') => {
+                if (source === 'fullscreen' && fullscreenVideoInput.checked) {
+                    lateralVideoInput.checked = false;
+                }
+
+                if (source === 'lateral' && lateralVideoInput.checked) {
+                    fullscreenVideoInput.checked = false;
+                }
+
+                if (fullscreenVideoInput.checked) {
+                    lateralVideoInput.disabled = true;
+                    return;
+                }
+
+                if (lateralVideoInput.checked) {
+                    fullscreenVideoInput.disabled = true;
+                    return;
+                }
+
+                lateralVideoInput.disabled = false;
+                fullscreenVideoInput.disabled = false;
+            };
+
+            lateralVideoInput.addEventListener('change', () => syncExclusiveVideoToggles('lateral'));
+            fullscreenVideoInput.addEventListener('change', () => syncExclusiveVideoToggles('fullscreen'));
+            syncExclusiveVideoToggles();
+        }());
     </script>
 </x-app-layout>
