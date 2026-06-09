@@ -917,6 +917,8 @@ class WebScreenConfigController extends Controller
             ->filter()
             ->values()
             ->all();
+        $hasActiveFullScreenVideoItems = collect($validated['fullScreenVideoPlaylist'])
+            ->contains(fn (array $item) => ! empty($item['url']) && (bool) ($item['active'] ?? false));
         $validated['apiRefreshInterval'] = (int) ($validated['apiRefreshInterval'] ?? 30);
         $validated['fullScreenCycleStartDelaySeconds'] = (int) ($validated['fullScreenCycleStartDelaySeconds'] ?? 0);
         $validated['isPaginationEnabled'] = (bool) ($validated['isPaginationEnabled'] ?? false);
@@ -946,6 +948,10 @@ class WebScreenConfigController extends Controller
         $validated['fullScreenSlideImageHeightWindows'] = max(0, min(2160, (int) ($validated['fullScreenSlideImageHeightWindows'] ?? 0)));
         $validated['fullScreenSlideImageWidthAndroid'] = max(0, min(3840, (int) ($validated['fullScreenSlideImageWidthAndroid'] ?? 0)));
         $validated['fullScreenSlideImageHeightAndroid'] = max(0, min(2160, (int) ($validated['fullScreenSlideImageHeightAndroid'] ?? 0)));
+
+        if ($validated['showFullScreenVideoPanel'] && ! $hasActiveFullScreenVideoItems) {
+            $validated['showFullScreenVideoPanel'] = false;
+        }
 
         if ($validated['showFullScreenVideoPanel']) {
             $validated['showVideoPanel'] = false;
