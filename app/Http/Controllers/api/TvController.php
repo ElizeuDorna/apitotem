@@ -12,6 +12,7 @@ use App\Models\DeviceActivation;
 use App\Models\GlobalImageGallery;
 use App\Models\Empresa;
 use App\Models\Produto;
+use App\Services\FinanceiroTvAccessService;
 use App\Support\ImageStorage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -236,7 +237,7 @@ class TvController extends Controller
             new OA\Response(response: 401, description: 'Token do device inválido')
         ]
     )]
-    public function produtos(Request $request): JsonResponse
+    public function produtos(Request $request, FinanceiroTvAccessService $financeiroTvAccessService): JsonResponse
     {
         $token = $request->bearerToken();
 
@@ -290,6 +291,27 @@ class TvController extends Controller
         $device->save();
 
         $empresaId = (int) $device->empresa_id;
+        $empresa = Empresa::query()->find($empresaId);
+        $financeiro = $empresa ? $financeiroTvAccessService->resolveTvBlockState($empresa) : [
+            'blocked' => false,
+            'reason' => null,
+            'message' => null,
+            'charge' => null,
+        ];
+
+        if ($financeiro['blocked']) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'produtos' => [],
+                ],
+                'meta' => [
+                    'total_produtos' => 0,
+                ],
+                'financeiro' => $financeiro,
+            ]);
+        }
+
         $configuration = $this->resolveDeviceConfiguration($device->id);
         $screenConfig = $this->resolveEffectiveScreenConfig($device, $configuration);
 
@@ -349,6 +371,7 @@ class TvController extends Controller
             'meta' => [
                 'total_produtos' => $produtos->count(),
             ],
+            'financeiro' => $financeiro,
         ]);
     }
 
@@ -386,13 +409,22 @@ class TvController extends Controller
             new OA\Response(response: 401, description: 'Token do device inválido')
         ]
     )]
-    public function bootstrap(Request $request): JsonResponse
+    public function bootstrap(Request $request, FinanceiroTvAccessService $financeiroTvAccessService): JsonResponse
     {
         $device = $request->attributes->get('device');
         $configuration = $this->resolveDeviceConfiguration($device->id);
+        $financeiro = $device->empresa
+            ? $financeiroTvAccessService->resolveTvBlockState($device->empresa)
+            : [
+                'blocked' => false,
+                'reason' => null,
+                'message' => null,
+                'charge' => null,
+            ];
 
         return response()->json([
             'status' => 'ok',
+            'financeiro' => $financeiro,
             'device' => [
                 'id' => $device->id,
                 'nome' => $device->nome,
@@ -509,7 +541,7 @@ class TvController extends Controller
         ]);
     }
 
-    public function webScreenConfig(Request $request): JsonResponse
+    public function webScreenConfig(Request $request, FinanceiroTvAccessService $financeiroTvAccessService): JsonResponse
     {
         $token = $request->bearerToken();
 
@@ -548,6 +580,12 @@ class TvController extends Controller
         $config = $this->resolveEffectiveScreenConfig($device, $deviceConfiguration);
 
         $empresa = Empresa::query()->find($device->empresa_id);
+        $financeiro = $empresa ? $financeiroTvAccessService->resolveTvBlockState($empresa) : [
+            'blocked' => false,
+            'reason' => null,
+            'message' => null,
+            'charge' => null,
+        ];
         $configuredRightSidebarLogoUrl = $this->normalizeCompanyLogoUrl((string) ($config->rightSidebarLogoUrl ?? ''));
         $companyLogoUrl = $this->normalizeCompanyLogoUrl((string) ($empresa->urlimagem ?? ''));
         $rightSidebarLogoUrl = $configuredRightSidebarLogoUrl !== ''
@@ -600,6 +638,7 @@ class TvController extends Controller
 
         return response()->json([
             'success' => true,
+            'financeiro' => $financeiro,
             'data' => [
                 'videoUrl' => $config->videoUrl,
                 'apiRefreshInterval' => (int) ($config->apiRefreshInterval ?? 30),

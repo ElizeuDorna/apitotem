@@ -35,12 +35,17 @@ class ConfigAdminController extends Controller
     public function edit()
     {
         $empresaId = $this->resolveEmpresaIdOrNull();
+        $asaasConfigEmpresaId = $this->resolveAsaasConfigEmpresaIdOrNull();
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
         $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
+        $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
+            && Schema::hasColumn('configuracoes', 'asaasApiKey')
+            && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
 
         $config = $this->findOrCreateConfig($empresaId)->fresh();
+        $asaasConfig = $this->findOrCreateConfig($asaasConfigEmpresaId)->fresh();
 
         $apkExists = Storage::disk(self::APK_DISK)->exists(self::APK_PATH);
         $apkSizeBytes = $apkExists ? (int) Storage::disk(self::APK_DISK)->size(self::APK_PATH) : null;
@@ -52,6 +57,9 @@ class ConfigAdminController extends Controller
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
             'produtoFormImagePreviewFeatureReady',
+            'asaasConfigFeatureReady',
+            'asaasConfig',
+            'asaasConfigEmpresaId',
             'apkExists',
             'apkSizeBytes',
             'apkLastModified',
@@ -68,6 +76,9 @@ class ConfigAdminController extends Controller
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
+        $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
+            && Schema::hasColumn('configuracoes', 'asaasApiKey')
+            && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
 
         if (! $canManagePanelBranding) {
             abort(403);
@@ -79,13 +90,24 @@ class ConfigAdminController extends Controller
             'panelSidebarFontFamily' => 'nullable|string|in:'.implode(',', self::SIDEBAR_FONT_FAMILY_OPTIONS),
             'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
             'produtoFormImagePreviewSize' => 'nullable|integer|min:32|max:300',
+            'metaAppId' => 'nullable|string|max:120',
+            'metaRedirectUri' => 'nullable|url|max:500',
+            'asaasBaseUrl' => 'nullable|url|max:255',
+            'asaasApiKey' => 'nullable|string|max:5000',
+            'asaasWebhookToken' => 'nullable|string|max:5000',
         ]);
 
         $config = $this->findOrCreateConfig($empresaId);
+        $asaasConfig = $this->findOrCreateConfig($this->resolveAsaasConfigEmpresaIdOrNull());
 
         $payload = [];
+        $asaasPayload = [];
         $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
         $warningMessages = [];
+
+        if (($request->filled('metaAppId') || $request->filled('metaRedirectUri')) && ! $currentUser?->isDefaultAdmin()) {
+            abort(403);
+        }
 
         if ($panelSidebarFontFeatureReady) {
             $sidebarFontFamily = trim((string) ($validated['panelSidebarFontFamily'] ?? ''));
@@ -100,6 +122,31 @@ class ConfigAdminController extends Controller
         $produtoFormImagePreviewSize = $validated['produtoFormImagePreviewSize'] ?? null;
         if ($produtoFormImagePreviewSize !== null) {
             $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
+        }
+
+        if ($currentUser?->isDefaultAdmin()) {
+            $metaAppId = trim((string) ($validated['metaAppId'] ?? ''));
+            $metaRedirectUri = trim((string) ($validated['metaRedirectUri'] ?? ''));
+
+            if ($metaAppId !== '' || $metaRedirectUri !== '') {
+                $globalConfig = $this->findOrCreateConfig(null);
+                $globalConfig->fill([
+                    'metaAppId' => $metaAppId !== '' ? $metaAppId : null,
+                    'metaRedirectUri' => $metaRedirectUri !== '' ? $metaRedirectUri : null,
+                ])->save();
+            }
+        }
+
+        if ($asaasConfigFeatureReady) {
+            $asaasBaseUrl = trim((string) ($validated['asaasBaseUrl'] ?? ''));
+            $asaasApiKey = trim((string) ($validated['asaasApiKey'] ?? ''));
+            $asaasWebhookToken = trim((string) ($validated['asaasWebhookToken'] ?? ''));
+
+            $asaasPayload['asaasBaseUrl'] = $asaasBaseUrl !== '' ? $asaasBaseUrl : null;
+            $asaasPayload['asaasApiKey'] = $asaasApiKey !== '' ? $asaasApiKey : null;
+            $asaasPayload['asaasWebhookToken'] = $asaasWebhookToken !== '' ? $asaasWebhookToken : null;
+        } elseif ($request->filled('asaasBaseUrl') || $request->filled('asaasApiKey') || $request->filled('asaasWebhookToken')) {
+            $warningMessages[] = 'Configuracao do Asaas indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
         if ($panelBrandIconFeatureReady) {
@@ -118,6 +165,10 @@ class ConfigAdminController extends Controller
 
         if ($payload !== []) {
             $config->fill($payload)->save();
+        }
+
+        if ($asaasPayload !== []) {
+            $asaasConfig->fill($asaasPayload)->save();
         }
 
         $redirect = redirect()
@@ -140,6 +191,23 @@ class ConfigAdminController extends Controller
         }
 
         return (int) EmpresaContext::requireEmpresaId($user);
+    }
+
+    private function resolveAsaasConfigEmpresaIdOrNull(): ?int
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return null;
+        }
+
+        if ($user->isDefaultAdmin()) {
+            return null;
+        }
+
+        $empresa = EmpresaContext::resolveEmpresaForUser($user);
+
+        return $empresa ? (int) $empresa->id : null;
     }
 
     private function findOrCreateConfig(?int $empresaId): Configuracao

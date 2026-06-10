@@ -15,6 +15,9 @@ class Configuracao extends Model
         'empresa_id',
         'apiUrl',
         'apiRefreshInterval',
+        'asaasBaseUrl',
+        'asaasApiKey',
+        'asaasWebhookToken',
         'fullScreenCycleStartDelaySeconds',
         'videoUrl',
         'videoMuted',
@@ -45,6 +48,8 @@ class Configuracao extends Model
         'panelSidebarFontFamily',
         'panelSidebarFontSize',
         'produtoFormImagePreviewSize',
+        'metaAppId',
+        'metaRedirectUri',
         'leftVerticalLogoWidth',
         'leftVerticalLogoHeight',
         'leftVerticalLogoWidthWindows',
@@ -231,6 +236,8 @@ class Configuracao extends Model
     }
 
     protected $casts = [
+        'asaasApiKey' => 'encrypted',
+        'asaasWebhookToken' => 'encrypted',
         'useGradient' => 'boolean',
         'videoMuted' => 'boolean',
         'videoPlaylist' => 'array',

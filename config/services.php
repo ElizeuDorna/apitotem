@@ -46,4 +46,11 @@ return [
         'verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
     ],
 
+    'asaas' => [
+        'base_url' => env('ASAAS_BASE_URL', 'https://api-sandbox.asaas.com/v3'),
+        'api_key' => env('ASAAS_API_KEY'),
+        'wallet_id' => env('ASAAS_WALLET_ID'),
+        'webhook_token' => env('ASAAS_WEBHOOK_TOKEN'),
+    ],
+
 ];

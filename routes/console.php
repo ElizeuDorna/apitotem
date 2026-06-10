@@ -9,6 +9,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command('devices:cleanup-activations')->everyFiveMinutes();
+Schedule::command('financeiro:dispatch-recurring-charges')->dailyAt('06:00');
+Schedule::command('financeiro:sync-pending-charges')->everyFiveMinutes();
 Schedule::command('social-media:dispatch-automation')->everyMinute();
 Schedule::command('social-media:publish-scheduled')->everyMinute();
 Schedule::command('whatsapp:dispatch-scheduled')->everyMinute();

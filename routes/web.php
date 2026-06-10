@@ -129,6 +129,8 @@ Route::get('/webhooks/whatsapp', [\App\Http\Controllers\Admin\WhatsAppWebhookCon
     ->name('whatsapp.webhook.verify');
 Route::post('/webhooks/whatsapp', [\App\Http\Controllers\Admin\WhatsAppWebhookController::class, 'receive'])
     ->name('whatsapp.webhook.receive');
+Route::post('/webhooks/asaas', [\App\Http\Controllers\Admin\AsaasWebhookController::class, 'receive'])
+    ->name('asaas.webhook.receive');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -291,6 +293,12 @@ Route::middleware('auth')->group(function () {
             ->middleware('menu.access:financeiro');
         Route::put('financeiro/{empresa}', [\App\Http\Controllers\Admin\FinanceiroController::class, 'update'])
             ->name('admin.financeiro.update')
+            ->middleware('menu.access:financeiro');
+        Route::post('financeiro/{empresa}/cobrancas/pix', [\App\Http\Controllers\Admin\FinanceiroController::class, 'storePixCharge'])
+            ->name('admin.financeiro.charges.store')
+            ->middleware('menu.access:financeiro');
+        Route::post('financeiro/cobrancas/{cobranca}/sincronizar', [\App\Http\Controllers\Admin\FinanceiroController::class, 'syncCharge'])
+            ->name('admin.financeiro.charges.sync')
             ->middleware('menu.access:financeiro');
 
         Route::resource('global-image-galleries', \App\Http\Controllers\Admin\GlobalImageGalleryController::class, ['as' => 'admin'])

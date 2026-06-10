@@ -533,6 +533,168 @@
             transition: none;
         }
 
+        #tvFinanceiroOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 120;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top, rgba(16, 185, 129, 0.18), transparent 34%),
+                linear-gradient(180deg, rgba(2, 6, 23, 0.94), rgba(15, 23, 42, 0.98));
+        }
+
+        #tvFinanceiroOverlay.is-active {
+            display: flex;
+        }
+
+        .tv-finance-card {
+            width: min(100%, 1080px);
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 360px);
+            gap: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 28px;
+            background: rgba(15, 23, 42, 0.92);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+            padding: 28px;
+            color: #e2e8f0;
+        }
+
+        .tv-finance-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 8px 14px;
+            background: rgba(239, 68, 68, 0.14);
+            color: #fca5a5;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .tv-finance-title {
+            margin-top: 18px;
+            font-size: clamp(28px, 3vw, 46px);
+            line-height: 1.05;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .tv-finance-copy {
+            margin-top: 14px;
+            font-size: clamp(15px, 1.5vw, 20px);
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+
+        .tv-finance-meta {
+            margin-top: 22px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .tv-finance-meta-card {
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(2, 6, 23, 0.55);
+            padding: 16px;
+        }
+
+        .tv-finance-meta-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .tv-finance-meta-value {
+            margin-top: 8px;
+            font-size: clamp(18px, 1.8vw, 28px);
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .tv-finance-side {
+            border-radius: 22px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(2, 6, 23, 0.62);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .tv-finance-qr {
+            width: min(100%, 280px);
+            aspect-ratio: 1;
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: #ffffff;
+            padding: 12px;
+            object-fit: contain;
+        }
+
+        .tv-finance-copy-paste {
+            width: 100%;
+            margin-top: 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(15, 23, 42, 0.9);
+            color: #cbd5e1;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        .tv-finance-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 16px;
+            width: 100%;
+            min-height: 48px;
+            border-radius: 14px;
+            background: #10b981;
+            color: #052e16;
+            font-size: 15px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .tv-finance-link.hidden,
+        .tv-finance-qr.hidden,
+        .tv-finance-copy-paste.hidden,
+        .tv-finance-side-note.hidden {
+            display: none !important;
+        }
+
+        .tv-finance-side-note {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #cbd5e1;
+        }
+
+        @media (max-width: 900px) {
+            .tv-finance-card {
+                grid-template-columns: 1fr;
+                padding: 22px;
+            }
+
+            .tv-finance-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+
         #offerSlideBackgroundMedia,
         #offerSlideBackgroundTint {
             position: absolute;
@@ -1057,6 +1219,40 @@
             <div id="offerSlideFooter">
                 <span id="offerSlideCounter">0 ofertas</span>
                 <span id="offerSlidePageIndicator"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="tvFinanceiroOverlay" aria-hidden="true">
+        <div class="tv-finance-card">
+            <div>
+                <div class="tv-finance-badge">Pagamento pendente</div>
+                <div id="tvFinanceiroTitle" class="tv-finance-title">TV temporariamente bloqueada</div>
+                <div id="tvFinanceiroMessage" class="tv-finance-copy">A liberacao acontece automaticamente assim que o pagamento for confirmado.</div>
+                <div class="tv-finance-meta">
+                    <div class="tv-finance-meta-card">
+                        <div class="tv-finance-meta-label">Cobrança</div>
+                        <div id="tvFinanceiroDescricao" class="tv-finance-meta-value">-</div>
+                    </div>
+                    <div class="tv-finance-meta-card">
+                        <div class="tv-finance-meta-label">Valor</div>
+                        <div id="tvFinanceiroValor" class="tv-finance-meta-value">-</div>
+                    </div>
+                    <div class="tv-finance-meta-card">
+                        <div class="tv-finance-meta-label">Vencimento</div>
+                        <div id="tvFinanceiroVencimento" class="tv-finance-meta-value">-</div>
+                    </div>
+                    <div class="tv-finance-meta-card">
+                        <div class="tv-finance-meta-label">Status</div>
+                        <div id="tvFinanceiroStatus" class="tv-finance-meta-value">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="tv-finance-side">
+                <p id="tvFinanceiroSideNote" class="tv-finance-side-note">Use a fatura ou o QR Code para regularizar. A TV sera liberada automaticamente apos a baixa do pagamento.</p>
+                <img id="tvFinanceiroQrCode" class="tv-finance-qr hidden" alt="QR Code da cobrança PIX" loading="eager">
+                <div id="tvFinanceiroPixCopyPaste" class="tv-finance-copy-paste hidden"></div>
+                <a id="tvFinanceiroInvoiceLink" class="tv-finance-link hidden" target="_blank" rel="noreferrer">Abrir fatura</a>
             </div>
         </div>
     </div>

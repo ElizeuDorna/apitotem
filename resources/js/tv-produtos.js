@@ -38,6 +38,17 @@ const tvLeftVerticalLogoSlot = document.getElementById('tvLeftVerticalLogoSlot')
 const tvLeftVerticalLogo = document.getElementById('tvLeftVerticalLogo');
 const tvMain = document.getElementById('tvMain');
 const tvShell = document.getElementById('tvShell');
+const tvFinanceiroOverlay = document.getElementById('tvFinanceiroOverlay');
+const tvFinanceiroTitle = document.getElementById('tvFinanceiroTitle');
+const tvFinanceiroMessage = document.getElementById('tvFinanceiroMessage');
+const tvFinanceiroDescricao = document.getElementById('tvFinanceiroDescricao');
+const tvFinanceiroValor = document.getElementById('tvFinanceiroValor');
+const tvFinanceiroVencimento = document.getElementById('tvFinanceiroVencimento');
+const tvFinanceiroStatus = document.getElementById('tvFinanceiroStatus');
+const tvFinanceiroQrCode = document.getElementById('tvFinanceiroQrCode');
+const tvFinanceiroPixCopyPaste = document.getElementById('tvFinanceiroPixCopyPaste');
+const tvFinanceiroInvoiceLink = document.getElementById('tvFinanceiroInvoiceLink');
+const tvFinanceiroSideNote = document.getElementById('tvFinanceiroSideNote');
 const fullscreenTestButton = document.getElementById('fullscreenTestButton');
 const OFFER_SLIDE_TRANSITION_MS = 280;
 
@@ -185,6 +196,7 @@ const mediaEndpoint = String(runtimeConfig.mediaEndpoint || queryParams.get('med
 const configPageUrl = String(runtimeConfig.configPageUrl || queryParams.get('configPage') || '/tv/totemweb/configuracao');
 const initialRefreshSeconds = Number(localStorage.getItem('tv_refresh_seconds') || queryParams.get('refresh') || 30);
 let refreshSeconds = Math.max(5, Math.min(3600, Number(initialRefreshSeconds || 30)));
+let financeBlockState = null;
 const AUDIO_UNLOCK_STORAGE_KEY = 'tv_audio_autoplay_unlocked';
 const VISUAL_CONFIG_CACHE_KEY = 'tv_cached_visual_config_v1';
 const PRODUCTS_CACHE_KEY = 'tv_cached_products_v1';
@@ -3600,6 +3612,131 @@ function formatPrice(value) {
     }).format(value);
 }
 
+function formatDatePtBr(value) {
+    const normalized = String(value || '').trim();
+    if (normalized === '') {
+        return '-';
+    }
+
+    const date = new Date(`${normalized}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+        return normalized;
+    }
+
+    return date.toLocaleDateString('pt-BR');
+}
+
+function hideFinanceiroOverlay() {
+    financeBlockState = null;
+
+    if (!tvFinanceiroOverlay) {
+        return;
+    }
+
+    tvFinanceiroOverlay.classList.remove('is-active');
+    tvFinanceiroOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function applyFinanceiroState(financeiro) {
+    const blocked = Boolean(financeiro && financeiro.blocked);
+    financeBlockState = blocked ? financeiro : null;
+
+    if (!tvFinanceiroOverlay) {
+        return blocked;
+    }
+
+    if (!blocked) {
+        hideFinanceiroOverlay();
+        return false;
+    }
+
+    const charge = financeiro.charge || {};
+
+    if (tvFinanceiroTitle) {
+        tvFinanceiroTitle.textContent = 'TV temporariamente bloqueada';
+    }
+
+    if (tvFinanceiroMessage) {
+        tvFinanceiroMessage.textContent = String(financeiro.message || 'A liberacao acontece automaticamente assim que o pagamento for confirmado.');
+    }
+
+    if (tvFinanceiroDescricao) {
+        tvFinanceiroDescricao.textContent = String(charge.descricao || '-');
+    }
+
+    if (tvFinanceiroValor) {
+        tvFinanceiroValor.textContent = formatPrice(Number(charge.valor_total || 0));
+    }
+
+    if (tvFinanceiroVencimento) {
+        tvFinanceiroVencimento.textContent = formatDatePtBr(charge.vencimento || '');
+    }
+
+    if (tvFinanceiroStatus) {
+        tvFinanceiroStatus.textContent = String(charge.status_label || charge.status || '-');
+    }
+
+    const showQrCode = Boolean(charge.show_qr_code && charge.pix_qr_code);
+    if (tvFinanceiroQrCode) {
+        if (showQrCode) {
+            tvFinanceiroQrCode.src = String(charge.pix_qr_code || '');
+            tvFinanceiroQrCode.classList.remove('hidden');
+        } else {
+            tvFinanceiroQrCode.removeAttribute('src');
+            tvFinanceiroQrCode.classList.add('hidden');
+        }
+    }
+
+    if (tvFinanceiroPixCopyPaste) {
+        const pixCode = String(charge.pix_copy_paste || '').trim();
+        if (showQrCode && pixCode !== '') {
+            tvFinanceiroPixCopyPaste.textContent = pixCode;
+            tvFinanceiroPixCopyPaste.classList.remove('hidden');
+        } else {
+            tvFinanceiroPixCopyPaste.textContent = '';
+            tvFinanceiroPixCopyPaste.classList.add('hidden');
+        }
+    }
+
+    if (tvFinanceiroInvoiceLink) {
+        const invoiceUrl = String(charge.invoice_url || '').trim();
+        if (invoiceUrl !== '') {
+            tvFinanceiroInvoiceLink.href = invoiceUrl;
+            tvFinanceiroInvoiceLink.classList.remove('hidden');
+        } else {
+            tvFinanceiroInvoiceLink.removeAttribute('href');
+            tvFinanceiroInvoiceLink.classList.add('hidden');
+        }
+    }
+
+    if (tvFinanceiroSideNote) {
+        tvFinanceiroSideNote.classList.toggle('hidden', showQrCode);
+    }
+
+    try {
+        hideOfferSlide(false);
+    } catch (_error) {
+    }
+
+    try {
+        stopConfiguredFullScreenVideoMode();
+    } catch (_error) {
+    }
+
+    try {
+        if (tvVideo) {
+            tvVideo.pause();
+        }
+    } catch (_error) {
+    }
+
+    tvFinanceiroOverlay.classList.add('is-active');
+    tvFinanceiroOverlay.setAttribute('aria-hidden', 'false');
+    updateWarningStatus(String(financeiro.message || 'TV bloqueada por inadimplencia.'));
+
+    return true;
+}
+
 function clearOfferSlideEntryTimer() {
     if (offerSlideEntryTimer) {
         clearTimeout(offerSlideEntryTimer);
@@ -5761,6 +5898,8 @@ async function loadVisualConfig(token) {
             return applyCachedVisualConfigIfAny();
         }
 
+        applyFinanceiroState(payload?.financeiro || null);
+
         Object.assign(visualConfig, payload.data || {});
         visualConfig.apiRefreshInterval = Math.max(5, Math.min(3600, Number(visualConfig.apiRefreshInterval || refreshSeconds || 30)));
         visualConfig.fullScreenCycleStartDelaySeconds = Math.max(0, Math.min(86400, Number(visualConfig.fullScreenCycleStartDelaySeconds || 0)));
@@ -6014,6 +6153,13 @@ async function loadProducts() {
         if (!response.ok || !payload?.success) {
             throw new Error('Falha ao consultar API de produtos da TV.');
         }
+
+        if (applyFinanceiroState(payload?.financeiro || null)) {
+            setOfflineIndicatorVisible(false);
+            return;
+        }
+
+        hideFinanceiroOverlay();
 
         const produtos = payload?.data?.produtos ?? [];
         renderProductsWithPagination(produtos);

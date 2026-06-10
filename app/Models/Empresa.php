@@ -142,6 +142,16 @@ class Empresa extends Model
         return $this->hasOne(EmpresaPublicPage::class);
     }
 
+    public function financeiroConfig(): HasOne
+    {
+        return $this->hasOne(EmpresaFinanceiroConfig::class);
+    }
+
+    public function financeiroCobrancas(): HasMany
+    {
+        return $this->hasMany(EmpresaFinanceiroCobranca::class);
+    }
+
     public function publicSlides(): HasMany
     {
         return $this->hasMany(HomeCarouselSlide::class);

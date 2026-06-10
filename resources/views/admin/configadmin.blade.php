@@ -199,6 +199,53 @@
                             </div>
                         </form>
                     </div>
+
+                    <div id="integracao-asaas" class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 scroll-mt-24">
+                        <h3 class="mb-3 text-base font-semibold text-slate-800">Integração Asaas</h3>
+                        <p class="mb-4 text-sm text-slate-600">
+                            @if (auth()->user()?->isDefaultAdmin())
+                                Estas credenciais valem para clientes administrados diretamente pelo admin.
+                            @else
+                                Estas credenciais valem para a sua revenda e para os clientes da sua carteira que usarem Asaas.
+                            @endif
+                        </p>
+
+                        <form method="POST" action="{{ route('admin.configadmin.update') }}" class="space-y-4">
+                            @csrf
+
+                            @if (!($asaasConfigFeatureReady ?? false))
+                                <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                    Recurso de configuracao do Asaas ainda indisponivel neste ambiente. Execute as migrations pendentes para habilitar.
+                                </div>
+                            @endif
+
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <label for="asaasBaseUrl" class="mb-1 block text-sm font-semibold">Base URL do Asaas</label>
+                                    <input id="asaasBaseUrl" name="asaasBaseUrl" type="url" value="{{ old('asaasBaseUrl', $asaasConfig->asaasBaseUrl ?? config('services.asaas.base_url')) }}" class="w-full rounded border px-3 py-2 text-sm">
+                                    <p class="mt-1 text-xs text-slate-500">Exemplo: https://api-sandbox.asaas.com/v3</p>
+                                    @error('asaasBaseUrl')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                                <div>
+                                    <label for="asaasWebhookToken" class="mb-1 block text-sm font-semibold">Token do Webhook</label>
+                                    <input id="asaasWebhookToken" name="asaasWebhookToken" type="text" value="{{ old('asaasWebhookToken', $asaasConfig->asaasWebhookToken ?? '') }}" class="w-full rounded border px-3 py-2 text-sm">
+                                    <p class="mt-1 text-xs text-slate-500">Usado para validar os eventos enviados pelo Asaas para esta conta.</p>
+                                    @error('asaasWebhookToken')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="asaasApiKey" class="mb-1 block text-sm font-semibold">API Key do Asaas</label>
+                                <textarea id="asaasApiKey" name="asaasApiKey" rows="3" class="w-full rounded border px-3 py-2 text-sm">{{ old('asaasApiKey', $asaasConfig->asaasApiKey ?? '') }}</textarea>
+                                <p class="mt-1 text-xs text-slate-500">Se deixar em branco, o sistema continua usando o fallback atual do ambiente.</p>
+                                @error('asaasApiKey')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                            </div>
+
+                            <div class="pt-2">
+                                <x-primary-button>Salvar integração Asaas</x-primary-button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

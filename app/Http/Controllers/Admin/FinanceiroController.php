@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\Empresa;
+use App\Models\EmpresaFinanceiroCobranca;
 use App\Models\EmpresaFinanceiroConfig;
+use App\Services\AsaasService;
+use App\Services\FinanceiroChargeService;
 use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use RuntimeException;
 
 class FinanceiroController extends Controller
 {
@@ -77,7 +82,7 @@ class FinanceiroController extends Controller
         ]);
     }
 
-    public function show(Empresa $empresa): View
+    public function show(Empresa $empresa, AsaasService $asaas, FinanceiroChargeService $financeiroChargeService): View
     {
         [$isAdmin, $isRevenda, $isClienteFinal] = $this->resolveProfileFlags();
 
@@ -88,14 +93,25 @@ class FinanceiroController extends Controller
             [
                 'valor_pagar_unitario' => 0,
                 'valor_receber_unitario' => 0,
+                'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+                'cobranca_automatica_ativa' => false,
+                'asaas_integration_ativa' => true,
+                'bloquear_tv_inadimplencia' => false,
+                'exibir_qr_code_tv_bloqueada' => false,
+                'asaas_customer_id' => null,
             ]
         );
 
         $isEmpresaRevenda = (int) $empresa->nivel_acesso === Empresa::NIVEL_REVENDA;
         $quantidadeDispositivos = $isEmpresaRevenda
             ? $this->countDevicesByRevenda((int) $empresa->id)
-            : (int) Device::query()->where('empresa_id', $empresa->id)->count();
+            : $this->countActiveDevicesForEmpresa((int) $empresa->id);
         $valorUnitario = (float) ($config->valor_receber_unitario ?? 0);
+        $cobrancas = EmpresaFinanceiroCobranca::query()
+            ->where('empresa_id', $empresa->id)
+            ->latest('vencimento')
+            ->latest('id')
+            ->get();
 
         return view('admin.financeiro.show', [
             'empresa' => $empresa,
@@ -107,6 +123,13 @@ class FinanceiroController extends Controller
             'isRevenda' => $isRevenda,
             'isClienteFinal' => $isClienteFinal,
             'isEmpresaRevenda' => $isEmpresaRevenda,
+            'cobrancas' => $cobrancas,
+            'cobrancaAberta' => $cobrancas->first(fn (EmpresaFinanceiroCobranca $cobranca) => $cobranca->isAwaitingPayment()),
+            'canCreatePixCharge' => $this->canManageEmpresaCobranca($empresa, $isAdmin, $isRevenda),
+            'asaasConfigured' => $asaas->isConfigured($empresa),
+            'billingIntervalOptions' => EmpresaFinanceiroConfig::billingIntervalOptions(),
+            'billingIntervalLabel' => $config->billingIntervalLabel(),
+            'suggestedChargeDueDate' => $financeiroChargeService->resolveSuggestedChargeDueDate($empresa, $config)->format('Y-m-d'),
         ]);
     }
 
@@ -117,27 +140,31 @@ class FinanceiroController extends Controller
         $this->authorizeEmpresaFinanceiroAccess($empresa, $isAdmin, $isRevenda, $isClienteFinal);
 
         abort_unless($isAdmin || $isRevenda, 403, 'Sem permissão para alterar valores financeiros.');
-
-        if ($isAdmin) {
-            $validated = $request->validate([
-                'valor_receber_unitario' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
-                'data_vencimento' => ['required', 'date'],
-                'data_aviso' => ['required', 'date'],
-                'data_bloqueio' => ['required', 'date', 'after_or_equal:data_aviso'],
-            ]);
-        } else {
-            $validated = $request->validate([
-                'valor_receber_unitario' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
-                'data_vencimento' => ['required', 'date'],
-                'data_aviso' => ['required', 'date'],
-                'data_bloqueio' => ['required', 'date', 'after_or_equal:data_aviso'],
-            ]);
+        if ($isAdmin && (int) $empresa->nivel_acesso === Empresa::NIVEL_CLIENTE_FINAL && $empresa->revenda_id !== null) {
+            abort(403, 'Admin pode visualizar, mas a configuracao deste cliente e gerida pela revenda vinculada.');
         }
+
+        $validated = $request->validate([
+            'valor_receber_unitario' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
+            'data_vencimento' => ['required', 'date'],
+            'data_aviso' => ['required', 'date'],
+            'data_bloqueio' => ['required', 'date', 'after_or_equal:data_aviso'],
+            'intervalo_cobranca_dias' => ['required', 'integer', Rule::in(array_keys(EmpresaFinanceiroConfig::billingIntervalOptions()))],
+            'cobranca_automatica_ativa' => ['nullable', 'boolean'],
+            'asaas_integration_ativa' => ['nullable', 'boolean'],
+            'bloquear_tv_inadimplencia' => ['nullable', 'boolean'],
+            'exibir_qr_code_tv_bloqueada' => ['nullable', 'boolean'],
+        ]);
 
         $config = EmpresaFinanceiroConfig::query()->firstOrCreate(
             ['empresa_id' => $empresa->id],
             [
                 'valor_receber_unitario' => 0,
+                'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+                'cobranca_automatica_ativa' => false,
+                'asaas_integration_ativa' => true,
+                'bloquear_tv_inadimplencia' => false,
+                'exibir_qr_code_tv_bloqueada' => false,
             ]
         );
 
@@ -146,9 +173,93 @@ class FinanceiroController extends Controller
         $config->data_vencimento = $validated['data_vencimento'];
         $config->data_aviso = $validated['data_aviso'];
         $config->data_bloqueio = $validated['data_bloqueio'];
+        $config->intervalo_cobranca_dias = (int) $validated['intervalo_cobranca_dias'];
+        $config->cobranca_automatica_ativa = $request->boolean('cobranca_automatica_ativa');
+        $config->asaas_integration_ativa = $request->boolean('asaas_integration_ativa');
+        $config->bloquear_tv_inadimplencia = $request->boolean('bloquear_tv_inadimplencia');
+        $config->exibir_qr_code_tv_bloqueada = $request->boolean('exibir_qr_code_tv_bloqueada');
         $config->save();
 
         return redirect()->route('admin.financeiro.show', $empresa)->with('success', 'Valores financeiros atualizados com sucesso.');
+    }
+
+    public function storePixCharge(Request $request, Empresa $empresa, AsaasService $asaas, FinanceiroChargeService $financeiroChargeService): RedirectResponse
+    {
+        [$isAdmin, $isRevenda, $isClienteFinal] = $this->resolveProfileFlags();
+        $this->authorizeEmpresaFinanceiroAccess($empresa, $isAdmin, $isRevenda, $isClienteFinal);
+
+        abort_unless($this->canManageEmpresaCobranca($empresa, $isAdmin, $isRevenda), 403, 'Sem permissao para gerar cobranca PIX para esta empresa.');
+        abort_unless((int) $empresa->nivel_acesso === Empresa::NIVEL_CLIENTE_FINAL, 422, 'A cobranca PIX inicial esta disponivel apenas para cliente final.');
+
+        $validated = $request->validate([
+            'due_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'description' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        try {
+            $result = $financeiroChargeService->createPixChargeForEmpresa(
+                $empresa,
+                $asaas,
+                $validated['description'] ?? null,
+                $validated['due_date'] ?? null,
+            );
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->route('admin.financeiro.show', $empresa)
+                ->withErrors(['asaas' => $exception->getMessage()]);
+        }
+
+        if ($result['status'] === 'processing') {
+            return redirect()
+                ->route('admin.financeiro.show', $empresa)
+                ->with('success', 'Ja existe uma cobranca PIX em processamento. Aguarde alguns instantes antes de tentar novamente.');
+        }
+
+        if ($result['status'] === 'existing') {
+            $existingCharge = $result['charge'];
+
+            if (! $existingCharge->gateway_payment_id) {
+                return redirect()
+                    ->route('admin.financeiro.show', $empresa)
+                    ->with('success', 'Ja existe uma cobranca PIX em processamento. Aguarde alguns instantes antes de tentar novamente.');
+            }
+
+            try {
+                $asaas->syncCharge($existingCharge);
+            } catch (RuntimeException $exception) {
+                return redirect()
+                    ->route('admin.financeiro.show', $empresa)
+                    ->withErrors(['asaas' => $exception->getMessage()]);
+            }
+
+            return redirect()
+                ->route('admin.financeiro.show', $empresa)
+                ->with('success', 'Ja existe uma cobranca PIX em aberto. O status foi atualizado.');
+        }
+
+        return redirect()->route('admin.financeiro.show', $empresa)->with('success', 'Cobranca PIX gerada com sucesso.');
+    }
+
+    public function syncCharge(EmpresaFinanceiroCobranca $cobranca, AsaasService $asaas): RedirectResponse
+    {
+        [$isAdmin, $isRevenda, $isClienteFinal] = $this->resolveProfileFlags();
+        $this->authorizeEmpresaFinanceiroAccess($cobranca->empresa, $isAdmin, $isRevenda, $isClienteFinal);
+
+        if (! optional($cobranca->empresa->financeiroConfig)->asaas_integration_ativa) {
+            return redirect()
+                ->route('admin.financeiro.show', $cobranca->empresa)
+                ->withErrors(['asaas' => 'A integracao com o Asaas nao esta ativada para esta empresa.']);
+        }
+
+        try {
+            $asaas->syncCharge($cobranca);
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->route('admin.financeiro.show', $cobranca->empresa)
+                ->withErrors(['asaas' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('admin.financeiro.show', $cobranca->empresa)->with('success', 'Status da cobranca atualizado.');
     }
 
     private function resolveProfileFlags(): array
@@ -174,10 +285,6 @@ class FinanceiroController extends Controller
         $empresaUsuario = $user?->empresa;
 
         if ($isAdmin) {
-            // Admin recebe de revendas e de clientes diretos (sem revenda).
-            if ($isEmpresaClienteFinal) {
-                abort_unless($empresa->revenda_id === null, 403, 'Admin recebe da revenda quando o cliente for vinculado.');
-            }
             return;
         }
 
@@ -203,11 +310,7 @@ class FinanceiroController extends Controller
 
         $clienteIds = $clientes->pluck('id')->all();
         $configs = EmpresaFinanceiroConfig::query()->whereIn('empresa_id', $clienteIds)->get()->keyBy('empresa_id');
-        $devices = Device::query()
-            ->selectRaw('empresa_id, COUNT(*) as total')
-            ->whereIn('empresa_id', $clienteIds)
-            ->groupBy('empresa_id')
-            ->pluck('total', 'empresa_id');
+        $devices = $this->countActiveDevicesForEmpresas($clienteIds);
 
         return $clientes->map(function (Empresa $cliente) use ($configs, $devices) {
             $qtd = (int) ($devices[$cliente->id] ?? 0);
@@ -233,6 +336,7 @@ class FinanceiroController extends Controller
 
         $devicesPorRevenda = Device::query()
             ->join('empresa as clientes', 'clientes.id', '=', 'devices.empresa_id')
+            ->where('devices.ativo', true)
             ->where('clientes.nivel_acesso', Empresa::NIVEL_CLIENTE_FINAL)
             ->whereNotNull('clientes.revenda_id')
             ->groupBy('clientes.revenda_id')
@@ -261,11 +365,7 @@ class FinanceiroController extends Controller
 
         $clienteIds = $clientes->pluck('id')->all();
         $configs = EmpresaFinanceiroConfig::query()->whereIn('empresa_id', $clienteIds)->get()->keyBy('empresa_id');
-        $devices = Device::query()
-            ->selectRaw('empresa_id, COUNT(*) as total')
-            ->whereIn('empresa_id', $clienteIds)
-            ->groupBy('empresa_id')
-            ->pluck('total', 'empresa_id');
+        $devices = $this->countActiveDevicesForEmpresas($clienteIds);
 
         return $clientes->map(function (Empresa $cliente) use ($configs, $devices) {
             $qtd = (int) ($devices[$cliente->id] ?? 0);
@@ -286,7 +386,7 @@ class FinanceiroController extends Controller
 
         $empresa = Empresa::query()->findOrFail($empresaId, ['id', 'nome', 'cnpj_cpf', 'nivel_acesso']);
         $config = EmpresaFinanceiroConfig::query()->where('empresa_id', $empresa->id)->first();
-        $qtd = (int) Device::query()->where('empresa_id', $empresa->id)->count();
+        $qtd = $this->countActiveDevicesForEmpresa((int) $empresa->id);
         $unit = (float) ($config?->valor_receber_unitario ?? 0);
 
         return collect([
@@ -317,11 +417,7 @@ class FinanceiroController extends Controller
             ->get()
             ->keyBy('empresa_id');
 
-        $devicesClientes = Device::query()
-            ->selectRaw('empresa_id, COUNT(*) as total')
-            ->whereIn('empresa_id', $clienteIds)
-            ->groupBy('empresa_id')
-            ->pluck('total', 'empresa_id');
+        $devicesClientes = $this->countActiveDevicesForEmpresas($clienteIds);
 
         $totalReceberClientes = 0.0;
         foreach ($clienteIds as $clienteId) {
@@ -342,8 +438,48 @@ class FinanceiroController extends Controller
     {
         return (int) Device::query()
             ->join('empresa as clientes', 'clientes.id', '=', 'devices.empresa_id')
+            ->where('devices.ativo', true)
             ->where('clientes.nivel_acesso', Empresa::NIVEL_CLIENTE_FINAL)
             ->where('clientes.revenda_id', $revendaId)
             ->count('devices.id');
+    }
+
+    private function countActiveDevicesForEmpresa(int $empresaId): int
+    {
+        return (int) Device::query()
+            ->where('empresa_id', $empresaId)
+            ->where('ativo', true)
+            ->count();
+    }
+
+    private function countActiveDevicesForEmpresas(array $empresaIds)
+    {
+        if ($empresaIds === []) {
+            return collect();
+        }
+
+        return Device::query()
+            ->selectRaw('empresa_id, COUNT(*) as total')
+            ->whereIn('empresa_id', $empresaIds)
+            ->where('ativo', true)
+            ->groupBy('empresa_id')
+            ->pluck('total', 'empresa_id');
+    }
+
+    private function canManageEmpresaCobranca(Empresa $empresa, bool $isAdmin, bool $isRevenda): bool
+    {
+        if ((int) $empresa->nivel_acesso !== Empresa::NIVEL_CLIENTE_FINAL) {
+            return false;
+        }
+
+        if ($isRevenda) {
+            return (int) $empresa->revenda_id === (int) (Auth::user()?->empresa?->id ?? 0);
+        }
+
+        if ($isAdmin) {
+            return $empresa->revenda_id === null;
+        }
+
+        return false;
     }
 }
