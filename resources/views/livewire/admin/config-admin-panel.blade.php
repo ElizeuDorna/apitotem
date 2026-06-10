@@ -262,7 +262,7 @@
                         <p class="mt-2">O sistema ja esta pronto para receber os eventos automaticamente, mas voce ainda precisa criar o webhook na conta do Asaas apontando para a URL publica abaixo.</p>
                         <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-900">
                             <p><strong>URL do webhook:</strong> {{ route('asaas.webhook.receive') }}</p>
-                            <p class="mt-1"><strong>Token de autenticacao:</strong> use o mesmo token salvo neste formulario.</p>
+                            <p class="mt-1"><strong>Token de autenticacao:</strong> use aqui o mesmo valor salvo no campo Token de autenticacao do webhook.</p>
                             <p class="mt-1"><strong>Eventos recomendados:</strong> PAYMENT_RECEIVED, PAYMENT_CONFIRMED, PAYMENT_OVERDUE, PAYMENT_UPDATED, PAYMENT_DELETED e PAYMENT_RESTORED.</p>
                         </div>
                         <p class="mt-3 text-xs text-emerald-800">Sem esse cadastro no portal do Asaas, o sistema ainda pode sincronizar por rotina agendada, mas o retorno do pagamento nao sera imediato.</p>
@@ -279,23 +279,23 @@
 
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label for="asaasBaseUrl" class="mb-1 block text-sm font-semibold">Base URL do Asaas</label>
+                                <label for="asaasBaseUrl" class="mb-1 block text-sm font-semibold">URL base da API do Asaas</label>
                                 <input id="asaasBaseUrl" name="asaasBaseUrl" type="url" value="{{ old('asaasBaseUrl', $asaasConfig->asaasBaseUrl ?? config('services.asaas.base_url')) }}" class="w-full rounded border px-3 py-2 text-sm">
-                                <p class="mt-1 text-xs text-slate-500">Exemplo: https://api.asaas.com/v3</p>
+                                <p class="mt-1 text-xs text-slate-500">Use a URL da API do ambiente correto. Exemplo producao: https://api.asaas.com/v3</p>
                                 @error('asaasBaseUrl')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                             </div>
                             <div>
-                                <label for="asaasWebhookToken" class="mb-1 block text-sm font-semibold">Token do Webhook</label>
+                                <label for="asaasWebhookToken" class="mb-1 block text-sm font-semibold">Token de autenticacao do webhook</label>
                                 <input id="asaasWebhookToken" name="asaasWebhookToken" type="text" value="{{ old('asaasWebhookToken', $asaasConfig->asaasWebhookToken ?? '') }}" class="w-full rounded border px-3 py-2 text-sm">
-                                <p class="mt-1 text-xs text-slate-500">Usado para validar os eventos enviados pelo Asaas para esta conta.</p>
+                                <p class="mt-1 text-xs text-slate-500">Esse valor deve ser o mesmo informado no campo Token de autenticacao ao cadastrar o webhook no portal do Asaas. Nao use aqui a chave de API.</p>
                                 @error('asaasWebhookToken')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                             </div>
                         </div>
 
                         <div>
-                            <label for="asaasApiKey" class="mb-1 block text-sm font-semibold">API Key do Asaas</label>
+                            <label for="asaasApiKey" class="mb-1 block text-sm font-semibold">Chave de API do Asaas</label>
                             <textarea id="asaasApiKey" name="asaasApiKey" rows="3" class="w-full rounded border px-3 py-2 text-sm">{{ old('asaasApiKey', $asaasConfig->asaasApiKey ?? '') }}</textarea>
-                            <p class="mt-1 text-xs text-slate-500">Se deixar em branco, o sistema continua usando o fallback atual do ambiente.</p>
+                            <p class="mt-1 text-xs text-slate-500">Cole aqui a chave gerada na area Chaves de API do Asaas. Nao use aqui o token do webhook. Se deixar em branco, o sistema continua usando o fallback atual do ambiente.</p>
                             @error('asaasApiKey')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
 
