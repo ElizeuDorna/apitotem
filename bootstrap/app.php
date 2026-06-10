@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $trustedProxies = env('TRUSTED_PROXIES');
 
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/asaas',
+            'webhooks/whatsapp',
+        ]);
+
         if (! is_null($trustedProxies) && $trustedProxies !== '') {
             $middleware->trustProxies(
                 at: $trustedProxies === '*' ? '*' : array_map('trim', explode(',', (string) $trustedProxies)),
