@@ -17,53 +17,26 @@
                         <div class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ session('warning') }}</div>
                     @endif
 
-                    <div class="mb-6 rounded-3xl border border-slate-200/70 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900 p-6 text-white">
-                        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                            <div class="max-w-2xl">
-                                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100/80">Painel Administrativo</p>
-                                <h3 class="mt-2 text-2xl font-semibold text-white">Organize as configuracoes por area</h3>
-                                <p class="mt-2 text-sm text-slate-200">
-                                    Cada bloco agora fica separado por contexto, com atalhos no topo para facilitar navegacao e manutencao.
-                                </p>
+                    <div class="mb-6 rounded-3xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-sm">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Navegacao da Tela</p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-900">Acesse cada grupo de configuracoes</h3>
+                                <p class="mt-1 text-sm text-slate-600">Os atalhos abaixo levam direto para cada bloco principal da pagina.</p>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                <a href="#tema-painel" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15">Tema</a>
+                            <nav class="flex flex-wrap gap-2 text-sm">
+                                <a href="#tema-painel" class="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 font-medium text-cyan-800 transition hover:bg-cyan-100">Tema do painel</a>
                                 @if (auth()->user()?->isDefaultAdmin())
-                                    <a href="#upload-apk" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15">APK</a>
+                                    <a href="#upload-apk" class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 font-medium text-sky-800 transition hover:bg-sky-100">Upload APK</a>
                                 @endif
-                                <a href="#identidade-painel" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15">Identidade</a>
-                                <a href="#integracao-asaas" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15">Asaas</a>
-                            </div>
+                                <a href="#identidade-painel" class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-4 py-2 font-medium text-violet-800 transition hover:bg-violet-100">Identidade visual</a>
+                                <a href="#integracao-asaas" class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 font-medium text-emerald-800 transition hover:bg-emerald-100">Integracao Asaas</a>
+                            </nav>
                         </div>
                     </div>
 
-                    <div class="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-                        <aside class="h-fit rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm lg:sticky lg:top-24">
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Menu da Tela</p>
-                            <nav class="mt-4 space-y-2 text-sm">
-                                <a href="#tema-painel" class="flex items-center justify-between rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 font-medium text-cyan-900 transition hover:bg-cyan-100">
-                                    <span>Tema do painel</span>
-                                    <span class="text-xs text-cyan-700">01</span>
-                                </a>
-                                @if (auth()->user()?->isDefaultAdmin())
-                                    <a href="#upload-apk" class="flex items-center justify-between rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 font-medium text-sky-900 transition hover:bg-sky-100">
-                                        <span>Upload APK</span>
-                                        <span class="text-xs text-sky-700">02</span>
-                                    </a>
-                                @endif
-                                <a href="#identidade-painel" class="flex items-center justify-between rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 font-medium text-violet-900 transition hover:bg-violet-100">
-                                    <span>Identidade visual</span>
-                                    <span class="text-xs text-violet-700">03</span>
-                                </a>
-                                <a href="#integracao-asaas" class="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 font-medium text-emerald-900 transition hover:bg-emerald-100">
-                                    <span>Integracao Asaas</span>
-                                    <span class="text-xs text-emerald-700">04</span>
-                                </a>
-                            </nav>
-                        </aside>
-
-                        <div class="space-y-6">
+                    <div class="space-y-6">
 
                     <div id="tema-painel" class="scroll-mt-24 rounded-3xl border border-cyan-200/80 bg-gradient-to-br from-cyan-50 via-white to-sky-100 p-6 shadow-sm">
                         <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -317,8 +290,6 @@
                                 <x-primary-button>Salvar integração Asaas</x-primary-button>
                             </div>
                         </form>
-                    </div>
-                        </div>
                     </div>
                 </div>
             </div>
