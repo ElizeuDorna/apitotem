@@ -41,7 +41,9 @@ class AsaasService
             'externalReference' => $cobranca->external_reference,
         ], [], $credentials);
 
-        $qrCode = $this->fetchPixQrCode((string) Arr::get($payment, 'id'), true, $credentials);
+        // The payment can be created before Asaas makes the PIX QR payload available.
+        // In that case we still persist the charge and let sync/webhook fill the QR fields later.
+        $qrCode = $this->fetchPixQrCode((string) Arr::get($payment, 'id'), false, $credentials);
 
         return $this->fillChargeFromGateway($cobranca, $payment, $qrCode);
     }
