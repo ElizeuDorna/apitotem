@@ -257,6 +257,17 @@
                         @endif
                     </p>
 
+                    <div class="mb-4 rounded-2xl border border-emerald-200 bg-white/85 p-4 text-sm text-emerald-950 shadow-sm">
+                        <p class="font-semibold text-emerald-900">Importante: o webhook precisa ser cadastrado no portal do Asaas.</p>
+                        <p class="mt-2">O sistema ja esta pronto para receber os eventos automaticamente, mas voce ainda precisa criar o webhook na conta do Asaas apontando para a URL publica abaixo.</p>
+                        <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-900">
+                            <p><strong>URL do webhook:</strong> {{ route('asaas.webhook.receive') }}</p>
+                            <p class="mt-1"><strong>Token de autenticacao:</strong> use o mesmo token salvo neste formulario.</p>
+                            <p class="mt-1"><strong>Eventos recomendados:</strong> PAYMENT_RECEIVED, PAYMENT_CONFIRMED, PAYMENT_OVERDUE, PAYMENT_UPDATED, PAYMENT_DELETED e PAYMENT_RESTORED.</p>
+                        </div>
+                        <p class="mt-3 text-xs text-emerald-800">Sem esse cadastro no portal do Asaas, o sistema ainda pode sincronizar por rotina agendada, mas o retorno do pagamento nao sera imediato.</p>
+                    </div>
+
                     <form method="POST" action="{{ route('admin.configadmin.update') }}" class="space-y-4 rounded-2xl border border-white/70 bg-gradient-to-br from-white to-emerald-50 p-5 shadow-sm backdrop-blur-sm">
                         @csrf
 
@@ -270,7 +281,7 @@
                             <div>
                                 <label for="asaasBaseUrl" class="mb-1 block text-sm font-semibold">Base URL do Asaas</label>
                                 <input id="asaasBaseUrl" name="asaasBaseUrl" type="url" value="{{ old('asaasBaseUrl', $asaasConfig->asaasBaseUrl ?? config('services.asaas.base_url')) }}" class="w-full rounded border px-3 py-2 text-sm">
-                                <p class="mt-1 text-xs text-slate-500">Exemplo: https://api-sandbox.asaas.com/v3</p>
+                                <p class="mt-1 text-xs text-slate-500">Exemplo: https://api.asaas.com/v3</p>
                                 @error('asaasBaseUrl')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                             </div>
                             <div>
