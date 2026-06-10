@@ -12,7 +12,7 @@
             </a>
         </div>
 
-        <div lang="pt-BR" translate="no" class="max-w-5xl mx-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div lang="pt-BR" translate="no" class="max-w-5xl mx-auto rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-cyan-50 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
             @php
                 $canEditConfig = ! ($isAdmin && (int) $empresa->nivel_acesso === \App\Models\Empresa::NIVEL_CLIENTE_FINAL && $empresa->revenda_id !== null);
                 $showPixSection = ! ($isEmpresaRevenda ?? false);
@@ -33,18 +33,18 @@
             @endif
 
             <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Empresa</p>
-                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ $empresa->nome }}</p>
-                    <p class="text-xs text-slate-600">{{ $empresa->cnpj_cpf }}</p>
+                <div class="rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-500 to-sky-600 p-5 text-white shadow-lg shadow-cyan-900/10">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-50/80">Empresa</p>
+                    <p class="mt-2 text-base font-semibold text-white">{{ $empresa->nome }}</p>
+                    <p class="text-xs text-cyan-50/80">{{ $empresa->cnpj_cpf }}</p>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Dispositivos Ativos</p>
-                    <p class="mt-1 text-2xl font-bold text-slate-900">{{ $quantidadeDispositivos }}</p>
+                <div class="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-400 to-teal-600 p-5 text-white shadow-lg shadow-emerald-900/10">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">Dispositivos Ativos</p>
+                    <p class="mt-2 text-3xl font-bold text-white">{{ $quantidadeDispositivos }}</p>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Totais Atuais</p>
-                    <p class="mt-1 text-sm text-slate-700">
+                <div class="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-300 via-orange-300 to-rose-400 p-5 text-slate-950 shadow-lg shadow-orange-900/10">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-800/70">Totais Atuais</p>
+                    <p class="mt-2 text-sm text-slate-900">
                         @if ($isClienteFinal)
                             <span class="whitespace-nowrap [hyphens:none] [overflow-wrap:normal]">Conta a Pagar</span>
                         @elseif ($isRevenda && !($isEmpresaRevenda ?? false))
@@ -60,32 +60,32 @@
             </div>
 
             @if ($isClienteFinal)
-                <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <div class="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-900">Resumo Financeiro</h3>
                     <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <p class="text-xs text-slate-500">Data-base do Ciclo</p>
+                        <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">Data-base do Ciclo</p>
                             <p class="text-sm font-semibold text-slate-900">{{ $config->data_vencimento ? $config->data_vencimento->format('d/m/Y') : '-' }}</p>
                             <p class="mt-1 text-xs text-slate-500">Usada como referência para sugerir a próxima cobrança recorrente.</p>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-500">Data de Aviso</p>
+                        <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-cyan-600">Data de Aviso</p>
                             <p class="text-sm font-semibold text-slate-900">{{ $config->data_aviso ? $config->data_aviso->format('d/m/Y') : '-' }}</p>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-500">Data de Bloqueio</p>
+                        <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-rose-500">Data de Bloqueio</p>
                             <p class="text-sm font-semibold text-slate-900">{{ $config->data_bloqueio ? $config->data_bloqueio->format('d/m/Y') : '-' }}</p>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-500">Intervalo de Cobrança</p>
+                        <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-violet-500">Intervalo de Cobrança</p>
                             <p class="text-sm font-semibold text-slate-900">{{ $billingIntervalLabel }}</p>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-500">Cobrança Automática</p>
+                        <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">Cobrança Automática</p>
                             <p class="text-sm font-semibold text-slate-900">{{ $config->automaticBillingStatusLabel() }}</p>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-500">
+                        <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">
                                 @if($isClienteFinal)
                                     Valor Unitário a Pagar
                                 @elseif($isRevenda)
@@ -127,7 +127,7 @@
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    <div class="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-fuchsia-50 to-sky-50 p-5 text-sm text-slate-700 shadow-sm">
                         <p class="font-semibold text-slate-900">Como o ciclo funciona</p>
                         <p class="mt-2">A <span class="font-medium">data-base do ciclo</span> serve de referência para calcular a próxima cobrança. O <span class="font-medium">vencimento da cobrança</span> é a data real da fatura que será gerada.</p>
                         <p class="mt-2">Exemplos: mensal soma 30 dias, trimestral soma 90 dias, semestral soma 180 dias e anual soma 365 dias a partir da última cobrança gerada ou da data-base configurada.</p>
@@ -184,7 +184,7 @@
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                    <div class="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 via-cyan-50 to-blue-50 p-5 text-sm text-sky-900 shadow-sm">
                         <p class="font-semibold text-sky-950">Como as credenciais do Asaas são escolhidas</p>
                         <p class="mt-2">Cliente final vinculado diretamente ao admin usa as credenciais globais salvas em Config Admin.</p>
                         <p class="mt-2">Cliente final vinculado a uma revenda usa as credenciais da própria revenda em Config Admin.</p>
@@ -198,7 +198,7 @@
                     </div>
                 </form>
             @else
-                <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm">
                     <h3 class="text-lg font-semibold text-amber-950">Modo somente leitura</h3>
                     <p class="mt-2 text-sm text-amber-900">
                         Este cliente está vinculado a uma revenda. O admin pode acompanhar as cobranças, mas a configuração e a emissão do PIX ficam com a revenda responsável.
@@ -233,7 +233,7 @@
             @endif
 
             @if ($showPixSection)
-                <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div class="mt-6 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-100 via-white to-blue-50 p-6 shadow-sm">
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <h3 class="text-lg font-semibold text-slate-900">Cobranças PIX</h3>
@@ -241,7 +241,7 @@
                         </div>
 
                         @if ($canCreatePixCharge)
-                            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-4">
+                            <div class="w-full max-w-xl rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-white via-emerald-50 to-teal-50 p-5 shadow-sm">
                                 @if (! $asaasConfigured)
                                     <p class="text-sm text-red-700">Defina <span class="font-semibold">ASAAS_API_KEY</span> no ambiente antes de gerar cobranças PIX.</p>
                                 @elseif ($cobrancaAberta)
@@ -280,7 +280,7 @@
                     </div>
 
                     @if ($cobrancas->isEmpty())
-                        <div class="mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-600">
+                        <div class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white/80 px-4 py-5 text-sm text-slate-600">
                             Nenhuma cobrança PIX foi gerada ainda para esta empresa.
                         </div>
                     @else
@@ -295,7 +295,7 @@
                                     }
                                 @endphp
 
-                                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div class="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-5 shadow-sm">
                                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                         <div>
                                             <div class="flex flex-wrap items-center gap-2">
@@ -310,7 +310,7 @@
                                         <div class="flex flex-wrap items-center gap-2">
                                             <form method="POST" action="{{ route('admin.financeiro.charges.sync', $cobranca) }}">
                                                 @csrf
-                                                <button type="submit" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                                <button type="submit" class="inline-flex items-center rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white">
                                                     Atualizar status
                                                 </button>
                                             </form>
@@ -324,7 +324,7 @@
                                     </div>
 
                                     <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr]">
-                                        <div class="flex min-h-[220px] items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                        <div class="flex min-h-[220px] items-center justify-center rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-cyan-50 p-4">
                                             @if ($qrCodeSrc)
                                                 <img src="{{ $qrCodeSrc }}" alt="QR Code PIX" class="h-44 w-44 rounded-lg border border-slate-200 bg-white p-2">
                                             @else
@@ -334,22 +334,22 @@
                                         <div class="space-y-3">
                                             <div>
                                                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Pix Copia e Cola</p>
-                                                <textarea readonly rows="4" class="mt-1 w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">{{ $cobranca->pix_copy_paste }}</textarea>
+                                                <textarea readonly rows="4" class="mt-1 w-full rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm text-slate-700">{{ $cobranca->pix_copy_paste }}</textarea>
                                             </div>
                                             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                                <div>
+                                                <div class="rounded-xl border border-white/70 bg-white/70 p-3">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Status Asaas</p>
                                                     <p class="mt-1 text-sm font-semibold text-slate-900">{{ $cobranca->status }}</p>
                                                 </div>
-                                                <div>
+                                                <div class="rounded-xl border border-white/70 bg-white/70 p-3">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Última sincronização</p>
                                                     <p class="mt-1 text-sm font-semibold text-slate-900">{{ optional($cobranca->last_gateway_sync_at)->format('d/m/Y H:i') ?: '-' }}</p>
                                                 </div>
-                                                <div>
+                                                <div class="rounded-xl border border-white/70 bg-white/70 p-3">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Pagamento confirmado em</p>
                                                     <p class="mt-1 text-sm font-semibold text-slate-900">{{ optional($cobranca->paid_at)->format('d/m/Y H:i') ?: '-' }}</p>
                                                 </div>
-                                                <div>
+                                                <div class="rounded-xl border border-white/70 bg-white/70 p-3">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Expiração do QR Code</p>
                                                     <p class="mt-1 text-sm font-semibold text-slate-900">{{ optional($cobranca->pix_expires_at)->format('d/m/Y H:i') ?: '-' }}</p>
                                                 </div>
