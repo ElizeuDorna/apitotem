@@ -113,6 +113,19 @@ class FinanceiroController extends Controller
             ->latest('id')
             ->get();
 
+        $cobrancaAberta = $cobrancas->first(fn (EmpresaFinanceiroCobranca $cobranca) => $cobranca->isAwaitingPayment());
+
+        if ($cobrancaAberta && $cobrancaAberta->gateway_payment_id && $config->asaas_integration_ativa) {
+            try {
+                $cobrancaSincronizada = $asaas->syncCharge($cobrancaAberta);
+                $cobrancas = $cobrancas->map(fn (EmpresaFinanceiroCobranca $cobranca) => $cobranca->id === $cobrancaSincronizada->id ? $cobrancaSincronizada : $cobranca);
+            } catch (RuntimeException) {
+                // Keep the page render resilient even if the gateway sync fails.
+            }
+
+            $cobrancaAberta = $cobrancas->first(fn (EmpresaFinanceiroCobranca $cobranca) => $cobranca->isAwaitingPayment());
+        }
+
         return view('admin.financeiro.show', [
             'empresa' => $empresa,
             'config' => $config,
@@ -124,7 +137,7 @@ class FinanceiroController extends Controller
             'isClienteFinal' => $isClienteFinal,
             'isEmpresaRevenda' => $isEmpresaRevenda,
             'cobrancas' => $cobrancas,
-            'cobrancaAberta' => $cobrancas->first(fn (EmpresaFinanceiroCobranca $cobranca) => $cobranca->isAwaitingPayment()),
+            'cobrancaAberta' => $cobrancaAberta,
             'canCreatePixCharge' => $this->canManageEmpresaCobranca($empresa, $isAdmin, $isRevenda),
             'asaasConfigured' => $asaas->isConfigured($empresa),
             'billingIntervalOptions' => EmpresaFinanceiroConfig::billingIntervalOptions(),

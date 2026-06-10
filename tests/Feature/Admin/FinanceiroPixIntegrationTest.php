@@ -309,6 +309,76 @@ class FinanceiroPixIntegrationTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_financeiro_show_marks_deleted_gateway_charge_and_shows_new_pix_form(): void
+    {
+        config()->set('services.asaas.api_key', 'sandbox-key');
+        config()->set('services.asaas.base_url', 'https://api-sandbox.asaas.com/v3');
+
+        Http::fake([
+            'https://api-sandbox.asaas.com/v3/payments/pay_deleted' => Http::response([
+                'id' => 'pay_deleted',
+                'customer' => 'cus_deleted',
+                'status' => 'PENDING',
+                'billingType' => 'PIX',
+                'value' => 29.9,
+                'dueDate' => now()->addDays(3)->format('Y-m-d'),
+                'deleted' => true,
+                'externalReference' => 'fin-ref-deleted',
+            ], 200),
+        ]);
+
+        $cliente = $this->createEmpresa([
+            'nome' => 'Cliente Cobranca Excluida',
+            'cnpj_cpf' => '12345678904',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'revenda_id' => null,
+            'email' => 'cliente.deleted@example.com',
+            'fone' => '62999999998',
+        ]);
+
+        $config = EmpresaFinanceiroConfig::query()->create([
+            'empresa_id' => $cliente->id,
+            'valor_pagar_unitario' => 29.90,
+            'valor_receber_unitario' => 29.90,
+            'data_vencimento' => now()->addDays(3)->toDateString(),
+            'data_aviso' => now()->addDay()->toDateString(),
+            'data_bloqueio' => now()->addDays(5)->toDateString(),
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+        ]);
+
+        $cobranca = EmpresaFinanceiroCobranca::query()->create([
+            'empresa_id' => $cliente->id,
+            'empresa_financeiro_config_id' => $config->id,
+            'referencia' => '202606',
+            'descricao' => 'Mensalidade removida no Asaas',
+            'quantidade_dispositivos' => 1,
+            'valor_unitario' => 29.90,
+            'valor_total' => 29.90,
+            'vencimento' => now()->addDays(2)->toDateString(),
+            'status' => 'PENDING',
+            'payment_method' => 'PIX',
+            'gateway' => 'asaas',
+            'gateway_payment_id' => 'pay_deleted',
+            'external_reference' => 'fin-ref-deleted',
+        ]);
+
+        $this->createDevice($cliente, 'Token deleted', 'uuid-deleted');
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.financeiro.show', $cliente))
+            ->assertOk()
+            ->assertSee('Gerar cobrança PIX', false);
+
+        $cobranca->refresh();
+
+        $this->assertSame('DELETED', $cobranca->status);
+    }
+
     public function test_admin_can_configure_billing_interval_for_company(): void
     {
         $cliente = $this->createEmpresa([

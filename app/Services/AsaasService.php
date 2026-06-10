@@ -57,7 +57,20 @@ class AsaasService
             throw new RuntimeException('A cobranca ainda nao possui identificador no Asaas.');
         }
 
-        $payment = $this->send('get', '/payments/'.$cobranca->gateway_payment_id, [], [], $credentials);
+        try {
+            $payment = $this->send('get', '/payments/'.$cobranca->gateway_payment_id, [], [], $credentials);
+        } catch (RuntimeException $exception) {
+            if ($this->shouldMarkChargeAsDeleted($exception->getMessage())) {
+                return $this->markChargeAsDeleted($cobranca, ['error' => $exception->getMessage()]);
+            }
+
+            throw $exception;
+        }
+
+        if ((bool) Arr::get($payment, 'deleted')) {
+            return $this->markChargeAsDeleted($cobranca, $payment);
+        }
+
         $qrCode = null;
 
         if (in_array((string) Arr::get($payment, 'billingType'), ['PIX', 'UNDEFINED', 'BOLETO'], true)) {
@@ -212,6 +225,42 @@ class AsaasService
         $cobranca->save();
 
         return $cobranca->fresh();
+    }
+
+    private function markChargeAsDeleted(EmpresaFinanceiroCobranca $cobranca, array $payload = []): EmpresaFinanceiroCobranca
+    {
+        $cobranca->fill([
+            'status' => 'DELETED',
+            'paid_at' => null,
+            'last_gateway_sync_at' => now(),
+            'gateway_payload' => $payload !== [] ? $payload : $cobranca->gateway_payload,
+        ]);
+
+        $cobranca->save();
+
+        return $cobranca->fresh();
+    }
+
+    private function shouldMarkChargeAsDeleted(string $message): bool
+    {
+        $normalized = mb_strtolower(trim($message));
+
+        foreach ([
+            'cobranca nao encontrada',
+            'cobrança não encontrada',
+            'payment not found',
+            'not found',
+            'nao existe',
+            'não existe',
+            'deleted',
+            'remov',
+        ] as $needle) {
+            if (str_contains($normalized, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolvePaidAt(string $status, array $payment): ?Carbon
