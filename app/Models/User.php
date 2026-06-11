@@ -139,6 +139,37 @@ class User extends Authenticatable
         ];
     }
 
+    public static function defaultSelfServiceMenuPermissions(): array
+    {
+        return [
+            self::MENU_CADASTRO_PUBLICO,
+            self::MENU_PRODUTOS,
+            self::MENU_DEPARTAMENTOS,
+            self::MENU_GRUPOS,
+            self::MENU_CONFIG_TELA_WEB,
+            self::MENU_ORGANIZAR_LISTA,
+            self::MENU_GALERIA_NOVA,
+            self::MENU_TOKEN_API,
+            self::MENU_ATIVAR_TV,
+            self::MENU_GESTAO_TVS,
+            self::MENU_DOWNLOADS,
+        ];
+    }
+
+    public static function sanitizeMenuPermissions(?array $permissions): array
+    {
+        if (! is_array($permissions)) {
+            return [];
+        }
+
+        $allowedPermissions = array_keys(self::availableMenuPermissions());
+
+        return array_values(array_unique(array_filter(
+            $permissions,
+            fn ($permission) => is_string($permission) && in_array($permission, $allowedPermissions, true)
+        )));
+    }
+
     public function hasMenuAccess(string $menu): bool
     {
         if ($this->isDefaultAdmin()) {

@@ -9,16 +9,19 @@
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
             <livewire:admin.config-admin-panel
                 :config="$config"
+                :global-config="$globalConfig"
                 :asaas-config="$asaasConfig"
                 :panel-brand-icon-feature-ready="$panelBrandIconFeatureReady"
                 :panel-sidebar-font-feature-ready="$panelSidebarFontFeatureReady"
                 :produto-form-image-preview-feature-ready="$produtoFormImagePreviewFeatureReady"
                 :self-service-login-visibility-feature-ready="$selfServiceLoginVisibilityFeatureReady"
+                :self-service-default-permissions-feature-ready="$selfServiceDefaultPermissionsFeatureReady"
                 :asaas-config-feature-ready="$asaasConfigFeatureReady"
                 :apk-exists="$apkExists"
                 :apk-size-bytes="$apkSizeBytes"
                 :apk-last-modified="$apkLastModified"
                 :apk-download-url="$apkDownloadUrl"
+                :self-service-menu-options="$selfServiceMenuOptions"
             />
         </div>
     </div>

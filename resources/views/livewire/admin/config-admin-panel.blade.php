@@ -8,7 +8,8 @@
             <div class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ session('warning') }}</div>
         @endif
 
-        @php($showSelfServiceRegisterOnLogin = old('showSelfServiceRegisterOnLogin', (bool) ($config->showSelfServiceRegisterOnLogin ?? true)))
+        @php($showSelfServiceRegisterOnLogin = old('showSelfServiceRegisterOnLogin', (bool) ($globalConfig->showSelfServiceRegisterOnLogin ?? true)))
+        @php($selfServiceDefaultMenuPermissions = old('selfServiceDefaultMenuPermissions', $globalConfig->selfServiceDefaultMenuPermissions ?? \App\Models\User::defaultSelfServiceMenuPermissions()))
 
         <div class="mb-6 rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900 p-5 text-white shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -299,6 +300,40 @@
                                     <span class="inline-block h-5 w-5 translate-x-1 rounded-full bg-white shadow-sm transition peer-checked:translate-x-6"></span>
                                 </span>
                             </label>
+                        </div>
+
+                        <div class="rounded-2xl border border-cyan-100 bg-gradient-to-br from-white to-cyan-50 p-5 shadow-sm">
+                            <div class="mb-3 flex items-start justify-between gap-3">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-slate-800">Permissoes padrao do auto cadastro</h4>
+                                    <p class="mt-1 text-xs text-slate-500">Esses menus serao liberados automaticamente para novos usuarios criados pelo cadastro publico.</p>
+                                </div>
+                                <span class="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-cyan-800">Automatico</span>
+                            </div>
+
+                            @if (! $selfServiceDefaultPermissionsFeatureReady)
+                                <div class="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                    Recurso indisponivel neste ambiente. Execute as migrations pendentes para habilitar.
+                                </div>
+                            @endif
+
+                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                @foreach ($selfServiceMenuOptions as $menuKey => $menuLabel)
+                                    <label class="flex items-start gap-3 rounded-xl border border-cyan-100 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm {{ $selfServiceDefaultPermissionsFeatureReady ? 'cursor-pointer hover:border-cyan-200' : 'cursor-not-allowed opacity-70' }}">
+                                        <input
+                                            type="checkbox"
+                                            name="selfServiceDefaultMenuPermissions[]"
+                                            value="{{ $menuKey }}"
+                                            class="mt-0.5 rounded border-slate-300 text-cyan-600 shadow-sm focus:ring-cyan-500"
+                                            @checked(in_array($menuKey, $selfServiceDefaultMenuPermissions, true))
+                                            {{ $selfServiceDefaultPermissionsFeatureReady ? '' : 'disabled' }}
+                                        >
+                                        <span>{{ $menuLabel }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+
+                            <p class="mt-3 text-xs text-slate-500">Depois do cadastro automatico, o admin ainda pode ajustar manualmente as permissoes do usuario na tela de Permissoes de Acesso.</p>
                         </div>
 
                         <div class="pt-2">

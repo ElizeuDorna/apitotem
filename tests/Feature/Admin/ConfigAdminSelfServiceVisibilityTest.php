@@ -29,4 +29,31 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
             'showSelfServiceRegisterOnLogin' => false,
         ]);
     }
+
+    public function test_default_admin_can_define_default_permissions_for_self_service_users(): void
+    {
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.configadmin.update'), [
+            'showSelfServiceRegisterOnLogin' => '1',
+            'selfServiceDefaultMenuPermissions' => [
+                User::MENU_PRODUTOS,
+                User::MENU_GRUPOS,
+                User::MENU_TOKEN_API,
+            ],
+        ]);
+
+        $response->assertRedirect();
+
+        $config = Configuracao::query()->whereNull('empresa_id')->firstOrFail();
+
+        $this->assertSame([
+            User::MENU_PRODUTOS,
+            User::MENU_GRUPOS,
+            User::MENU_TOKEN_API,
+        ], $config->selfServiceDefaultMenuPermissions);
+    }
 }

@@ -9,6 +9,8 @@ class ConfigAdminPanel extends Component
 {
     public Configuracao $config;
 
+    public Configuracao $globalConfig;
+
     public Configuracao $asaasConfig;
 
     public bool $panelBrandIconFeatureReady = false;
@@ -18,6 +20,8 @@ class ConfigAdminPanel extends Component
     public bool $produtoFormImagePreviewFeatureReady = false;
 
     public bool $selfServiceLoginVisibilityFeatureReady = false;
+
+    public bool $selfServiceDefaultPermissionsFeatureReady = false;
 
     public bool $asaasConfigFeatureReady = false;
 
@@ -29,32 +33,40 @@ class ConfigAdminPanel extends Component
 
     public string $apkDownloadUrl = '';
 
+    public array $selfServiceMenuOptions = [];
+
     public ?string $openSection = 'cadastro-login';
 
     public function mount(
         Configuracao $config,
+        Configuracao $globalConfig,
         Configuracao $asaasConfig,
         bool $panelBrandIconFeatureReady,
         bool $panelSidebarFontFeatureReady,
         bool $produtoFormImagePreviewFeatureReady,
         bool $selfServiceLoginVisibilityFeatureReady,
+        bool $selfServiceDefaultPermissionsFeatureReady,
         bool $asaasConfigFeatureReady,
         bool $apkExists,
         ?int $apkSizeBytes,
         ?int $apkLastModified,
-        string $apkDownloadUrl
+        string $apkDownloadUrl,
+        array $selfServiceMenuOptions
     ): void {
         $this->config = $config;
+        $this->globalConfig = $globalConfig;
         $this->asaasConfig = $asaasConfig;
         $this->panelBrandIconFeatureReady = $panelBrandIconFeatureReady;
         $this->panelSidebarFontFeatureReady = $panelSidebarFontFeatureReady;
         $this->produtoFormImagePreviewFeatureReady = $produtoFormImagePreviewFeatureReady;
         $this->selfServiceLoginVisibilityFeatureReady = $selfServiceLoginVisibilityFeatureReady;
+        $this->selfServiceDefaultPermissionsFeatureReady = $selfServiceDefaultPermissionsFeatureReady;
         $this->asaasConfigFeatureReady = $asaasConfigFeatureReady;
         $this->apkExists = $apkExists;
         $this->apkSizeBytes = $apkSizeBytes;
         $this->apkLastModified = $apkLastModified;
         $this->apkDownloadUrl = $apkDownloadUrl;
+        $this->selfServiceMenuOptions = $selfServiceMenuOptions;
     }
 
     public function toggleSection(string $section): void

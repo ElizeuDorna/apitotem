@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
 
 class ConfigAdminController extends Controller
@@ -41,12 +42,15 @@ class ConfigAdminController extends Controller
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
         $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
         $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
+        $selfServiceDefaultPermissionsFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
 
         $config = $this->findOrCreateConfig($empresaId)->fresh();
+        $globalConfig = $this->findOrCreateConfig(null)->fresh();
         $asaasConfig = $this->findOrCreateConfig($asaasConfigEmpresaId)->fresh();
+        $selfServiceMenuOptions = User::availableMenuPermissions();
 
         $apkExists = Storage::disk(self::APK_DISK)->exists(self::APK_PATH);
         $apkSizeBytes = $apkExists ? (int) Storage::disk(self::APK_DISK)->size(self::APK_PATH) : null;
@@ -55,13 +59,16 @@ class ConfigAdminController extends Controller
 
         return view('admin.configadmin', compact(
             'config',
+            'globalConfig',
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
             'produtoFormImagePreviewFeatureReady',
             'selfServiceLoginVisibilityFeatureReady',
+            'selfServiceDefaultPermissionsFeatureReady',
             'asaasConfigFeatureReady',
             'asaasConfig',
             'asaasConfigEmpresaId',
+            'selfServiceMenuOptions',
             'apkExists',
             'apkSizeBytes',
             'apkLastModified',
@@ -79,6 +86,7 @@ class ConfigAdminController extends Controller
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
         $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
+        $selfServiceDefaultPermissionsFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
@@ -94,6 +102,8 @@ class ConfigAdminController extends Controller
             'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
             'produtoFormImagePreviewSize' => 'nullable|integer|min:32|max:300',
             'showSelfServiceRegisterOnLogin' => 'nullable|boolean',
+            'selfServiceDefaultMenuPermissions' => ['nullable', 'array'],
+            'selfServiceDefaultMenuPermissions.*' => ['string', Rule::in(array_keys(User::availableMenuPermissions()))],
             'metaAppId' => 'nullable|string|max:120',
             'metaRedirectUri' => 'nullable|url|max:500',
             'asaasBaseUrl' => 'nullable|url|max:255',
@@ -102,6 +112,7 @@ class ConfigAdminController extends Controller
         ]);
 
         $config = $this->findOrCreateConfig($empresaId);
+    $globalConfig = $this->findOrCreateConfig(null);
         $asaasConfig = $this->findOrCreateConfig($this->resolveAsaasConfigEmpresaIdOrNull());
 
         $payload = [];
@@ -109,7 +120,11 @@ class ConfigAdminController extends Controller
         $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
         $warningMessages = [];
 
-        if (($request->filled('metaAppId') || $request->filled('metaRedirectUri')) && ! $currentUser?->isDefaultAdmin()) {
+        if (($request->filled('metaAppId')
+            || $request->filled('metaRedirectUri')
+            || $request->has('showSelfServiceRegisterOnLogin')
+            || $request->has('selfServiceDefaultMenuPermissions'))
+            && ! $currentUser?->isDefaultAdmin()) {
             abort(403);
         }
 
@@ -128,23 +143,28 @@ class ConfigAdminController extends Controller
             $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
         }
 
-        if ($selfServiceLoginVisibilityFeatureReady) {
-            $payload['showSelfServiceRegisterOnLogin'] = $request->boolean('showSelfServiceRegisterOnLogin');
+        if ($selfServiceLoginVisibilityFeatureReady && $currentUser?->isDefaultAdmin()) {
+            $globalConfig->showSelfServiceRegisterOnLogin = $request->boolean('showSelfServiceRegisterOnLogin');
         } elseif ($request->has('showSelfServiceRegisterOnLogin')) {
             $warningMessages[] = 'Controle do link de cadastro no login indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
+        }
+
+        if ($selfServiceDefaultPermissionsFeatureReady && $currentUser?->isDefaultAdmin()) {
+            $globalConfig->selfServiceDefaultMenuPermissions = User::sanitizeMenuPermissions(
+                $validated['selfServiceDefaultMenuPermissions'] ?? []
+            );
+        } elseif ($request->has('selfServiceDefaultMenuPermissions')) {
+            $warningMessages[] = 'Configuracao das permissoes padrao do auto cadastro indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
         if ($currentUser?->isDefaultAdmin()) {
             $metaAppId = trim((string) ($validated['metaAppId'] ?? ''));
             $metaRedirectUri = trim((string) ($validated['metaRedirectUri'] ?? ''));
 
-            if ($metaAppId !== '' || $metaRedirectUri !== '') {
-                $globalConfig = $this->findOrCreateConfig(null);
-                $globalConfig->fill([
-                    'metaAppId' => $metaAppId !== '' ? $metaAppId : null,
-                    'metaRedirectUri' => $metaRedirectUri !== '' ? $metaRedirectUri : null,
-                ])->save();
-            }
+            $globalConfig->fill([
+                'metaAppId' => $metaAppId !== '' ? $metaAppId : null,
+                'metaRedirectUri' => $metaRedirectUri !== '' ? $metaRedirectUri : null,
+            ]);
         }
 
         if ($asaasConfigFeatureReady) {
@@ -175,6 +195,10 @@ class ConfigAdminController extends Controller
 
         if ($payload !== []) {
             $config->fill($payload)->save();
+        }
+
+        if ($currentUser?->isDefaultAdmin()) {
+            $globalConfig->save();
         }
 
         if ($asaasPayload !== []) {

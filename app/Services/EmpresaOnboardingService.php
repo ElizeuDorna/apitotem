@@ -7,11 +7,13 @@ use App\Models\EmpresaFinanceiroConfig;
 use App\Models\EmpresaFinanceiroCobranca;
 use App\Models\EmpresaSubscription;
 use App\Models\EmpresaSubscriptionPlan;
+use App\Models\Configuracao;
 use App\Models\User;
 use App\Rules\CpfCnpjValido;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
 use RuntimeException;
@@ -123,6 +125,7 @@ class EmpresaOnboardingService
                 'email' => $validated['owner_email'],
                 'cpf' => $validated['owner_document'],
                 'empresa_id' => $empresa->id,
+                'menu_permissions' => $this->resolveSelfServiceDefaultMenuPermissions(),
                 'password' => Hash::make($validated['password']),
             ]);
 
@@ -300,5 +303,22 @@ class EmpresaOnboardingService
         }
 
         return $result['charge'] ?? null;
+    }
+
+    private function resolveSelfServiceDefaultMenuPermissions(): array
+    {
+        if (! Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions')) {
+            return User::defaultSelfServiceMenuPermissions();
+        }
+
+        $globalConfig = Configuracao::query()
+            ->whereNull('empresa_id')
+            ->first();
+
+        if (! $globalConfig || $globalConfig->selfServiceDefaultMenuPermissions === null) {
+            return User::defaultSelfServiceMenuPermissions();
+        }
+
+        return User::sanitizeMenuPermissions($globalConfig->selfServiceDefaultMenuPermissions);
     }
 }

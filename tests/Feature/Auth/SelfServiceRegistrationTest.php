@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\EmpresaFinanceiroConfig;
 use App\Models\EmpresaSubscription;
@@ -71,6 +72,7 @@ class SelfServiceRegistrationTest extends TestCase
 
         $this->assertSame(Empresa::CADASTRO_ORIGEM_SELF_SERVICE, $empresa->cadastro_origem);
         $this->assertSame((int) $empresa->id, (int) $user->empresa_id);
+        $this->assertSame(User::defaultSelfServiceMenuPermissions(), $user->menu_permissions);
 
         $this->assertDatabaseHas('empresa_financeiro_configs', [
             'empresa_id' => $empresa->id,
@@ -264,5 +266,51 @@ class SelfServiceRegistrationTest extends TestCase
             && (float) data_get($request->data(), 'value') === 179.7);
 
         $this->assertSame((int) $plan->id, (int) $subscription->subscription_plan_id);
+    }
+
+    public function test_self_service_registration_uses_admin_defined_default_permissions(): void
+    {
+        EmpresaSubscriptionPlan::query()->updateOrCreate([
+            'code' => 'trimestral',
+        ], [
+            'name' => 'Plano Trimestral',
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_90_DIAS,
+            'valor_unitario' => 59.90,
+            'trial_days' => 7,
+            'is_active' => true,
+            'is_self_service' => true,
+            'sort_order' => 10,
+        ]);
+
+        Configuracao::query()->create([
+            'empresa_id' => null,
+            'selfServiceDefaultMenuPermissions' => [
+                User::MENU_PRODUTOS,
+                User::MENU_CONFIG_TELA_WEB,
+                User::MENU_ATIVAR_TV,
+            ],
+        ]);
+
+        $this->post(route('self-service.register.store'), [
+            'company_name' => 'Empresa Permissao Padrao',
+            'company_social_name' => 'Empresa Permissao Padrao LTDA',
+            'company_document' => '12.345.678/0001-95',
+            'company_email' => 'empresa-permissao@example.com',
+            'company_phone' => '(11) 98888-7777',
+            'owner_name' => 'Responsavel Permissao',
+            'owner_email' => 'responsavel-permissao@example.com',
+            'owner_document' => '97779474100',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'plan_code' => 'trimestral',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::query()->where('email', 'responsavel-permissao@example.com')->firstOrFail();
+
+        $this->assertSame([
+            User::MENU_PRODUTOS,
+            User::MENU_CONFIG_TELA_WEB,
+            User::MENU_ATIVAR_TV,
+        ], $user->menu_permissions);
     }
 }
