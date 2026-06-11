@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Configuracao;
 use App\Models\User;
+use App\Models\WebScreenModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -123,5 +124,38 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
             User::MENU_PRODUTOS,
             User::MENU_FINANCEIRO,
         ], $config->selfServiceDefaultMenuPermissions);
+    }
+
+    public function test_default_admin_can_define_default_web_screen_model_for_self_service_users(): void
+    {
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $model = WebScreenModel::query()->create([
+            'empresa_id' => null,
+            'nome' => 'Modelo Auto Cadastro',
+            'is_admin_default' => true,
+            'config_payload' => [
+                'showTitle' => false,
+                'titleText' => 'Modelo Auto Cadastro',
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.configadmin.update'), [
+            'configSection' => 'cadastro-login',
+            'showSelfServiceRegisterOnLogin' => '1',
+            'selfServiceDefaultMenuPermissions' => [
+                User::MENU_PRODUTOS,
+            ],
+            'selfServiceDefaultWebScreenModelId' => (string) $model->id,
+        ]);
+
+        $response->assertRedirect();
+
+        $config = Configuracao::query()->whereNull('empresa_id')->firstOrFail();
+
+        $this->assertSame((int) $model->id, (int) $config->selfServiceDefaultWebScreenModelId);
     }
 }

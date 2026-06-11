@@ -23,6 +23,8 @@ class ConfigAdminPanel extends Component
 
     public bool $selfServiceDefaultPermissionsFeatureReady = false;
 
+    public bool $selfServiceDefaultWebScreenModelFeatureReady = false;
+
     public bool $asaasConfigFeatureReady = false;
 
     public bool $apkExists = false;
@@ -35,6 +37,8 @@ class ConfigAdminPanel extends Component
 
     public array $selfServiceMenuOptions = [];
 
+    public array $selfServiceWebScreenModelOptions = [];
+
     public ?string $openSection = 'cadastro-login';
 
     public function mount(
@@ -46,12 +50,14 @@ class ConfigAdminPanel extends Component
         bool $produtoFormImagePreviewFeatureReady,
         bool $selfServiceLoginVisibilityFeatureReady,
         bool $selfServiceDefaultPermissionsFeatureReady,
+        bool $selfServiceDefaultWebScreenModelFeatureReady,
         bool $asaasConfigFeatureReady,
         bool $apkExists,
         ?int $apkSizeBytes,
         ?int $apkLastModified,
         string $apkDownloadUrl,
-        array $selfServiceMenuOptions
+        array $selfServiceMenuOptions,
+        array $selfServiceWebScreenModelOptions
     ): void {
         $this->config = $config;
         $this->globalConfig = $globalConfig;
@@ -61,12 +67,14 @@ class ConfigAdminPanel extends Component
         $this->produtoFormImagePreviewFeatureReady = $produtoFormImagePreviewFeatureReady;
         $this->selfServiceLoginVisibilityFeatureReady = $selfServiceLoginVisibilityFeatureReady;
         $this->selfServiceDefaultPermissionsFeatureReady = $selfServiceDefaultPermissionsFeatureReady;
+        $this->selfServiceDefaultWebScreenModelFeatureReady = $selfServiceDefaultWebScreenModelFeatureReady;
         $this->asaasConfigFeatureReady = $asaasConfigFeatureReady;
         $this->apkExists = $apkExists;
         $this->apkSizeBytes = $apkSizeBytes;
         $this->apkLastModified = $apkLastModified;
         $this->apkDownloadUrl = $apkDownloadUrl;
         $this->selfServiceMenuOptions = $selfServiceMenuOptions;
+        $this->selfServiceWebScreenModelOptions = $selfServiceWebScreenModelOptions;
     }
 
     public function toggleSection(string $section): void

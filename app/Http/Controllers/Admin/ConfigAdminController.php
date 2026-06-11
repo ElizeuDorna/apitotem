@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
 use App\Models\Empresa;
 use App\Models\User;
+use App\Models\WebScreenModel;
 use App\Support\EmpresaContext;
 use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
@@ -46,6 +47,7 @@ class ConfigAdminController extends Controller
         $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
         $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
         $selfServiceDefaultPermissionsFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions');
+        $selfServiceDefaultWebScreenModelFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
@@ -54,6 +56,7 @@ class ConfigAdminController extends Controller
         $globalConfig = $this->findOrCreateConfig(null)->fresh();
         $asaasConfig = $this->findOrCreateConfig($asaasConfigEmpresaId)->fresh();
         $selfServiceMenuOptions = User::availableMenuPermissions();
+        $selfServiceWebScreenModelOptions = $this->selfServiceAdminDefaultWebScreenModelOptions();
 
         $apkExists = Storage::disk(self::APK_DISK)->exists(self::APK_PATH);
         $apkSizeBytes = $apkExists ? (int) Storage::disk(self::APK_DISK)->size(self::APK_PATH) : null;
@@ -68,10 +71,12 @@ class ConfigAdminController extends Controller
             'produtoFormImagePreviewFeatureReady',
             'selfServiceLoginVisibilityFeatureReady',
             'selfServiceDefaultPermissionsFeatureReady',
+            'selfServiceDefaultWebScreenModelFeatureReady',
             'asaasConfigFeatureReady',
             'asaasConfig',
             'asaasConfigEmpresaId',
             'selfServiceMenuOptions',
+            'selfServiceWebScreenModelOptions',
             'apkExists',
             'apkSizeBytes',
             'apkLastModified',
@@ -90,9 +95,12 @@ class ConfigAdminController extends Controller
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
         $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
         $selfServiceDefaultPermissionsFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions');
+        $selfServiceDefaultWebScreenModelFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
+
+        $webScreenModelIds = $this->selfServiceAdminDefaultWebScreenModelIds();
 
         if (! $canManagePanelBranding) {
             abort(403);
@@ -122,6 +130,7 @@ class ConfigAdminController extends Controller
             'showSelfServiceRegisterOnLogin' => 'nullable|boolean',
             'selfServiceDefaultMenuPermissions' => ['nullable', 'array'],
             'selfServiceDefaultMenuPermissions.*' => ['string', Rule::in(array_keys(User::availableMenuPermissions()))],
+            'selfServiceDefaultWebScreenModelId' => ['nullable', 'integer', Rule::in($webScreenModelIds)],
             'metaAppId' => 'nullable|string|max:120',
             'metaRedirectUri' => 'nullable|url|max:500',
             'asaasBaseUrl' => 'nullable|url|max:255',
@@ -171,6 +180,13 @@ class ConfigAdminController extends Controller
             );
         } elseif ($section === self::SECTION_CADASTRO_LOGIN && $request->has('selfServiceDefaultMenuPermissions')) {
             $warningMessages[] = 'Configuracao das permissoes padrao do auto cadastro indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
+        }
+
+        if ($section === self::SECTION_CADASTRO_LOGIN && $selfServiceDefaultWebScreenModelFeatureReady && $currentUser?->isDefaultAdmin()) {
+            $selectedModelId = $validated['selfServiceDefaultWebScreenModelId'] ?? null;
+            $globalConfig->selfServiceDefaultWebScreenModelId = $selectedModelId !== null ? (int) $selectedModelId : null;
+        } elseif ($section === self::SECTION_CADASTRO_LOGIN && $request->has('selfServiceDefaultWebScreenModelId')) {
+            $warningMessages[] = 'Configuracao do modelo padrao da TV para auto cadastro indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
         if ($section === self::SECTION_CADASTRO_LOGIN && $currentUser?->isDefaultAdmin()) {
@@ -279,6 +295,31 @@ class ConfigAdminController extends Controller
         }
 
         return $config;
+    }
+
+    private function selfServiceAdminDefaultWebScreenModelOptions(): array
+    {
+        if (! Schema::hasTable('web_screen_models')) {
+            return [];
+        }
+
+        return WebScreenModel::query()
+            ->where('is_admin_default', true)
+            ->orderBy('nome')
+            ->get(['id', 'nome'])
+            ->map(fn (WebScreenModel $model) => [
+                'id' => (int) $model->id,
+                'name' => (string) $model->nome,
+            ])
+            ->all();
+    }
+
+    private function selfServiceAdminDefaultWebScreenModelIds(): array
+    {
+        return array_map(
+            static fn (array $item) => (int) $item['id'],
+            $this->selfServiceAdminDefaultWebScreenModelOptions()
+        );
     }
 
     private function storePanelBrandIcon($upload, ?int $empresaId): string

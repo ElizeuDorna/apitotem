@@ -16,12 +16,14 @@
                 :produto-form-image-preview-feature-ready="$produtoFormImagePreviewFeatureReady"
                 :self-service-login-visibility-feature-ready="$selfServiceLoginVisibilityFeatureReady"
                 :self-service-default-permissions-feature-ready="$selfServiceDefaultPermissionsFeatureReady"
+                :self-service-default-web-screen-model-feature-ready="$selfServiceDefaultWebScreenModelFeatureReady"
                 :asaas-config-feature-ready="$asaasConfigFeatureReady"
                 :apk-exists="$apkExists"
                 :apk-size-bytes="$apkSizeBytes"
                 :apk-last-modified="$apkLastModified"
                 :apk-download-url="$apkDownloadUrl"
                 :self-service-menu-options="$selfServiceMenuOptions"
+                :self-service-web-screen-model-options="$selfServiceWebScreenModelOptions"
             />
         </div>
     </div>

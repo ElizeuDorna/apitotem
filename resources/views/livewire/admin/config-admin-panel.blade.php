@@ -10,6 +10,7 @@
 
         @php($showSelfServiceRegisterOnLogin = old('showSelfServiceRegisterOnLogin', (bool) ($globalConfig->showSelfServiceRegisterOnLogin ?? true)))
         @php($selfServiceDefaultMenuPermissions = old('selfServiceDefaultMenuPermissions', $globalConfig->selfServiceDefaultMenuPermissions ?? \App\Models\User::defaultSelfServiceMenuPermissions()))
+        @php($selfServiceDefaultWebScreenModelId = old('selfServiceDefaultWebScreenModelId', $globalConfig->selfServiceDefaultWebScreenModelId ?? ''))
 
         <div class="mb-6 rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900 p-5 text-white shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -336,6 +337,41 @@
                             </div>
 
                             <p class="mt-3 text-xs text-slate-500">Depois do cadastro automatico, o admin ainda pode ajustar manualmente as permissoes do usuario na tela de Permissoes de Acesso.</p>
+                        </div>
+
+                        <div class="rounded-2xl border border-sky-100 bg-gradient-to-br from-white to-sky-50 p-5 shadow-sm">
+                            <div class="mb-3 flex items-start justify-between gap-3">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-slate-800">Modelo padrao da TV no auto cadastro</h4>
+                                    <p class="mt-1 text-xs text-slate-500">Selecione um modelo padrao criado em Configuracao da Tela Web para aplicar automaticamente na empresa nova.</p>
+                                </div>
+                                <span class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-800">Tela web</span>
+                            </div>
+
+                            @if (! $selfServiceDefaultWebScreenModelFeatureReady)
+                                <div class="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                    Recurso indisponivel neste ambiente. Execute as migrations pendentes para habilitar.
+                                </div>
+                            @endif
+
+                            <div>
+                                <label for="selfServiceDefaultWebScreenModelId" class="mb-1 block text-sm font-semibold text-slate-800">Modelo padrao</label>
+                                <select
+                                    id="selfServiceDefaultWebScreenModelId"
+                                    name="selfServiceDefaultWebScreenModelId"
+                                    class="w-full rounded border px-3 py-2 text-sm"
+                                    {{ $selfServiceDefaultWebScreenModelFeatureReady ? '' : 'disabled' }}
+                                >
+                                    <option value="">Nao aplicar modelo padrao</option>
+                                    @foreach ($selfServiceWebScreenModelOptions as $modelOption)
+                                        <option value="{{ $modelOption['id'] }}" @selected((string) $selfServiceDefaultWebScreenModelId === (string) $modelOption['id'])>
+                                            {{ $modelOption['name'] }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('selfServiceDefaultWebScreenModelId')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                <p class="mt-2 text-xs text-slate-500">Apenas modelos marcados como padrao global do admin aparecem nesta lista.</p>
+                            </div>
                         </div>
 
                         <div class="pt-2">

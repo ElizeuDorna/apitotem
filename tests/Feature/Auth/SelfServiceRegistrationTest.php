@@ -8,6 +8,7 @@ use App\Models\EmpresaFinanceiroConfig;
 use App\Models\EmpresaSubscription;
 use App\Models\EmpresaSubscriptionPlan;
 use App\Models\User;
+use App\Models\WebScreenModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -312,5 +313,55 @@ class SelfServiceRegistrationTest extends TestCase
             User::MENU_CONFIG_TELA_WEB,
             User::MENU_ATIVAR_TV,
         ], $user->menu_permissions);
+    }
+
+    public function test_self_service_registration_applies_admin_defined_default_web_screen_model(): void
+    {
+        EmpresaSubscriptionPlan::query()->updateOrCreate([
+            'code' => 'trimestral',
+        ], [
+            'name' => 'Plano Trimestral',
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_90_DIAS,
+            'valor_unitario' => 59.90,
+            'trial_days' => 7,
+            'is_active' => true,
+            'is_self_service' => true,
+            'sort_order' => 10,
+        ]);
+
+        $model = WebScreenModel::query()->create([
+            'empresa_id' => null,
+            'nome' => 'Modelo Padrao TV',
+            'is_admin_default' => true,
+            'config_payload' => [
+                'showTitle' => false,
+                'titleText' => 'Modelo Padrao TV',
+            ],
+        ]);
+
+        Configuracao::query()->create([
+            'empresa_id' => null,
+            'selfServiceDefaultWebScreenModelId' => $model->id,
+        ]);
+
+        $this->post(route('self-service.register.store'), [
+            'company_name' => 'Empresa Modelo TV',
+            'company_social_name' => 'Empresa Modelo TV LTDA',
+            'company_document' => '12.345.678/0001-95',
+            'company_email' => 'empresa-modelo-tv@example.com',
+            'company_phone' => '(11) 98888-7777',
+            'owner_name' => 'Responsavel Modelo TV',
+            'owner_email' => 'responsavel-modelo-tv@example.com',
+            'owner_document' => '97779474100',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'plan_code' => 'trimestral',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $empresa = Empresa::query()->where('email', 'empresa-modelo-tv@example.com')->firstOrFail();
+        $config = Configuracao::query()->where('empresa_id', $empresa->id)->firstOrFail();
+
+        $this->assertFalse((bool) $config->showTitle);
+        $this->assertSame('Modelo Padrao TV', $config->titleText);
     }
 }

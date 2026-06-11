@@ -9,6 +9,7 @@ use App\Models\EmpresaSubscription;
 use App\Models\EmpresaSubscriptionPlan;
 use App\Models\Configuracao;
 use App\Models\User;
+use App\Models\WebScreenModel;
 use App\Rules\CpfCnpjValido;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -138,6 +139,8 @@ class EmpresaOnboardingService
             ], [
                 'trial_ends_at' => $trialDays > 0 ? now()->startOfDay()->addDays($trialDays) : null,
             ]);
+
+            $this->applyDefaultSelfServiceWebScreenModel($empresa);
 
             return [
                 'empresa' => $empresa->refresh(),
@@ -320,5 +323,46 @@ class EmpresaOnboardingService
         }
 
         return User::sanitizeMenuPermissions($globalConfig->selfServiceDefaultMenuPermissions);
+    }
+
+    private function applyDefaultSelfServiceWebScreenModel(Empresa $empresa): void
+    {
+        if (! Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId') || ! Schema::hasTable('web_screen_models')) {
+            return;
+        }
+
+        $globalConfig = Configuracao::query()
+            ->whereNull('empresa_id')
+            ->first();
+
+        $modelId = (int) ($globalConfig?->selfServiceDefaultWebScreenModelId ?? 0);
+        if ($modelId <= 0) {
+            return;
+        }
+
+        $model = WebScreenModel::query()
+            ->where('id', $modelId)
+            ->where('is_admin_default', true)
+            ->first();
+
+        if (! $model || ! is_array($model->config_payload) || $model->config_payload === []) {
+            return;
+        }
+
+        $config = Configuracao::query()->firstOrCreate([
+            'empresa_id' => $empresa->id,
+        ], []);
+
+        $fillable = array_flip((new Configuracao())->getFillable());
+
+        foreach ($model->config_payload as $key => $value) {
+            if (! is_string($key) || ! isset($fillable[$key]) || $key === 'empresa_id') {
+                continue;
+            }
+
+            $config->setAttribute($key, $value);
+        }
+
+        $config->save();
     }
 }
