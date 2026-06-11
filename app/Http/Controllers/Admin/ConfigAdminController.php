@@ -40,6 +40,7 @@ class ConfigAdminController extends Controller
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
         $produtoFormImagePreviewFeatureReady = Schema::hasColumn('configuracoes', 'produtoFormImagePreviewSize');
+        $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
@@ -57,6 +58,7 @@ class ConfigAdminController extends Controller
             'panelBrandIconFeatureReady',
             'panelSidebarFontFeatureReady',
             'produtoFormImagePreviewFeatureReady',
+            'selfServiceLoginVisibilityFeatureReady',
             'asaasConfigFeatureReady',
             'asaasConfig',
             'asaasConfigEmpresaId',
@@ -76,6 +78,7 @@ class ConfigAdminController extends Controller
         $panelBrandIconFeatureReady = Schema::hasColumn('configuracoes', 'panelBrandIconUrl');
         $panelSidebarFontFeatureReady = Schema::hasColumn('configuracoes', 'panelSidebarFontFamily')
             && Schema::hasColumn('configuracoes', 'panelSidebarFontSize');
+        $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
@@ -90,6 +93,7 @@ class ConfigAdminController extends Controller
             'panelSidebarFontFamily' => 'nullable|string|in:'.implode(',', self::SIDEBAR_FONT_FAMILY_OPTIONS),
             'panelSidebarFontSize' => 'nullable|numeric|min:10|max:20',
             'produtoFormImagePreviewSize' => 'nullable|integer|min:32|max:300',
+            'showSelfServiceRegisterOnLogin' => 'nullable|boolean',
             'metaAppId' => 'nullable|string|max:120',
             'metaRedirectUri' => 'nullable|url|max:500',
             'asaasBaseUrl' => 'nullable|url|max:255',
@@ -122,6 +126,12 @@ class ConfigAdminController extends Controller
         $produtoFormImagePreviewSize = $validated['produtoFormImagePreviewSize'] ?? null;
         if ($produtoFormImagePreviewSize !== null) {
             $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
+        }
+
+        if ($selfServiceLoginVisibilityFeatureReady) {
+            $payload['showSelfServiceRegisterOnLogin'] = $request->boolean('showSelfServiceRegisterOnLogin');
+        } elseif ($request->has('showSelfServiceRegisterOnLogin')) {
+            $warningMessages[] = 'Controle do link de cadastro no login indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
         if ($currentUser?->isDefaultAdmin()) {

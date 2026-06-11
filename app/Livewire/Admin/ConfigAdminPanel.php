@@ -17,6 +17,8 @@ class ConfigAdminPanel extends Component
 
     public bool $produtoFormImagePreviewFeatureReady = false;
 
+    public bool $selfServiceLoginVisibilityFeatureReady = false;
+
     public bool $asaasConfigFeatureReady = false;
 
     public bool $apkExists = false;
@@ -27,7 +29,7 @@ class ConfigAdminPanel extends Component
 
     public string $apkDownloadUrl = '';
 
-    public ?string $openSection = null;
+    public ?string $openSection = 'cadastro-login';
 
     public function mount(
         Configuracao $config,
@@ -35,6 +37,7 @@ class ConfigAdminPanel extends Component
         bool $panelBrandIconFeatureReady,
         bool $panelSidebarFontFeatureReady,
         bool $produtoFormImagePreviewFeatureReady,
+        bool $selfServiceLoginVisibilityFeatureReady,
         bool $asaasConfigFeatureReady,
         bool $apkExists,
         ?int $apkSizeBytes,
@@ -46,6 +49,7 @@ class ConfigAdminPanel extends Component
         $this->panelBrandIconFeatureReady = $panelBrandIconFeatureReady;
         $this->panelSidebarFontFeatureReady = $panelSidebarFontFeatureReady;
         $this->produtoFormImagePreviewFeatureReady = $produtoFormImagePreviewFeatureReady;
+        $this->selfServiceLoginVisibilityFeatureReady = $selfServiceLoginVisibilityFeatureReady;
         $this->asaasConfigFeatureReady = $asaasConfigFeatureReady;
         $this->apkExists = $apkExists;
         $this->apkSizeBytes = $apkSizeBytes;

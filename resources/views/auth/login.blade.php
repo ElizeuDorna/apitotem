@@ -40,12 +40,16 @@
         </div>
 
         <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-                <div class="font-semibold">Ainda não tem empresa cadastrada?</div>
-                <a href="{{ route('self-service.register') }}" class="mt-1 inline-flex text-sm font-semibold text-sky-700 underline hover:text-sky-900">
-                    Criar conta da empresa com 7 dias de trial
-                </a>
-            </div>
+            @if (($showSelfServiceRegisterOnLogin ?? true))
+                <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                    <div class="font-semibold">Ainda não tem empresa cadastrada?</div>
+                    <a href="{{ route('self-service.register') }}" class="mt-1 inline-flex text-sm font-semibold text-sky-700 underline hover:text-sky-900">
+                        Criar conta da empresa com 7 dias de trial
+                    </a>
+                </div>
+            @else
+                <div></div>
+            @endif
 
             <div class="flex items-center justify-end gap-3">
             @if (Route::has('password.request'))

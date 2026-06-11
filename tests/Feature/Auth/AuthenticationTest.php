@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Configuracao;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,7 +15,20 @@ class AuthenticationTest extends TestCase
     {
         $response = $this->get('/login');
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertSee('Criar conta da empresa com 7 dias de trial');
+    }
+
+    public function test_login_screen_hides_self_service_link_when_disabled_in_admin_config(): void
+    {
+        Configuracao::query()->create([
+            'empresa_id' => null,
+            'showSelfServiceRegisterOnLogin' => false,
+        ]);
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertDontSee('Criar conta da empresa com 7 dias de trial');
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void

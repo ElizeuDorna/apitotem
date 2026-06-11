@@ -8,6 +8,8 @@
             <div class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">{{ session('warning') }}</div>
         @endif
 
+        @php($showSelfServiceRegisterOnLogin = old('showSelfServiceRegisterOnLogin', (bool) ($config->showSelfServiceRegisterOnLogin ?? true)))
+
         <div class="mb-6 rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900 p-5 text-white shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -27,6 +29,9 @@
                     @endif
                     <button type="button" wire:click="toggleSection('identidade')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'identidade' ? 'border-violet-200 bg-violet-100 text-violet-950 shadow-violet-950/10' : 'border-violet-400/40 bg-violet-400/20 text-white hover:bg-violet-400/30' }}">
                         Identidade visual
+                    </button>
+                    <button type="button" wire:click="toggleSection('cadastro-login')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'cadastro-login' ? 'border-sky-200 bg-sky-100 text-sky-950 shadow-sky-950/10' : 'border-sky-400/40 bg-sky-400/20 text-white hover:bg-sky-400/30' }}">
+                        Login e cadastro
                     </button>
                     <button type="button" wire:click="toggleSection('asaas')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'asaas' ? 'border-emerald-200 bg-emerald-100 text-emerald-950 shadow-emerald-950/10' : 'border-emerald-400/40 bg-emerald-400/20 text-white hover:bg-emerald-400/30' }}">
                         Integracao Asaas
@@ -240,11 +245,74 @@
                 </div>
             @endif
 
+            @if ($openSection === 'cadastro-login')
+                <div id="cadastro-login" class="scroll-mt-24 rounded-3xl border border-sky-200/80 bg-gradient-to-br from-sky-100 via-cyan-50 to-white p-6 shadow-sm">
+                    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">Bloco 04</p>
+                            <h3 class="text-lg font-semibold text-slate-900">Login e Cadastro</h3>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-700">Acesso</span>
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.configadmin.update') }}" class="space-y-4">
+                        @csrf
+
+                        <div
+                            id="login-self-service-visibility"
+                            x-data="{ enabled: {{ $showSelfServiceRegisterOnLogin ? 'true' : 'false' }} }"
+                            class="rounded-2xl border border-sky-100 bg-gradient-to-br from-white to-sky-50 p-5 shadow-sm"
+                        >
+                            <h4 class="mb-3 text-sm font-semibold text-slate-800">Cadastro publico no login</h4>
+                            @if (! $selfServiceLoginVisibilityFeatureReady)
+                                <div class="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                    Recurso indisponivel neste ambiente. Execute as migrations pendentes para habilitar.
+                                </div>
+                            @endif
+
+                            <div class="mb-3 flex items-center justify-between gap-3 rounded-xl border border-sky-100 bg-white/80 px-3 py-2">
+                                <span class="text-sm font-medium text-slate-700">Status atual</span>
+                                <span
+                                    class="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
+                                    :class="enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'"
+                                    x-text="enabled ? 'Ativado' : 'Desativado'"
+                                ></span>
+                            </div>
+
+                            <input type="hidden" name="showSelfServiceRegisterOnLogin" value="0">
+                            <label class="group flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-sky-200 bg-white/90 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-300 hover:bg-white {{ $selfServiceLoginVisibilityFeatureReady ? '' : 'cursor-not-allowed opacity-70' }}">
+                                <span class="min-w-0">
+                                    <span class="block font-semibold text-slate-800">Exibir no login o link de cadastro da empresa</span>
+                                    <span class="mt-1 block text-xs text-slate-500">Quando desativado, o /cadastro continua existindo, mas o atalho some da tela de login.</span>
+                                    <span class="mt-2 block text-xs font-semibold" :class="enabled ? 'text-emerald-700' : 'text-slate-600'" x-text="enabled ? 'Clique em Salvar para manter o cadastro visivel no login.' : 'Clique em Salvar para esconder o atalho de cadastro no login.'"></span>
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    name="showSelfServiceRegisterOnLogin"
+                                    value="1"
+                                    class="peer sr-only"
+                                    @checked($showSelfServiceRegisterOnLogin)
+                                    x-model="enabled"
+                                    {{ $selfServiceLoginVisibilityFeatureReady ? '' : 'disabled' }}
+                                >
+                                <span class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full bg-slate-300 transition peer-checked:bg-sky-600 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500">
+                                    <span class="inline-block h-5 w-5 translate-x-1 rounded-full bg-white shadow-sm transition peer-checked:translate-x-6"></span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="pt-2">
+                            <x-primary-button>Salvar</x-primary-button>
+                        </div>
+                    </form>
+                </div>
+            @endif
+
             @if ($openSection === 'asaas')
                 <div id="integracao-asaas" class="scroll-mt-24 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-100 via-teal-50 to-white p-6 shadow-sm">
                     <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">Bloco 04</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">Bloco 05</p>
                             <h3 class="text-lg font-semibold text-slate-900">Integração Asaas</h3>
                         </div>
                         <span class="inline-flex w-fit rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">Financeiro</span>

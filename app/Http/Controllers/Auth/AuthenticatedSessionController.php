@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Configuracao;
 use App\Support\EmpresaContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -17,7 +19,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): View
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'showSelfServiceRegisterOnLogin' => $this->showSelfServiceRegisterOnLogin(),
+        ]);
     }
 
     /**
@@ -53,5 +57,18 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function showSelfServiceRegisterOnLogin(): bool
+    {
+        if (! Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin')) {
+            return true;
+        }
+
+        $value = Configuracao::query()
+            ->whereNull('empresa_id')
+            ->value('showSelfServiceRegisterOnLogin');
+
+        return $value === null ? true : (bool) $value;
     }
 }

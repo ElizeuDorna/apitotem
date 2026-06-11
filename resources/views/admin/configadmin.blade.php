@@ -13,6 +13,7 @@
                 :panel-brand-icon-feature-ready="$panelBrandIconFeatureReady"
                 :panel-sidebar-font-feature-ready="$panelSidebarFontFeatureReady"
                 :produto-form-image-preview-feature-ready="$produtoFormImagePreviewFeatureReady"
+                :self-service-login-visibility-feature-ready="$selfServiceLoginVisibilityFeatureReady"
                 :asaas-config-feature-ready="$asaasConfigFeatureReady"
                 :apk-exists="$apkExists"
                 :apk-size-bytes="$apkSizeBytes"
