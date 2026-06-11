@@ -234,6 +234,132 @@ class TvFinanceiroBlockTest extends TestCase
             ->assertJsonPath('financeiro.charge.pix_copy_paste', '000201010212999');
     }
 
+    public function test_tv_blocks_immediately_when_asaas_charge_is_overdue_even_before_block_date(): void
+    {
+        $empresa = Empresa::query()->create([
+            'codigo' => 'EMP9006',
+            'nome' => 'Cliente TV Overdue',
+            'fantasia' => 'Cliente TV Overdue',
+            'razaosocial' => 'Cliente TV Overdue LTDA',
+            'cnpj_cpf' => '12345678000195',
+            'urlimagem' => 'logo.png',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+        ]);
+
+        $device = Device::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'TV Overdue',
+            'local' => 'Loja',
+            'token' => 'tv-token-overdue',
+            'device_uuid' => 'tv-uuid-overdue',
+            'ativo' => true,
+        ]);
+
+        $config = EmpresaFinanceiroConfig::query()->create([
+            'empresa_id' => $empresa->id,
+            'valor_pagar_unitario' => 29.90,
+            'valor_receber_unitario' => 29.90,
+            'data_vencimento' => now()->addDays(28)->toDateString(),
+            'data_aviso' => now()->addDays(28)->toDateString(),
+            'data_bloqueio' => now()->addDays(28)->toDateString(),
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+            'asaas_integration_ativa' => true,
+            'bloquear_tv_inadimplencia' => true,
+            'exibir_qr_code_tv_bloqueada' => true,
+        ]);
+
+        EmpresaFinanceiroCobranca::query()->create([
+            'empresa_id' => $empresa->id,
+            'empresa_financeiro_config_id' => $config->id,
+            'referencia' => '202606',
+            'descricao' => 'Mensalidade Overdue',
+            'quantidade_dispositivos' => 1,
+            'valor_unitario' => 29.90,
+            'valor_total' => 29.90,
+            'vencimento' => now()->subDay()->toDateString(),
+            'status' => 'OVERDUE',
+            'payment_method' => 'PIX',
+            'gateway' => 'asaas',
+            'gateway_payment_id' => 'pay_tv_overdue',
+            'invoice_url' => 'https://asaas.test/invoice/pay_tv_overdue',
+            'pix_qr_code' => base64_encode('fake-image-overdue'),
+            'pix_copy_paste' => '000201010212OVERDUE',
+            'external_reference' => 'fin-tv-overdue',
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$device->token,
+            'Accept' => 'application/json',
+        ])->getJson('/api/tv/bootstrap')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('financeiro.blocked', true)
+            ->assertJsonPath('financeiro.reason', 'financeiro_blocked')
+            ->assertJsonPath('financeiro.charge.status', 'OVERDUE');
+    }
+
+    public function test_tv_keeps_access_for_pending_asaas_charge_until_block_date_is_reached(): void
+    {
+        $empresa = Empresa::query()->create([
+            'codigo' => 'EMP9007',
+            'nome' => 'Cliente TV Pending',
+            'fantasia' => 'Cliente TV Pending',
+            'razaosocial' => 'Cliente TV Pending LTDA',
+            'cnpj_cpf' => '12345678000196',
+            'urlimagem' => 'logo.png',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+        ]);
+
+        $device = Device::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'TV Pending',
+            'local' => 'Loja',
+            'token' => 'tv-token-pending',
+            'device_uuid' => 'tv-uuid-pending',
+            'ativo' => true,
+        ]);
+
+        $config = EmpresaFinanceiroConfig::query()->create([
+            'empresa_id' => $empresa->id,
+            'valor_pagar_unitario' => 29.90,
+            'valor_receber_unitario' => 29.90,
+            'data_vencimento' => now()->addDays(10)->toDateString(),
+            'data_aviso' => now()->addDays(10)->toDateString(),
+            'data_bloqueio' => now()->addDays(10)->toDateString(),
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+            'asaas_integration_ativa' => true,
+            'bloquear_tv_inadimplencia' => true,
+            'exibir_qr_code_tv_bloqueada' => true,
+        ]);
+
+        EmpresaFinanceiroCobranca::query()->create([
+            'empresa_id' => $empresa->id,
+            'empresa_financeiro_config_id' => $config->id,
+            'referencia' => '202606',
+            'descricao' => 'Mensalidade Pending',
+            'quantidade_dispositivos' => 1,
+            'valor_unitario' => 29.90,
+            'valor_total' => 29.90,
+            'vencimento' => now()->addDays(10)->toDateString(),
+            'status' => 'PENDING',
+            'payment_method' => 'PIX',
+            'gateway' => 'asaas',
+            'gateway_payment_id' => 'pay_tv_pending_future',
+            'invoice_url' => 'https://asaas.test/invoice/pay_tv_pending_future',
+            'pix_qr_code' => base64_encode('fake-image-pending'),
+            'pix_copy_paste' => '000201010212PENDING',
+            'external_reference' => 'fin-tv-pending-future',
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$device->token,
+            'Accept' => 'application/json',
+        ])->getJson('/api/tv/bootstrap')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('financeiro.blocked', false);
+    }
+
     public function test_tv_blocks_when_empresa_subscription_is_expired_even_without_financeiro_block(): void
     {
         $empresa = Empresa::query()->create([

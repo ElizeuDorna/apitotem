@@ -28,20 +28,15 @@ class FinanceiroTvAccessService
             return $this->defaultState();
         }
 
-        if (! $this->blockDateReached($config)) {
-            return $this->defaultState();
-        }
-
         if (! $config->asaas_integration_ativa) {
+            if (! $this->blockDateReached($config)) {
+                return $this->defaultState();
+            }
+
             return $this->resolveInternalBlockState($config);
         }
 
-        $cobranca = EmpresaFinanceiroCobranca::query()
-            ->where('empresa_id', $empresa->id)
-            ->whereIn('status', ['PENDING', 'OVERDUE'])
-            ->latest('vencimento')
-            ->latest('id')
-            ->first();
+        $cobranca = $this->resolveBlockingCharge($empresa->id, $config);
 
         if (! $cobranca) {
             return $this->defaultState();
@@ -71,6 +66,31 @@ class FinanceiroTvAccessService
                 'show_qr_code' => (bool) $config->exibir_qr_code_tv_bloqueada,
             ],
         ];
+    }
+
+    private function resolveBlockingCharge(int $empresaId, EmpresaFinanceiroConfig $config): ?EmpresaFinanceiroCobranca
+    {
+        $overdueCharge = EmpresaFinanceiroCobranca::query()
+            ->where('empresa_id', $empresaId)
+            ->where('status', 'OVERDUE')
+            ->latest('vencimento')
+            ->latest('id')
+            ->first();
+
+        if ($overdueCharge) {
+            return $overdueCharge;
+        }
+
+        if (! $this->blockDateReached($config)) {
+            return null;
+        }
+
+        return EmpresaFinanceiroCobranca::query()
+            ->where('empresa_id', $empresaId)
+            ->where('status', 'PENDING')
+            ->latest('vencimento')
+            ->latest('id')
+            ->first();
     }
 
     private function resolveInternalBlockState(EmpresaFinanceiroConfig $config): array
