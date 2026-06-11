@@ -237,6 +237,21 @@ class RegisteredUserController extends Controller
             ->with('status', 'Usuário atualizado com sucesso.');
     }
 
+    public function destroy(User $user): RedirectResponse
+    {
+        $authUser = Auth::user();
+
+        abort_unless($authUser?->isDefaultAdmin(), 403);
+        abort_if($user->isDefaultAdmin(), 422, 'O admin padrão não pode ser excluído.');
+
+        $userName = $user->name;
+        $user->delete();
+
+        return redirect()
+            ->route('register')
+            ->with('status', "Usuário {$userName} excluído com sucesso.");
+    }
+
     private function authorizeVisibleUser(User $user): void
     {
         $authUser = Auth::user();

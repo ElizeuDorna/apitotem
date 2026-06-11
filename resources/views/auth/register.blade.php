@@ -117,7 +117,16 @@
                                 <td class="px-4 py-2">{{ $usuario->email }}</td>
                                 <td class="px-4 py-2">{{ preg_replace('/\D/', '', (string) $usuario->cpf) }}</td>
                                 <td class="px-4 py-2 text-center">
-                                    <a href="{{ route('register.users.edit', $usuario) }}" class="text-blue-600 hover:text-blue-800 text-sm">Editar</a>
+                                    <div class="flex items-center justify-center gap-3">
+                                        <a href="{{ route('register.users.edit', $usuario) }}" class="text-blue-600 hover:text-blue-800 text-sm">Editar</a>
+                                        @if (auth()->user()?->isDefaultAdmin())
+                                            <form method="POST" action="{{ route('register.users.destroy', $usuario) }}" onsubmit="return confirm('Tem certeza que deseja excluir este usuário?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm">Excluir</button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty

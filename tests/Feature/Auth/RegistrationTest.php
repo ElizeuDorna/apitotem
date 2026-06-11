@@ -48,4 +48,42 @@ class RegistrationTest extends TestCase
         $this->assertAuthenticatedAs($authUser);
         $response->assertRedirect(route('register', absolute: false));
     }
+
+    public function test_default_admin_can_delete_registered_users(): void
+    {
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $user = User::factory()->create([
+            'cpf' => '98765432100',
+        ]);
+
+        $response = $this->actingAs($admin)->delete(route('register.users.destroy', $user));
+
+        $response->assertRedirect(route('register', absolute: false));
+        $this->assertDatabaseMissing('users', [
+            'id' => $user->id,
+        ]);
+    }
+
+    public function test_non_default_admin_cannot_delete_registered_users(): void
+    {
+        $authUser = User::factory()->create([
+            'cpf' => '12345678901',
+        ]);
+
+        $user = User::factory()->create([
+            'cpf' => '98765432100',
+        ]);
+
+        $this->actingAs($authUser)
+            ->delete(route('register.users.destroy', $user))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+        ]);
+    }
 }

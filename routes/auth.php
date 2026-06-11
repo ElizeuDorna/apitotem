@@ -59,6 +59,11 @@ Route::middleware('auth')->group(function () {
         ->middleware('menu.access:cadastro_publico')
         ->name('register.users.update');
 
+    Route::delete('register/{user}', [RegisteredUserController::class, 'destroy'])
+        ->middleware('revenda.empresa.selecionada')
+        ->middleware('menu.access:cadastro_publico')
+        ->name('register.users.destroy');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
