@@ -5,7 +5,10 @@ namespace Tests\Feature\Admin;
 use App\Livewire\Admin\CompanyEditForm;
 use App\Livewire\Admin\CompaniesManagementPanel;
 use App\Models\Empresa;
+use App\Models\EmpresaFinanceiroConfig;
+use App\Models\EmpresaSubscription;
 use App\Models\User;
+use App\Services\EmpresaOnboardingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -60,6 +63,21 @@ class CompanyManagementTest extends TestCase
             'email' => 'empresa-livewire@example.com',
             'revenda_id' => $revenda->id,
             'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'cadastro_origem' => Empresa::CADASTRO_ORIGEM_ADMIN,
+        ]);
+
+        $empresa = Empresa::query()->where('email', 'empresa-livewire@example.com')->firstOrFail();
+
+        $this->assertDatabaseHas('empresa_financeiro_configs', [
+            'empresa_id' => $empresa->id,
+            'asaas_integration_ativa' => false,
+            'cobranca_automatica_ativa' => false,
+        ]);
+
+        $this->assertDatabaseHas('empresa_subscriptions', [
+            'empresa_id' => $empresa->id,
+            'status' => EmpresaSubscription::STATUS_ACTIVE,
+            'plan_name' => 'Cadastro gerenciado',
         ]);
     }
 
@@ -249,6 +267,89 @@ class CompanyManagementTest extends TestCase
             'email' => 'empresa-atualizada@example.com',
             'fone' => '(11) 98888-7777',
             'revenda_id' => $revenda->id,
+        ]);
+    }
+
+    public function test_revenda_created_company_is_provisioned_with_managed_defaults(): void
+    {
+        $revenda = Empresa::query()->create([
+            'codigo' => '920',
+            'nome' => 'Revenda Provisionamento',
+            'fantasia' => 'Revenda Provisionamento',
+            'razaosocial' => 'Revenda Provisionamento LTDA',
+            'cnpj_cpf' => '08707221000107',
+            'email' => 'revenda-provisionamento@example.com',
+            'fone' => '11999996666',
+            'nivel_acesso' => Empresa::NIVEL_REVENDA,
+            'api_token' => str_repeat('p', 60),
+            'urlimagem' => '',
+        ]);
+
+        $revendaUser = User::factory()->create([
+            'empresa_id' => $revenda->id,
+            'menu_permissions' => [],
+        ]);
+
+        $this->actingAs($revendaUser);
+
+        Livewire::test(CompaniesManagementPanel::class)
+            ->call('startCreate')
+            ->set('nome', 'Cliente Revenda Provisionado')
+            ->set('razaosocial', 'Cliente Revenda Provisionado LTDA')
+            ->set('cnpjCpf', '83.198.688/0001-93')
+            ->set('email', 'cliente-revenda@example.com')
+            ->set('fone', '(11) 97777-0000')
+            ->call('save');
+
+        $empresa = Empresa::query()->where('email', 'cliente-revenda@example.com')->firstOrFail();
+
+        $this->assertSame(Empresa::CADASTRO_ORIGEM_REVENDA, $empresa->cadastro_origem);
+        $this->assertSame((int) $revenda->id, (int) $empresa->revenda_id);
+
+        $config = EmpresaFinanceiroConfig::query()->where('empresa_id', $empresa->id)->firstOrFail();
+
+        $this->assertFalse((bool) $config->asaas_integration_ativa);
+        $this->assertFalse((bool) $config->cobranca_automatica_ativa);
+    }
+
+    public function test_self_service_provisioning_enables_asaas_and_automatic_billing_by_default(): void
+    {
+        $empresa = Empresa::query()->create([
+            'codigo' => '930',
+            'nome' => 'Cliente Self Service',
+            'fantasia' => 'Cliente Self Service',
+            'razaosocial' => 'Cliente Self Service LTDA',
+            'cnpj_cpf' => '54132168000190',
+            'email' => 'cliente-self@example.com',
+            'fone' => '11999997777',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'cadastro_origem' => Empresa::CADASTRO_ORIGEM_SELF_SERVICE,
+            'api_token' => str_repeat('s', 60),
+            'urlimagem' => '',
+        ]);
+
+        app(EmpresaOnboardingService::class)->provisionSelfServiceClient($empresa, [
+            'plan_name' => 'Plano Trimestral',
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_90_DIAS,
+            'valor_unitario' => 49.90,
+        ], [
+            'starts_at' => now()->startOfDay(),
+            'access_expires_at' => now()->addDays(90)->startOfDay(),
+        ]);
+
+        $this->assertDatabaseHas('empresa_financeiro_configs', [
+            'empresa_id' => $empresa->id,
+            'asaas_integration_ativa' => true,
+            'cobranca_automatica_ativa' => true,
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_90_DIAS,
+            'valor_receber_unitario' => 49.90,
+        ]);
+
+        $this->assertDatabaseHas('empresa_subscriptions', [
+            'empresa_id' => $empresa->id,
+            'status' => EmpresaSubscription::STATUS_ACTIVE,
+            'plan_name' => 'Plano Trimestral',
+            'access_expires_at' => now()->addDays(90)->startOfDay()->toDateString(),
         ]);
     }
 }

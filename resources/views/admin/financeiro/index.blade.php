@@ -11,14 +11,22 @@
         </div>
 
         <div lang="pt-BR" translate="no" class="max-w-7xl mx-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div class="mb-6">
-                <h2 class="text-2xl font-bold text-slate-900">Contas a Pagar e Receber</h2>
-                @if ($isClienteFinal)
-                    <p class="mt-1 text-sm text-slate-600">Visualização de contas a pagar da sua empresa.</p>
-                @elseif ($isRevenda)
-                    <p class="mt-1 text-sm text-slate-600">Revenda possui contas a receber dos clientes da carteira e contas a pagar ao admin.</p>
-                @else
-                    <p class="mt-1 text-sm text-slate-600">Admin possui contas a receber de revendas e de clientes finais diretos.</p>
+            <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Contas a Pagar e Receber</h2>
+                    @if ($isClienteFinal)
+                        <p class="mt-1 text-sm text-slate-600">Visualização de contas a pagar da sua empresa.</p>
+                    @elseif ($isRevenda)
+                        <p class="mt-1 text-sm text-slate-600">Revenda possui contas a receber dos clientes da carteira e contas a pagar ao admin.</p>
+                    @else
+                        <p class="mt-1 text-sm text-slate-600">Admin possui contas a receber de revendas e de clientes finais diretos.</p>
+                    @endif
+                </div>
+
+                @if ($isAdmin)
+                    <a href="{{ route('admin.financeiro.plans.index') }}" class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                        Gerenciar planos self-service
+                    </a>
                 @endif
             </div>
 

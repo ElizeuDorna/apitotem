@@ -14,11 +14,11 @@ use RuntimeException;
 
 class FinanceiroChargeService
 {
-    public function createPixChargeForEmpresa(Empresa $empresa, AsaasService $asaas, ?string $description = null, Carbon|string|null $dueDate = null): array
+    public function createPixChargeForEmpresa(Empresa $empresa, AsaasService $asaas, ?string $description = null, Carbon|string|null $dueDate = null, ?int $quantityOverride = null): array
     {
         $normalizedDueDate = $this->normalizeDueDate($dueDate);
 
-        $result = DB::transaction(function () use ($empresa, $description, $normalizedDueDate) {
+        $result = DB::transaction(function () use ($empresa, $description, $normalizedDueDate, $quantityOverride) {
             Empresa::query()->whereKey($empresa->id)->lockForUpdate()->firstOrFail();
 
             $config = EmpresaFinanceiroConfig::query()->firstOrCreate(
@@ -53,9 +53,11 @@ class FinanceiroChargeService
                 ];
             }
 
-            $quantidadeDispositivos = $this->countActiveDevicesForEmpresa((int) $empresa->id);
+            $quantidadeDispositivos = $quantityOverride !== null
+                ? max(1, $quantityOverride)
+                : $this->countActiveDevicesForEmpresa((int) $empresa->id);
             $valorUnitario = (float) ($config->valor_receber_unitario ?? 0);
-            $valorTotal = round($quantidadeDispositivos * $valorUnitario, 2);
+            $valorTotal = round($quantidadeDispositivos * $config->billingCycleUnitTotal(), 2);
 
             if ($quantidadeDispositivos <= 0) {
                 throw new RuntimeException('Nao ha dispositivos ativos para gerar cobranca.');

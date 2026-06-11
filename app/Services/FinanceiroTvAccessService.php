@@ -8,10 +8,18 @@ use App\Models\EmpresaFinanceiroConfig;
 
 class FinanceiroTvAccessService
 {
+    public function __construct(private readonly EmpresaSubscriptionService $subscriptionService) {}
+
     public function resolveTvBlockState(Empresa $empresa): array
     {
         if ((int) $empresa->nivel_acesso !== Empresa::NIVEL_CLIENTE_FINAL) {
             return $this->defaultState();
+        }
+
+        $subscriptionState = $this->subscriptionService->currentStatus($empresa);
+
+        if ($subscriptionState['blocked']) {
+            return $subscriptionState;
         }
 
         $config = $empresa->financeiroConfig()->first();

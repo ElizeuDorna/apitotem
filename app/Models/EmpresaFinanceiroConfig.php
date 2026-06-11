@@ -72,6 +72,21 @@ class EmpresaFinanceiroConfig extends Model
         return self::billingIntervalOptions()[$this->billingIntervalDays()];
     }
 
+    public function billingCycleMonths(): int
+    {
+        return match ($this->billingIntervalDays()) {
+            self::INTERVALO_90_DIAS => 3,
+            self::INTERVALO_180_DIAS => 6,
+            self::INTERVALO_1_ANO => 12,
+            default => 1,
+        };
+    }
+
+    public function billingCycleUnitTotal(): float
+    {
+        return round(((float) $this->valor_receber_unitario) * $this->billingCycleMonths(), 2);
+    }
+
     public function automaticBillingStatusLabel(): string
     {
         return $this->cobranca_automatica_ativa ? 'Ativado' : 'Desativado';

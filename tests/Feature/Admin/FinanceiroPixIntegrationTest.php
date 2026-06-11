@@ -6,6 +6,8 @@ use App\Models\Device;
 use App\Models\Empresa;
 use App\Models\EmpresaFinanceiroCobranca;
 use App\Models\EmpresaFinanceiroConfig;
+use App\Models\EmpresaSubscription;
+use App\Models\EmpresaSubscriptionPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -117,11 +119,33 @@ class FinanceiroPixIntegrationTest extends TestCase
             'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
         ]);
 
+        $plan = EmpresaSubscriptionPlan::query()->create([
+            'code' => 'mensal-webhook',
+            'name' => 'Plano Mensal Webhook',
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+            'valor_unitario' => 25,
+            'trial_days' => 7,
+            'is_active' => true,
+            'is_self_service' => true,
+            'sort_order' => 10,
+        ]);
+
         $config = EmpresaFinanceiroConfig::query()->create([
             'empresa_id' => $cliente->id,
             'valor_pagar_unitario' => 25,
             'valor_receber_unitario' => 25,
             'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_30_DIAS,
+        ]);
+
+        $subscription = EmpresaSubscription::query()->create([
+            'empresa_id' => $cliente->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => EmpresaSubscription::STATUS_TRIAL,
+            'starts_at' => now()->subDay()->toDateString(),
+            'trial_ends_at' => now()->addDays(2)->toDateString(),
+            'access_expires_at' => now()->addDays(2)->toDateString(),
+            'plan_name' => $plan->name,
+            'metadata' => ['plan_code' => $plan->code],
         ]);
 
         $cobranca = EmpresaFinanceiroCobranca::query()->create([
@@ -157,10 +181,15 @@ class FinanceiroPixIntegrationTest extends TestCase
         ])->assertOk();
 
         $cobranca->refresh();
+        $subscription->refresh();
 
         $this->assertSame('RECEIVED', $cobranca->status);
         $this->assertNotNull($cobranca->paid_at);
         $this->assertSame('000201010212', $cobranca->pix_copy_paste);
+        $this->assertSame(EmpresaSubscription::STATUS_ACTIVE, $subscription->status);
+        $this->assertNull($subscription->trial_ends_at);
+        $this->assertNotNull($subscription->access_expires_at);
+        $this->assertSame('pay_123', data_get($subscription->metadata, 'last_paid_charge_id'));
     }
 
     public function test_asaas_webhook_requires_configured_token(): void
@@ -521,6 +550,76 @@ class FinanceiroPixIntegrationTest extends TestCase
 
         Http::assertSent(fn ($request) => $request->url() === 'https://api-sandbox.asaas.com/v3/payments'
             && data_get($request->data(), 'dueDate') === $vencimentoEsperado->format('Y-m-d'));
+    }
+
+    public function test_pix_charge_total_scales_with_configured_billing_cycle(): void
+    {
+        config()->set('services.asaas.api_key', 'sandbox-key');
+        config()->set('services.asaas.base_url', 'https://api-sandbox.asaas.com/v3');
+
+        Http::fake([
+            'https://api-sandbox.asaas.com/v3/customers*' => Http::sequence()
+                ->push(['data' => []], 200)
+                ->push(['id' => 'cus_180'], 200),
+            'https://api-sandbox.asaas.com/v3/payments' => Http::response([
+                'id' => 'pay_180',
+                'customer' => 'cus_180',
+                'status' => 'PENDING',
+                'billingType' => 'PIX',
+                'value' => 240.0,
+                'dueDate' => now()->addDays(3)->format('Y-m-d'),
+                'invoiceUrl' => 'https://asaas.test/invoice/pay_180',
+                'externalReference' => 'fin-ref-180',
+            ], 200),
+            'https://api-sandbox.asaas.com/v3/payments/pay_180/pixQrCode' => Http::response([
+                'encodedImage' => base64_encode('fake-image'),
+                'payload' => '000201010212',
+                'expirationDate' => now()->addDays(1)->toIso8601String(),
+            ], 200),
+        ]);
+
+        $cliente = $this->createEmpresa([
+            'nome' => 'Cliente Intervalo 180',
+            'cnpj_cpf' => '12345678901',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+            'revenda_id' => null,
+            'email' => 'cliente180@example.com',
+            'fone' => '62999999998',
+        ]);
+
+        EmpresaFinanceiroConfig::query()->create([
+            'empresa_id' => $cliente->id,
+            'valor_pagar_unitario' => 20.00,
+            'valor_receber_unitario' => 20.00,
+            'data_vencimento' => now()->addDays(3)->toDateString(),
+            'data_aviso' => now()->addDay()->toDateString(),
+            'data_bloqueio' => now()->addDays(5)->toDateString(),
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_180_DIAS,
+        ]);
+
+        $this->createDevice($cliente, 'Token 1', 'uuid-180-1');
+        $this->createDevice($cliente, 'Token 2', 'uuid-180-2');
+
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.financeiro.charges.store', $cliente), [
+            'description' => 'Cobranca ciclo Cliente 180',
+            'due_date' => now()->addDays(3)->format('Y-m-d'),
+        ])->assertRedirect(route('admin.financeiro.show', $cliente));
+
+        $this->assertDatabaseHas('empresa_financeiro_cobrancas', [
+            'empresa_id' => $cliente->id,
+            'gateway_payment_id' => 'pay_180',
+            'quantidade_dispositivos' => 2,
+            'valor_unitario' => 20.00,
+            'valor_total' => 240.00,
+        ]);
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://api-sandbox.asaas.com/v3/payments'
+            && (float) data_get($request->data(), 'value') === 240.0);
     }
 
     public function test_recurring_charge_command_generates_only_for_auto_enabled_companies(): void

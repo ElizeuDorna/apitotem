@@ -14,6 +14,59 @@
 
     <div class="py-10 bg-slate-50/60">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            @if (session('success'))
+                <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if (($subscriptionSummary ?? null) || ($openChargeSummary ?? null))
+                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    @if ($subscriptionSummary)
+                        <article class="rounded-2xl border border-violet-100 bg-violet-50/70 p-6 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Assinatura da empresa</p>
+                            <h4 class="mt-2 text-xl font-semibold text-slate-900">{{ $subscriptionSummary['plan_name'] ?: 'Plano ativo' }}</h4>
+                            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div class="rounded-lg border border-white/80 bg-white/80 p-3">
+                                    <p class="text-xs uppercase tracking-wide text-slate-500">Status</p>
+                                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ strtoupper($subscriptionSummary['status']) }}</p>
+                                </div>
+                                <div class="rounded-lg border border-white/80 bg-white/80 p-3">
+                                    <p class="text-xs uppercase tracking-wide text-slate-500">Fim do trial</p>
+                                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ $subscriptionSummary['trial_ends_at'] ?: '-' }}</p>
+                                </div>
+                                <div class="rounded-lg border border-white/80 bg-white/80 p-3">
+                                    <p class="text-xs uppercase tracking-wide text-slate-500">Próxima expiração</p>
+                                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ $subscriptionSummary['access_expires_at'] ?: '-' }}</p>
+                                </div>
+                            </div>
+                        </article>
+                    @endif
+
+                    @if ($openChargeSummary)
+                        <article class="rounded-2xl border border-amber-100 bg-amber-50/80 p-6 shadow-sm">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Cobrança em aberto</p>
+                                    <h4 class="mt-2 text-xl font-semibold text-slate-900">R$ {{ number_format($openChargeSummary['amount'], 2, ',', '.') }}</h4>
+                                    <p class="mt-1 text-sm text-slate-600">Vencimento: {{ $openChargeSummary['due_date'] ?: '-' }} • {{ $openChargeSummary['status_label'] }}</p>
+                                </div>
+                                <a href="{{ $openChargeSummary['financeiro_url'] }}" class="inline-flex items-center justify-center rounded-md border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">
+                                    Abrir cobrança
+                                </a>
+                            </div>
+
+                            @if ($openChargeSummary['pix_copy_paste'])
+                                <div class="mt-4 rounded-lg border border-amber-200 bg-white/80 p-3">
+                                    <p class="text-xs uppercase tracking-wide text-slate-500">PIX copia e cola</p>
+                                    <p class="mt-1 break-all text-sm font-medium text-slate-900">{{ $openChargeSummary['pix_copy_paste'] }}</p>
+                                </div>
+                            @endif
+                        </article>
+                    @endif
+                </section>
+            @endif
+
             <section class="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50 via-white to-emerald-50 shadow-sm">
                 <div class="border-b border-sky-100/70 px-6 py-5 sm:px-8">
                     <p class="text-xs uppercase tracking-[0.18em] text-sky-700">Painel Administrativo</p>

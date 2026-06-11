@@ -6,6 +6,7 @@ use App\Models\Device;
 use App\Models\Empresa;
 use App\Models\EmpresaFinanceiroCobranca;
 use App\Models\EmpresaFinanceiroConfig;
+use App\Models\EmpresaSubscription;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -231,5 +232,93 @@ class TvFinanceiroBlockTest extends TestCase
             ->assertJsonPath('financeiro.charge.show_qr_code', true)
             ->assertJsonPath('financeiro.charge.invoice_url', 'https://asaas.test/invoice/pay_tv_qr')
             ->assertJsonPath('financeiro.charge.pix_copy_paste', '000201010212999');
+    }
+
+    public function test_tv_blocks_when_empresa_subscription_is_expired_even_without_financeiro_block(): void
+    {
+        $empresa = Empresa::query()->create([
+            'codigo' => 'EMP9004',
+            'nome' => 'Cliente TV Assinatura Expirada',
+            'fantasia' => 'Cliente TV Assinatura Expirada',
+            'razaosocial' => 'Cliente TV Assinatura Expirada LTDA',
+            'cnpj_cpf' => '12345678000193',
+            'urlimagem' => 'logo.png',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+        ]);
+
+        $device = Device::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'TV Assinatura',
+            'local' => 'Recepcao',
+            'token' => 'tv-token-assinatura-expirada',
+            'device_uuid' => 'tv-uuid-assinatura-expirada',
+            'ativo' => true,
+        ]);
+
+        EmpresaSubscription::query()->create([
+            'empresa_id' => $empresa->id,
+            'status' => EmpresaSubscription::STATUS_ACTIVE,
+            'starts_at' => now()->subMonths(2)->toDateString(),
+            'access_expires_at' => now()->subDay()->toDateString(),
+            'plan_name' => 'Plano Semestral',
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$device->token,
+            'Accept' => 'application/json',
+        ])->getJson('/api/tv/produtos')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('financeiro.blocked', true)
+            ->assertJsonPath('financeiro.reason', 'subscription_expired')
+            ->assertJsonPath('financeiro.charge', null);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$device->token,
+            'Accept' => 'application/json',
+        ])->getJson('/api/tv/bootstrap')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('financeiro.blocked', true)
+            ->assertJsonPath('financeiro.reason', 'subscription_expired');
+    }
+
+    public function test_tv_keeps_access_during_subscription_grace_period(): void
+    {
+        $empresa = Empresa::query()->create([
+            'codigo' => 'EMP9005',
+            'nome' => 'Cliente TV Carencia',
+            'fantasia' => 'Cliente TV Carencia',
+            'razaosocial' => 'Cliente TV Carencia LTDA',
+            'cnpj_cpf' => '12345678000194',
+            'urlimagem' => 'logo.png',
+            'nivel_acesso' => Empresa::NIVEL_CLIENTE_FINAL,
+        ]);
+
+        $device = Device::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => 'TV Carencia',
+            'local' => 'Loja',
+            'token' => 'tv-token-carencia',
+            'device_uuid' => 'tv-uuid-carencia',
+            'ativo' => true,
+        ]);
+
+        EmpresaSubscription::query()->create([
+            'empresa_id' => $empresa->id,
+            'status' => EmpresaSubscription::STATUS_ACTIVE,
+            'starts_at' => now()->subMonths(2)->toDateString(),
+            'access_expires_at' => now()->subDay()->toDateString(),
+            'grace_ends_at' => now()->addDays(3)->toDateString(),
+            'plan_name' => 'Plano Trial Migrado',
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$device->token,
+            'Accept' => 'application/json',
+        ])->getJson('/api/tv/bootstrap')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('financeiro.blocked', false);
     }
 }

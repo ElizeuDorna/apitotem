@@ -15,6 +15,8 @@ use RuntimeException;
 
 class AsaasService
 {
+    public function __construct(private readonly EmpresaSubscriptionLifecycleService $subscriptionLifecycleService) {}
+
     public function isConfigured(?Empresa $empresa = null): bool
     {
         return $this->resolveCredentials($empresa)['api_key'] !== '';
@@ -199,6 +201,7 @@ class AsaasService
 
     private function fillChargeFromGateway(EmpresaFinanceiroCobranca $cobranca, array $payment, ?array $qrCode = null): EmpresaFinanceiroCobranca
     {
+        $wasPaid = $cobranca->isPaid();
         $status = strtoupper((string) Arr::get($payment, 'status', $cobranca->status ?: 'PENDING'));
         $paidAt = $this->resolvePaidAt($status, $payment);
 
@@ -223,6 +226,10 @@ class AsaasService
         }
 
         $cobranca->save();
+
+        if (! $wasPaid && $cobranca->isPaid()) {
+            $this->subscriptionLifecycleService->syncFromPaidCharge($cobranca);
+        }
 
         return $cobranca->fresh();
     }

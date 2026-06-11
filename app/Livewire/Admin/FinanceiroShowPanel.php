@@ -53,6 +53,8 @@ class FinanceiroShowPanel extends Component
 
     public $intervaloCobrancaDias;
 
+    public int $mesesCobranca = 1;
+
     public bool $cobrancaAutomaticaAtiva = false;
 
     public bool $asaasIntegrationAtiva = false;
@@ -104,10 +106,12 @@ class FinanceiroShowPanel extends Component
         $this->dataAviso = optional($config->data_aviso)->format('Y-m-d');
         $this->dataBloqueio = optional($config->data_bloqueio)->format('Y-m-d');
         $this->intervaloCobrancaDias = $config->billingIntervalDays();
+        $this->mesesCobranca = $config->billingCycleMonths();
         $this->cobrancaAutomaticaAtiva = (bool) $config->cobranca_automatica_ativa;
         $this->asaasIntegrationAtiva = (bool) $config->asaas_integration_ativa;
         $this->bloquearTvInadimplencia = (bool) $config->bloquear_tv_inadimplencia;
         $this->exibirQrCodeTvBloqueada = (bool) $config->exibir_qr_code_tv_bloqueada;
+        $this->refreshTotals();
     }
 
     protected function rules(): array
@@ -152,14 +156,41 @@ class FinanceiroShowPanel extends Component
         $this->config->save();
         $this->config->refresh();
 
-        $valorUnitario = (float) $this->config->valor_receber_unitario;
-        $this->totalPagar = $this->quantidadeDispositivos * $valorUnitario;
-        $this->totalReceber = $this->quantidadeDispositivos * $valorUnitario;
+        $this->mesesCobranca = $this->config->billingCycleMonths();
+        $this->refreshTotals();
         $this->billingIntervalLabel = $this->config->billingIntervalLabel();
 
         $this->successMessage = 'Valores financeiros atualizados com sucesso.';
         $this->successToastKey++;
         session()->flash('success', $this->successMessage);
+    }
+
+    public function updatedValorReceberUnitario(): void
+    {
+        $this->refreshTotals();
+    }
+
+    public function updatedIntervaloCobrancaDias($value): void
+    {
+        $intervaloDias = (int) $value;
+
+        if (! array_key_exists($intervaloDias, EmpresaFinanceiroConfig::billingIntervalOptions())) {
+            return;
+        }
+
+        $this->config->intervalo_cobranca_dias = $intervaloDias;
+        $this->mesesCobranca = $this->config->billingCycleMonths();
+        $this->billingIntervalLabel = $this->config->billingIntervalLabel();
+        $this->refreshTotals();
+    }
+
+    private function refreshTotals(): void
+    {
+        $valorUnitario = round((float) $this->valorReceberUnitario, 2);
+        $valorCicloPorDispositivo = round($valorUnitario * $this->mesesCobranca, 2);
+
+        $this->totalPagar = round($this->quantidadeDispositivos * $valorCicloPorDispositivo, 2);
+        $this->totalReceber = round($this->quantidadeDispositivos * $valorCicloPorDispositivo, 2);
     }
 
     private function resolveProfileFlags(): array

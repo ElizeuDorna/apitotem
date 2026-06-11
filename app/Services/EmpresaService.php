@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class EmpresaService
 {
+    public function __construct(private readonly EmpresaOnboardingService $onboardingService) {}
+
     public function canSearch(User $user): bool
     {
         $empresaVinculada = EmpresaContext::resolveEmpresaForUser($user);
@@ -132,10 +134,12 @@ class EmpresaService
 
         if ($user->isDefaultAdmin()) {
             $validated['nivel_acesso'] = (int) ($validated['nivel_acesso'] ?? Empresa::NIVEL_CLIENTE_FINAL);
+            $validated['cadastro_origem'] = Empresa::CADASTRO_ORIGEM_ADMIN;
         } else {
             abort_unless($empresaVinculada && $empresaVinculada->isRevenda(), 403);
             $validated['nivel_acesso'] = Empresa::NIVEL_CLIENTE_FINAL;
             $validated['revenda_id'] = $empresaVinculada->id;
+            $validated['cadastro_origem'] = Empresa::CADASTRO_ORIGEM_REVENDA;
         }
 
         if ((int) $validated['nivel_acesso'] === Empresa::NIVEL_REVENDA) {
@@ -161,7 +165,12 @@ class EmpresaService
 
         while (true) {
             try {
-                return DB::transaction(fn () => Empresa::query()->create($validated));
+                return DB::transaction(function () use ($validated) {
+                    $empresa = Empresa::query()->create($validated);
+                    $this->onboardingService->provisionManagedClient($empresa);
+
+                    return $empresa;
+                });
             } catch (QueryException $e) {
                 $tentativas++;
                 if ($tentativas >= 3 || (int) $e->getCode() !== 23000) {

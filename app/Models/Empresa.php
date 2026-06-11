@@ -17,6 +17,14 @@ class Empresa extends Model
     public const NIVEL_CLIENTE_FINAL = 1;
 
     public const NIVEL_REVENDA = 2;
+
+    public const CADASTRO_ORIGEM_LEGACY = 'legacy';
+
+    public const CADASTRO_ORIGEM_ADMIN = 'admin';
+
+    public const CADASTRO_ORIGEM_REVENDA = 'revenda';
+
+    public const CADASTRO_ORIGEM_SELF_SERVICE = 'self_service';
     
     protected $table = 'empresa'; 
 
@@ -31,6 +39,7 @@ class Empresa extends Model
         'api_token',
         'nivel_acesso',
         'revenda_id',
+        'cadastro_origem',
         'endereco',
         'bairro',
         'numero',
@@ -52,6 +61,16 @@ class Empresa extends Model
         'revenda_id' => 'integer',
         'public_page_enabled' => 'boolean',
     ];
+
+    public static function cadastroOrigemOptions(): array
+    {
+        return [
+            self::CADASTRO_ORIGEM_LEGACY,
+            self::CADASTRO_ORIGEM_ADMIN,
+            self::CADASTRO_ORIGEM_REVENDA,
+            self::CADASTRO_ORIGEM_SELF_SERVICE,
+        ];
+    }
 
     protected static function booted(): void
     {
@@ -137,6 +156,11 @@ class Empresa extends Model
         return (int) $this->nivel_acesso === self::NIVEL_CLIENTE_FINAL;
     }
 
+    public function isSelfService(): bool
+    {
+        return (string) $this->cadastro_origem === self::CADASTRO_ORIGEM_SELF_SERVICE;
+    }
+
     public function publicPage(): HasOne
     {
         return $this->hasOne(EmpresaPublicPage::class);
@@ -150,6 +174,11 @@ class Empresa extends Model
     public function financeiroCobrancas(): HasMany
     {
         return $this->hasMany(EmpresaFinanceiroCobranca::class);
+    }
+
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(EmpresaSubscription::class);
     }
 
     public function publicSlides(): HasMany

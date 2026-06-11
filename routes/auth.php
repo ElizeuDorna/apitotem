@@ -12,6 +12,12 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    Route::get('cadastro', [RegisteredUserController::class, 'createSelfService'])
+        ->name('self-service.register');
+
+    Route::post('cadastro', [RegisteredUserController::class, 'storeSelfService'])
+        ->name('self-service.register.store');
+
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
@@ -31,6 +37,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('assinatura/pendente', [RegisteredUserController::class, 'showSelfServicePendingSubscription'])
+        ->name('self-service.subscription.pending');
+
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->middleware('revenda.empresa.selecionada')
         ->middleware('menu.access:cadastro_publico')

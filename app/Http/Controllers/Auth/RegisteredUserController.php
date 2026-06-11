@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
+use App\Models\EmpresaFinanceiroCobranca;
 use App\Models\User;
+use App\Services\EmpresaOnboardingService;
 use App\Support\EmpresaContext;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +20,59 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
+    public function createSelfService(EmpresaOnboardingService $onboardingService): View
+    {
+        return view('auth.self-service-register', [
+            'plans' => $onboardingService->availableSelfServicePlans(),
+        ]);
+    }
+
+    public function storeSelfService(Request $request, EmpresaOnboardingService $onboardingService): RedirectResponse
+    {
+        abort_if(empty($onboardingService->availableSelfServicePlans()), 503, 'Nenhum plano de self-service configurado.');
+
+        $result = $onboardingService->registerSelfServiceCompany($request->all());
+        $user = $result['user'];
+        $empresa = $result['empresa'];
+        $initialCharge = $result['initial_charge'] ?? null;
+
+        event(new Registered($user));
+        Auth::login($user);
+
+        if ($initialCharge) {
+            return redirect()
+                ->route('self-service.subscription.pending')
+                ->with('success', 'Cadastro concluído. A primeira cobrança PIX já foi gerada para esta empresa.');
+        }
+
+        return redirect(route('dashboard', absolute: false));
+    }
+
+    public function showSelfServicePendingSubscription(): View
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+
+        $empresa = $user->empresa;
+        abort_unless($empresa && $empresa->isClienteFinal(), 403);
+
+        $subscription = $empresa->subscription()->with('plan')->first();
+        $charge = EmpresaFinanceiroCobranca::query()
+            ->where('empresa_id', $empresa->id)
+            ->whereIn('status', EmpresaFinanceiroCobranca::awaitingPaymentStatuses())
+            ->latest('vencimento')
+            ->latest('id')
+            ->first();
+
+        abort_unless($subscription && $charge, 404);
+
+        return view('auth.self-service-subscription-pending', [
+            'empresa' => $empresa,
+            'subscription' => $subscription,
+            'charge' => $charge,
+        ]);
+    }
+
     /**
      * Display the registration view.
      */

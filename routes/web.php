@@ -5,7 +5,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RevendaSiteController;
 use App\Models\Device;
 use App\Models\Empresa;
+use App\Models\EmpresaFinanceiroCobranca;
 use App\Models\Produto;
+use App\Models\EmpresaSubscription;
 use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -101,6 +103,46 @@ Route::get('/dashboard', function () {
         ->whereIn('empresa_id', $empresaIds)
         ->count();
 
+    $empresaComercial = null;
+    $subscriptionSummary = null;
+    $openChargeSummary = null;
+
+    if ($user && $user->empresa_id) {
+        $empresaComercial = Empresa::query()
+            ->with(['subscription.plan', 'financeiroConfig'])
+            ->find($user->empresa_id);
+
+        if ($empresaComercial && $empresaComercial->isClienteFinal()) {
+            $subscription = $empresaComercial->subscription;
+            $openCharge = EmpresaFinanceiroCobranca::query()
+                ->where('empresa_id', $empresaComercial->id)
+                ->whereIn('status', EmpresaFinanceiroCobranca::awaitingPaymentStatuses())
+                ->latest('vencimento')
+                ->latest('id')
+                ->first();
+
+            if ($subscription) {
+                $subscriptionSummary = [
+                    'status' => $subscription->normalizedStatus(),
+                    'plan_name' => $subscription->plan_name,
+                    'trial_ends_at' => optional($subscription->trial_ends_at)?->format('d/m/Y'),
+                    'access_expires_at' => optional($subscription->access_expires_at)?->format('d/m/Y'),
+                ];
+            }
+
+            if ($openCharge) {
+                $openChargeSummary = [
+                    'status_label' => $openCharge->statusLabel(),
+                    'amount' => (float) $openCharge->valor_total,
+                    'due_date' => optional($openCharge->vencimento)?->format('d/m/Y'),
+                    'invoice_url' => $openCharge->invoice_url,
+                    'pix_copy_paste' => $openCharge->pix_copy_paste,
+                    'financeiro_url' => route('admin.financeiro.show', $empresaComercial),
+                ];
+            }
+        }
+    }
+
     return view('dashboard', [
         'isAdminGeral' => $isAdminGeral,
         'revendaPrecisaSelecionar' => $revendaPrecisaSelecionar,
@@ -117,6 +159,8 @@ Route::get('/dashboard', function () {
         'tvsAtivas' => $tvsAtivas,
         'tvsOnline' => $tvsOnline,
         'produtosTotal' => $produtosTotal,
+        'subscriptionSummary' => $subscriptionSummary,
+        'openChargeSummary' => $openChargeSummary,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -136,6 +180,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/admin/financeiro/planos', [\App\Http\Controllers\Admin\FinanceiroController::class, 'plans'])
+        ->name('admin.financeiro.plans.index')
+        ->middleware('menu.access:financeiro');
 
     Route::resource('admin/home-carousel', \App\Http\Controllers\Admin\HomeCarouselController::class, ['as' => 'admin'])
         ->parameters(['home-carousel' => 'homeCarousel'])

@@ -58,6 +58,7 @@
                 @endif
                 : <span class="font-semibold">R$ {{ number_format($totalReceber, 2, ',', '.') }}</span>
             </p>
+            <p class="mt-2 text-xs text-slate-800/75">{{ $quantidadeDispositivos }} dispositivo(s) x {{ $mesesCobranca }} mes(es) x R$ {{ number_format((float) $valorReceberUnitario, 2, ',', '.') }}</p>
         </div>
     </div>
 
@@ -81,6 +82,7 @@
                 <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
                     <p class="text-xs font-semibold uppercase tracking-wide text-violet-500">Intervalo de Cobrança</p>
                     <p class="text-sm font-semibold text-slate-900">{{ $billingIntervalLabel }}</p>
+                    <p class="mt-1 text-xs text-slate-500">Equivale a {{ $mesesCobranca }} mes(es) por ciclo.</p>
                 </div>
                 <div class="rounded-2xl border border-white/70 bg-white/70 p-4 backdrop-blur-sm">
                     <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">Cobrança Automática</p>
@@ -135,7 +137,23 @@
                 <p class="font-semibold text-slate-900">Como o ciclo funciona</p>
                 <p class="mt-2">A <span class="font-medium">data-base do ciclo</span> serve de referência para calcular a próxima cobrança. O <span class="font-medium">vencimento da cobrança</span> é a data real da fatura que será gerada.</p>
                 <p class="mt-2">Exemplos: mensal soma 30 dias, trimestral soma 90 dias, semestral soma 180 dias e anual soma 365 dias a partir da última cobrança gerada ou da data-base configurada.</p>
+                <p class="mt-2">O total do ciclo segue o plano: <span class="font-medium">dispositivos ativos x valor unitário x meses do intervalo</span>.</p>
                 <p class="mt-2">Se a cobrança automática estiver ativada, o sistema verifica diariamente se chegou ao próximo ciclo e gera a cobrança PIX sem ação manual.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Meses do Ciclo</p>
+                    <p class="mt-1 text-2xl font-bold text-emerald-950">{{ $mesesCobranca }}</p>
+                </div>
+                <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Total por Dispositivo</p>
+                    <p class="mt-1 text-2xl font-bold text-sky-950">R$ {{ number_format(((float) $valorReceberUnitario) * $mesesCobranca, 2, ',', '.') }}</p>
+                </div>
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Total do Ciclo</p>
+                    <p class="mt-1 text-2xl font-bold text-amber-950">R$ {{ number_format($totalReceber, 2, ',', '.') }}</p>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

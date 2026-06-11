@@ -19,6 +19,15 @@ use RuntimeException;
 
 class FinanceiroController extends Controller
 {
+    public function plans(): View
+    {
+        $user = Auth::user();
+
+        abort_unless($user?->isDefaultAdmin(), 403);
+
+        return view('admin.financeiro.plans');
+    }
+
     public function index(Request $request): View
     {
         $user = Auth::user();
@@ -106,7 +115,7 @@ class FinanceiroController extends Controller
         $quantidadeDispositivos = $isEmpresaRevenda
             ? $this->countDevicesByRevenda((int) $empresa->id)
             : $this->countActiveDevicesForEmpresa((int) $empresa->id);
-        $valorUnitario = (float) ($config->valor_receber_unitario ?? 0);
+        $valorCicloPorDispositivo = $config->billingCycleUnitTotal();
         $cobrancas = EmpresaFinanceiroCobranca::query()
             ->where('empresa_id', $empresa->id)
             ->latest('vencimento')
@@ -130,8 +139,8 @@ class FinanceiroController extends Controller
             'empresa' => $empresa,
             'config' => $config,
             'quantidadeDispositivos' => $quantidadeDispositivos,
-            'totalPagar' => $quantidadeDispositivos * $valorUnitario,
-            'totalReceber' => $quantidadeDispositivos * $valorUnitario,
+            'totalPagar' => round($quantidadeDispositivos * $valorCicloPorDispositivo, 2),
+            'totalReceber' => round($quantidadeDispositivos * $valorCicloPorDispositivo, 2),
             'isAdmin' => $isAdmin,
             'isRevenda' => $isRevenda,
             'isClienteFinal' => $isClienteFinal,
