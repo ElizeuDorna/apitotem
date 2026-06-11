@@ -20,6 +20,12 @@
                     $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
                         ->where('empresa_id', (int) $layoutEmpresaId)
                         ->value('panelBrandIconUrl') ?? '');
+
+                    if ($panelBrandIconUrl === '') {
+                        $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
+                            ->whereNull('empresa_id')
+                            ->value('panelBrandIconUrl') ?? '');
+                    }
                 } elseif ($layoutUseGlobalConfig) {
                     $panelBrandIconUrl = (string) (\App\Models\Configuracao::query()
                         ->whereNull('empresa_id')

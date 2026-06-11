@@ -9,10 +9,7 @@
         <div id="upload-download" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h3 class="text-base font-semibold text-slate-900">{{ $editingDownloadId ? 'Editar upload sem recarregar a página' : 'Novo upload sem recarregar a página' }}</h3>
-                    <p class="mt-1 text-sm text-slate-600">
-                        Piloto em Livewire para validar o fluxo de upload no admin sem refresh completo.
-                    </p>
+                    <h3 class="text-base font-semibold text-slate-900">{{ $editingDownloadId ? 'Editar upload' : 'Novo upload' }}</h3>
                 </div>
 
                 <div wire:loading.flex wire:target="save,file" class="items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
