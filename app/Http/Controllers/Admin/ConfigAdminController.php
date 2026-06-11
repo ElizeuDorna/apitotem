@@ -21,6 +21,9 @@ class ConfigAdminController extends Controller
 {
     private const APK_DISK = 'public';
     private const APK_PATH = 'apk/install.apk';
+    private const SECTION_IDENTIDADE = 'identidade';
+    private const SECTION_CADASTRO_LOGIN = 'cadastro-login';
+    private const SECTION_ASAAS = 'asaas';
     private const SIDEBAR_FONT_FAMILY_OPTIONS = [
         'figtree',
         'inter',
@@ -95,7 +98,22 @@ class ConfigAdminController extends Controller
             abort(403);
         }
 
+        $section = $request->input('configSection');
+
+        if (! in_array($section, [
+            self::SECTION_IDENTIDADE,
+            self::SECTION_CADASTRO_LOGIN,
+            self::SECTION_ASAAS,
+        ], true)) {
+            abort(422, 'Secao de configuracao invalida.');
+        }
+
         $validated = $request->validate([
+            'configSection' => ['required', 'string', Rule::in([
+                self::SECTION_IDENTIDADE,
+                self::SECTION_CADASTRO_LOGIN,
+                self::SECTION_ASAAS,
+            ])],
             'panelBrandIconFile' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg,ico|max:2048',
             'removePanelBrandIcon' => 'nullable|boolean',
             'panelSidebarFontFamily' => 'nullable|string|in:'.implode(',', self::SIDEBAR_FONT_FAMILY_OPTIONS),
@@ -120,44 +138,42 @@ class ConfigAdminController extends Controller
         $shouldRemoveIcon = (bool) ($validated['removePanelBrandIcon'] ?? false);
         $warningMessages = [];
 
-        if (($request->filled('metaAppId')
-            || $request->filled('metaRedirectUri')
-            || $request->has('showSelfServiceRegisterOnLogin')
-            || $request->has('selfServiceDefaultMenuPermissions'))
-            && ! $currentUser?->isDefaultAdmin()) {
+        if ($section === self::SECTION_CADASTRO_LOGIN && ! $currentUser?->isDefaultAdmin()) {
             abort(403);
         }
 
-        if ($panelSidebarFontFeatureReady) {
+        if ($section === self::SECTION_IDENTIDADE && $panelSidebarFontFeatureReady) {
             $sidebarFontFamily = trim((string) ($validated['panelSidebarFontFamily'] ?? ''));
             $payload['panelSidebarFontFamily'] = $sidebarFontFamily !== '' ? $sidebarFontFamily : null;
 
             $sidebarFontSize = $validated['panelSidebarFontSize'] ?? null;
             $payload['panelSidebarFontSize'] = $sidebarFontSize !== null ? (float) $sidebarFontSize : null;
-        } elseif ($request->filled('panelSidebarFontFamily') || $request->filled('panelSidebarFontSize')) {
+        } elseif ($section === self::SECTION_IDENTIDADE && ($request->filled('panelSidebarFontFamily') || $request->filled('panelSidebarFontSize'))) {
             $warningMessages[] = 'Configuracao de fonte da lateral indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
-        $produtoFormImagePreviewSize = $validated['produtoFormImagePreviewSize'] ?? null;
-        if ($produtoFormImagePreviewSize !== null) {
-            $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
+        if ($section === self::SECTION_IDENTIDADE) {
+            $produtoFormImagePreviewSize = $validated['produtoFormImagePreviewSize'] ?? null;
+            if ($produtoFormImagePreviewSize !== null) {
+                $payload['produtoFormImagePreviewSize'] = (int) $produtoFormImagePreviewSize;
+            }
         }
 
-        if ($selfServiceLoginVisibilityFeatureReady && $currentUser?->isDefaultAdmin()) {
+        if ($section === self::SECTION_CADASTRO_LOGIN && $selfServiceLoginVisibilityFeatureReady && $currentUser?->isDefaultAdmin()) {
             $globalConfig->showSelfServiceRegisterOnLogin = $request->boolean('showSelfServiceRegisterOnLogin');
-        } elseif ($request->has('showSelfServiceRegisterOnLogin')) {
+        } elseif ($section === self::SECTION_CADASTRO_LOGIN && $request->has('showSelfServiceRegisterOnLogin')) {
             $warningMessages[] = 'Controle do link de cadastro no login indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
-        if ($selfServiceDefaultPermissionsFeatureReady && $currentUser?->isDefaultAdmin()) {
+        if ($section === self::SECTION_CADASTRO_LOGIN && $selfServiceDefaultPermissionsFeatureReady && $currentUser?->isDefaultAdmin()) {
             $globalConfig->selfServiceDefaultMenuPermissions = User::sanitizeMenuPermissions(
                 $validated['selfServiceDefaultMenuPermissions'] ?? []
             );
-        } elseif ($request->has('selfServiceDefaultMenuPermissions')) {
+        } elseif ($section === self::SECTION_CADASTRO_LOGIN && $request->has('selfServiceDefaultMenuPermissions')) {
             $warningMessages[] = 'Configuracao das permissoes padrao do auto cadastro indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
-        if ($currentUser?->isDefaultAdmin()) {
+        if ($section === self::SECTION_CADASTRO_LOGIN && $currentUser?->isDefaultAdmin()) {
             $metaAppId = trim((string) ($validated['metaAppId'] ?? ''));
             $metaRedirectUri = trim((string) ($validated['metaRedirectUri'] ?? ''));
 
@@ -167,7 +183,7 @@ class ConfigAdminController extends Controller
             ]);
         }
 
-        if ($asaasConfigFeatureReady) {
+        if ($section === self::SECTION_ASAAS && $asaasConfigFeatureReady) {
             $asaasBaseUrl = trim((string) ($validated['asaasBaseUrl'] ?? ''));
             $asaasApiKey = trim((string) ($validated['asaasApiKey'] ?? ''));
             $asaasWebhookToken = trim((string) ($validated['asaasWebhookToken'] ?? ''));
@@ -175,11 +191,11 @@ class ConfigAdminController extends Controller
             $asaasPayload['asaasBaseUrl'] = $asaasBaseUrl !== '' ? $asaasBaseUrl : null;
             $asaasPayload['asaasApiKey'] = $asaasApiKey !== '' ? $asaasApiKey : null;
             $asaasPayload['asaasWebhookToken'] = $asaasWebhookToken !== '' ? $asaasWebhookToken : null;
-        } elseif ($request->filled('asaasBaseUrl') || $request->filled('asaasApiKey') || $request->filled('asaasWebhookToken')) {
+        } elseif ($section === self::SECTION_ASAAS && ($request->filled('asaasBaseUrl') || $request->filled('asaasApiKey') || $request->filled('asaasWebhookToken'))) {
             $warningMessages[] = 'Configuracao do Asaas indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
-        if ($panelBrandIconFeatureReady) {
+        if ($section === self::SECTION_IDENTIDADE && $panelBrandIconFeatureReady) {
             if ($shouldRemoveIcon) {
                 $this->deletePanelBrandIcon($config->panelBrandIconUrl);
                 $payload['panelBrandIconUrl'] = null;
@@ -189,7 +205,7 @@ class ConfigAdminController extends Controller
                 $this->deletePanelBrandIcon($config->panelBrandIconUrl);
                 $payload['panelBrandIconUrl'] = $this->storePanelBrandIcon($request->file('panelBrandIconFile'), $empresaId);
             }
-        } elseif ($shouldRemoveIcon || $request->hasFile('panelBrandIconFile')) {
+        } elseif ($section === self::SECTION_IDENTIDADE && ($shouldRemoveIcon || $request->hasFile('panelBrandIconFile'))) {
             $warningMessages[] = 'Upload de icone indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
@@ -197,7 +213,7 @@ class ConfigAdminController extends Controller
             $config->fill($payload)->save();
         }
 
-        if ($currentUser?->isDefaultAdmin()) {
+        if ($section === self::SECTION_CADASTRO_LOGIN && $currentUser?->isDefaultAdmin()) {
             $globalConfig->save();
         }
 

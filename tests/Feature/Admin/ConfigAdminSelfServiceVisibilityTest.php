@@ -19,6 +19,7 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)->post(route('admin.configadmin.update'), [
+            'configSection' => 'cadastro-login',
             'showSelfServiceRegisterOnLogin' => '0',
         ]);
 
@@ -38,6 +39,7 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)->post(route('admin.configadmin.update'), [
+            'configSection' => 'cadastro-login',
             'showSelfServiceRegisterOnLogin' => '1',
             'selfServiceDefaultMenuPermissions' => [
                 User::MENU_PRODUTOS,
@@ -54,6 +56,72 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
             User::MENU_PRODUTOS,
             User::MENU_GRUPOS,
             User::MENU_TOKEN_API,
+        ], $config->selfServiceDefaultMenuPermissions);
+    }
+
+    public function test_saving_login_and_signup_settings_does_not_clear_asaas_credentials(): void
+    {
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        Configuracao::query()->create([
+            'empresa_id' => null,
+            'asaasBaseUrl' => 'https://api.asaas.com/v3',
+            'asaasApiKey' => 'asaas-key-123',
+            'asaasWebhookToken' => 'webhook-token-123',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.configadmin.update'), [
+            'configSection' => 'cadastro-login',
+            'showSelfServiceRegisterOnLogin' => '1',
+            'selfServiceDefaultMenuPermissions' => [
+                User::MENU_PRODUTOS,
+                User::MENU_GRUPOS,
+            ],
+        ]);
+
+        $response->assertRedirect();
+
+        $config = Configuracao::query()->whereNull('empresa_id')->firstOrFail();
+
+        $this->assertSame('https://api.asaas.com/v3', $config->asaasBaseUrl);
+        $this->assertSame('asaas-key-123', $config->asaasApiKey);
+        $this->assertSame('webhook-token-123', $config->asaasWebhookToken);
+    }
+
+    public function test_saving_asaas_settings_does_not_clear_self_service_permissions(): void
+    {
+        $admin = User::factory()->create([
+            'email' => User::DEFAULT_ADMIN_EMAIL,
+            'cpf' => User::DEFAULT_ADMIN_DOCUMENT,
+        ]);
+
+        Configuracao::query()->create([
+            'empresa_id' => null,
+            'showSelfServiceRegisterOnLogin' => true,
+            'selfServiceDefaultMenuPermissions' => [
+                User::MENU_PRODUTOS,
+                User::MENU_FINANCEIRO,
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.configadmin.update'), [
+            'configSection' => 'asaas',
+            'asaasBaseUrl' => 'https://sandbox.asaas.com/api/v3',
+            'asaasApiKey' => 'new-asaas-key',
+            'asaasWebhookToken' => 'new-webhook-token',
+        ]);
+
+        $response->assertRedirect();
+
+        $config = Configuracao::query()->whereNull('empresa_id')->firstOrFail();
+
+        $this->assertTrue((bool) $config->showSelfServiceRegisterOnLogin);
+        $this->assertSame([
+            User::MENU_PRODUTOS,
+            User::MENU_FINANCEIRO,
         ], $config->selfServiceDefaultMenuPermissions);
     }
 }

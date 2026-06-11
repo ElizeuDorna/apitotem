@@ -132,6 +132,7 @@
 
                     <form method="POST" action="{{ route('admin.configadmin.update') }}" enctype="multipart/form-data" class="space-y-4">
                         @csrf
+                        <input type="hidden" name="configSection" value="identidade">
 
                         @if (! $panelBrandIconFeatureReady)
                             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -258,6 +259,7 @@
 
                     <form method="POST" action="{{ route('admin.configadmin.update') }}" class="space-y-4">
                         @csrf
+                        <input type="hidden" name="configSection" value="cadastro-login">
 
                         <div
                             id="login-self-service-visibility"
@@ -373,6 +375,7 @@
 
                     <form method="POST" action="{{ route('admin.configadmin.update') }}" class="space-y-4 rounded-2xl border border-white/70 bg-gradient-to-br from-white to-emerald-50 p-5 shadow-sm backdrop-blur-sm">
                         @csrf
+                        <input type="hidden" name="configSection" value="asaas">
 
                         @if (! $asaasConfigFeatureReady)
                             <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
