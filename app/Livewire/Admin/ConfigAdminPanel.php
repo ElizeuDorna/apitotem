@@ -3,6 +3,8 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Configuracao;
+use App\Models\User;
+use App\Support\EmpresaContext;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -42,6 +44,8 @@ class ConfigAdminPanel extends Component
 
     public array $selfServiceWebScreenModelOptions = [];
 
+    public bool $canManageAsaasSection = false;
+
     public ?string $openSection = 'tema';
 
     public function mount(
@@ -80,12 +84,26 @@ class ConfigAdminPanel extends Component
         $this->apkDownloadUrl = $apkDownloadUrl;
         $this->selfServiceMenuOptions = $selfServiceMenuOptions;
         $this->selfServiceWebScreenModelOptions = $selfServiceWebScreenModelOptions;
-        $this->openSection = Auth::user()?->isDefaultAdmin() ? 'cadastro-login' : 'tema';
+        $user = Auth::user();
+        $linkedEmpresa = $user ? EmpresaContext::resolveEmpresaForUser($user) : null;
+
+        $this->canManageAsaasSection = (bool) (
+            $user?->isDefaultAdmin()
+            || (
+                $user?->hasMenuAccess(User::MENU_CONFIG_ADMIN_ASAAS)
+                && ! $linkedEmpresa?->isClienteFinal()
+            )
+        );
+        $this->openSection = $user?->isDefaultAdmin() ? 'cadastro-login' : 'tema';
     }
 
     public function toggleSection(string $section): void
     {
         if ($section === 'cadastro-login' && ! Auth::user()?->isDefaultAdmin()) {
+            return;
+        }
+
+        if ($section === 'asaas' && ! $this->canManageAsaasSection) {
             return;
         }
 

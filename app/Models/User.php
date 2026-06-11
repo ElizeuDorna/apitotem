@@ -28,6 +28,8 @@ class User extends Authenticatable
 
     public const MENU_CONFIG_ADMIN = 'config_admin';
 
+    public const MENU_CONFIG_ADMIN_ASAAS = 'config_admin_asaas';
+
     public const MENU_CONFIGURACAO = 'configuracao';
 
     public const MENU_CONFIG_TELA_WEB = 'config_tela_web';
@@ -122,6 +124,7 @@ class User extends Authenticatable
             self::MENU_DEPARTAMENTOS => 'Departamentos',
             self::MENU_GRUPOS => 'Grupos',
             self::MENU_CONFIG_ADMIN => 'Config Admin',
+            self::MENU_CONFIG_ADMIN_ASAAS => 'Config Admin - Integracao Asaas',
             self::MENU_CONFIGURACAO => 'Configuração',
             self::MENU_CONFIG_TELA_WEB => 'Configuração Tela Web',
             self::MENU_ABRIR_TOTEM_WEB => 'Abrir Totem Web',

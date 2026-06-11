@@ -155,6 +155,10 @@ class ConfigAdminController extends Controller
             abort(403);
         }
 
+        if ($section === self::SECTION_ASAAS && ! $this->canManageAsaasSection($currentUser)) {
+            abort(403);
+        }
+
         if ($section === self::SECTION_IDENTIDADE && $panelSidebarFontFeatureReady) {
             $sidebarFontFamily = trim((string) ($validated['panelSidebarFontFamily'] ?? ''));
             $payload['panelSidebarFontFamily'] = $sidebarFontFamily !== '' ? $sidebarFontFamily : null;
@@ -256,6 +260,22 @@ class ConfigAdminController extends Controller
         }
 
         return $redirect;
+    }
+
+    private function canManageAsaasSection(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isDefaultAdmin()) {
+            return true;
+        }
+
+        $linkedEmpresa = EmpresaContext::resolveEmpresaForUser($user);
+
+        return $user->hasMenuAccess(User::MENU_CONFIG_ADMIN_ASAAS)
+            && ! $linkedEmpresa?->isClienteFinal();
     }
 
     private function resolveEmpresaIdOrNull(): ?int

@@ -38,9 +38,11 @@
                             Login e cadastro
                         </button>
                     @endif
-                    <button type="button" wire:click="toggleSection('asaas')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'asaas' ? 'border-emerald-200 bg-emerald-100 text-emerald-950 shadow-emerald-950/10' : 'border-emerald-400/40 bg-emerald-400/20 text-white hover:bg-emerald-400/30' }}">
-                        Integracao Asaas
-                    </button>
+                    @if ($canManageAsaasSection)
+                        <button type="button" wire:click="toggleSection('asaas')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'asaas' ? 'border-emerald-200 bg-emerald-100 text-emerald-950 shadow-emerald-950/10' : 'border-emerald-400/40 bg-emerald-400/20 text-white hover:bg-emerald-400/30' }}">
+                            Integracao Asaas
+                        </button>
+                    @endif
                 </nav>
             </div>
         </div>
@@ -402,7 +404,7 @@
                 </div>
             @endif
 
-            @if ($openSection === 'asaas')
+            @if ($canManageAsaasSection && $openSection === 'asaas')
                 <div id="integracao-asaas" class="scroll-mt-24 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-100 via-teal-50 to-white p-6 shadow-sm">
                     <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
