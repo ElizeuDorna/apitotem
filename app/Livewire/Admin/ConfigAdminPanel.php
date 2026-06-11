@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Configuracao;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ConfigAdminPanel extends Component
@@ -41,7 +42,7 @@ class ConfigAdminPanel extends Component
 
     public array $selfServiceWebScreenModelOptions = [];
 
-    public ?string $openSection = 'cadastro-login';
+    public ?string $openSection = 'tema';
 
     public function mount(
         Configuracao $config,
@@ -79,10 +80,15 @@ class ConfigAdminPanel extends Component
         $this->apkDownloadUrl = $apkDownloadUrl;
         $this->selfServiceMenuOptions = $selfServiceMenuOptions;
         $this->selfServiceWebScreenModelOptions = $selfServiceWebScreenModelOptions;
+        $this->openSection = Auth::user()?->isDefaultAdmin() ? 'cadastro-login' : 'tema';
     }
 
     public function toggleSection(string $section): void
     {
+        if ($section === 'cadastro-login' && ! Auth::user()?->isDefaultAdmin()) {
+            return;
+        }
+
         $this->openSection = $this->openSection === $section ? null : $section;
     }
 

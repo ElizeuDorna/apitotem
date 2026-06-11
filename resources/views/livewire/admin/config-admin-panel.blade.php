@@ -33,9 +33,11 @@
                     <button type="button" wire:click="toggleSection('identidade')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'identidade' ? 'border-violet-200 bg-violet-100 text-violet-950 shadow-violet-950/10' : 'border-violet-400/40 bg-violet-400/20 text-white hover:bg-violet-400/30' }}">
                         Identidade visual
                     </button>
-                    <button type="button" wire:click="toggleSection('cadastro-login')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'cadastro-login' ? 'border-sky-200 bg-sky-100 text-sky-950 shadow-sky-950/10' : 'border-sky-400/40 bg-sky-400/20 text-white hover:bg-sky-400/30' }}">
-                        Login e cadastro
-                    </button>
+                    @if (auth()->user()?->isDefaultAdmin())
+                        <button type="button" wire:click="toggleSection('cadastro-login')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'cadastro-login' ? 'border-sky-200 bg-sky-100 text-sky-950 shadow-sky-950/10' : 'border-sky-400/40 bg-sky-400/20 text-white hover:bg-sky-400/30' }}">
+                            Login e cadastro
+                        </button>
+                    @endif
                     <button type="button" wire:click="toggleSection('asaas')" class="inline-flex items-center rounded-full border px-4 py-2.5 font-semibold shadow-sm transition {{ $openSection === 'asaas' ? 'border-emerald-200 bg-emerald-100 text-emerald-950 shadow-emerald-950/10' : 'border-emerald-400/40 bg-emerald-400/20 text-white hover:bg-emerald-400/30' }}">
                         Integracao Asaas
                     </button>
@@ -249,7 +251,7 @@
                 </div>
             @endif
 
-            @if ($openSection === 'cadastro-login')
+            @if (auth()->user()?->isDefaultAdmin() && $openSection === 'cadastro-login')
                 <div id="cadastro-login" class="scroll-mt-24 rounded-3xl border border-sky-200/80 bg-gradient-to-br from-sky-100 via-cyan-50 to-white p-6 shadow-sm">
                     <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
