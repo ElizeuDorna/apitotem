@@ -11,6 +11,7 @@
         @php($showSelfServiceRegisterOnLogin = old('showSelfServiceRegisterOnLogin', (bool) ($globalConfig->showSelfServiceRegisterOnLogin ?? true)))
         @php($selfServiceDefaultMenuPermissions = old('selfServiceDefaultMenuPermissions', $globalConfig->selfServiceDefaultMenuPermissions ?? \App\Models\User::defaultSelfServiceMenuPermissions()))
         @php($selfServiceDefaultWebScreenModelId = old('selfServiceDefaultWebScreenModelId', $globalConfig->selfServiceDefaultWebScreenModelId ?? ''))
+        @php($selfServiceCloneDefaultWebScreenModel = old('selfServiceCloneDefaultWebScreenModel', (bool) ($globalConfig->selfServiceCloneDefaultWebScreenModel ?? false)))
 
         <div class="mb-6 rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-900 p-5 text-white shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -371,6 +372,24 @@
                                 </select>
                                 @error('selfServiceDefaultWebScreenModelId')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                 <p class="mt-2 text-xs text-slate-500">Apenas modelos marcados como padrao global do admin aparecem nesta lista.</p>
+                            </div>
+
+                            <div class="mt-4 rounded-xl border border-sky-100 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm {{ $selfServiceCloneDefaultWebScreenModelFeatureReady ? '' : 'opacity-70' }}">
+                                <input type="hidden" name="selfServiceCloneDefaultWebScreenModel" value="0">
+                                <label class="flex items-start gap-3 {{ $selfServiceCloneDefaultWebScreenModelFeatureReady ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <input
+                                        type="checkbox"
+                                        name="selfServiceCloneDefaultWebScreenModel"
+                                        value="1"
+                                        class="mt-0.5 rounded border-slate-300 text-sky-600 shadow-sm focus:ring-sky-500"
+                                        @checked($selfServiceCloneDefaultWebScreenModel)
+                                        {{ $selfServiceCloneDefaultWebScreenModelFeatureReady ? '' : 'disabled' }}
+                                    >
+                                    <span>
+                                        <span class="block font-semibold text-slate-800">Clonar modelo para a empresa nova</span>
+                                        <span class="mt-1 block text-xs text-slate-500">Cria uma copia editavel do modelo selecionado dentro da empresa do auto cadastro. Sem isso, a TV usa a configuracao aplicada, mas a empresa nao ganha um modelo proprio salvo.</span>
+                                    </span>
+                                </label>
                             </div>
                         </div>
 

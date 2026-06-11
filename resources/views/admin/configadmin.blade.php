@@ -17,6 +17,7 @@
                 :self-service-login-visibility-feature-ready="$selfServiceLoginVisibilityFeatureReady"
                 :self-service-default-permissions-feature-ready="$selfServiceDefaultPermissionsFeatureReady"
                 :self-service-default-web-screen-model-feature-ready="$selfServiceDefaultWebScreenModelFeatureReady"
+                :self-service-clone-default-web-screen-model-feature-ready="$selfServiceCloneDefaultWebScreenModelFeatureReady"
                 :asaas-config-feature-ready="$asaasConfigFeatureReady"
                 :apk-exists="$apkExists"
                 :apk-size-bytes="$apkSizeBytes"

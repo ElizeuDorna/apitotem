@@ -364,4 +364,56 @@ class SelfServiceRegistrationTest extends TestCase
         $this->assertFalse((bool) $config->showTitle);
         $this->assertSame('Modelo Padrao TV', $config->titleText);
     }
+
+    public function test_self_service_registration_can_clone_admin_default_web_screen_model_for_new_company(): void
+    {
+        EmpresaSubscriptionPlan::query()->updateOrCreate([
+            'code' => 'trimestral',
+        ], [
+            'name' => 'Plano Trimestral',
+            'intervalo_cobranca_dias' => EmpresaFinanceiroConfig::INTERVALO_90_DIAS,
+            'valor_unitario' => 59.90,
+            'trial_days' => 7,
+            'is_active' => true,
+            'is_self_service' => true,
+            'sort_order' => 10,
+        ]);
+
+        $model = WebScreenModel::query()->create([
+            'empresa_id' => null,
+            'nome' => 'Modelo Base Auto Cadastro',
+            'is_admin_default' => true,
+            'config_payload' => [
+                'titleText' => 'TV Auto Cadastro Clone',
+            ],
+        ]);
+
+        Configuracao::query()->create([
+            'empresa_id' => null,
+            'selfServiceDefaultWebScreenModelId' => $model->id,
+            'selfServiceCloneDefaultWebScreenModel' => true,
+        ]);
+
+        $this->post(route('self-service.register.store'), [
+            'company_name' => 'Empresa Clone Modelo TV',
+            'company_social_name' => 'Empresa Clone Modelo TV LTDA',
+            'company_document' => '83.198.688/0001-93',
+            'company_email' => 'empresa-clone-modelo-tv@example.com',
+            'company_phone' => '(11) 98888-7777',
+            'owner_name' => 'Responsavel Clone Modelo TV',
+            'owner_email' => 'responsavel-clone-modelo-tv@example.com',
+            'owner_document' => '97779474100',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'plan_code' => 'trimestral',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $empresa = Empresa::query()->where('email', 'empresa-clone-modelo-tv@example.com')->firstOrFail();
+        $clonedModel = WebScreenModel::query()->where('empresa_id', $empresa->id)->firstOrFail();
+
+        $this->assertSame('Modelo Base Auto Cadastro', $clonedModel->nome);
+        $this->assertFalse((bool) $clonedModel->is_admin_default);
+        $this->assertSame((int) $model->id, (int) $clonedModel->source_model_id);
+        $this->assertSame(['titleText' => 'TV Auto Cadastro Clone'], $clonedModel->config_payload);
+    }
 }

@@ -150,6 +150,7 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
                 User::MENU_PRODUTOS,
             ],
             'selfServiceDefaultWebScreenModelId' => (string) $model->id,
+            'selfServiceCloneDefaultWebScreenModel' => '1',
         ]);
 
         $response->assertRedirect();
@@ -157,5 +158,6 @@ class ConfigAdminSelfServiceVisibilityTest extends TestCase
         $config = Configuracao::query()->whereNull('empresa_id')->firstOrFail();
 
         $this->assertSame((int) $model->id, (int) $config->selfServiceDefaultWebScreenModelId);
+        $this->assertTrue((bool) $config->selfServiceCloneDefaultWebScreenModel);
     }
 }

@@ -48,6 +48,7 @@ class ConfigAdminController extends Controller
         $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
         $selfServiceDefaultPermissionsFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions');
         $selfServiceDefaultWebScreenModelFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId');
+        $selfServiceCloneDefaultWebScreenModelFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceCloneDefaultWebScreenModel');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
@@ -72,6 +73,7 @@ class ConfigAdminController extends Controller
             'selfServiceLoginVisibilityFeatureReady',
             'selfServiceDefaultPermissionsFeatureReady',
             'selfServiceDefaultWebScreenModelFeatureReady',
+            'selfServiceCloneDefaultWebScreenModelFeatureReady',
             'asaasConfigFeatureReady',
             'asaasConfig',
             'asaasConfigEmpresaId',
@@ -96,6 +98,7 @@ class ConfigAdminController extends Controller
         $selfServiceLoginVisibilityFeatureReady = Schema::hasColumn('configuracoes', 'showSelfServiceRegisterOnLogin');
         $selfServiceDefaultPermissionsFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultMenuPermissions');
         $selfServiceDefaultWebScreenModelFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId');
+        $selfServiceCloneDefaultWebScreenModelFeatureReady = Schema::hasColumn('configuracoes', 'selfServiceCloneDefaultWebScreenModel');
         $asaasConfigFeatureReady = Schema::hasColumn('configuracoes', 'asaasBaseUrl')
             && Schema::hasColumn('configuracoes', 'asaasApiKey')
             && Schema::hasColumn('configuracoes', 'asaasWebhookToken');
@@ -131,6 +134,7 @@ class ConfigAdminController extends Controller
             'selfServiceDefaultMenuPermissions' => ['nullable', 'array'],
             'selfServiceDefaultMenuPermissions.*' => ['string', Rule::in(array_keys(User::availableMenuPermissions()))],
             'selfServiceDefaultWebScreenModelId' => ['nullable', 'integer', Rule::in($webScreenModelIds)],
+            'selfServiceCloneDefaultWebScreenModel' => ['nullable', 'boolean'],
             'metaAppId' => 'nullable|string|max:120',
             'metaRedirectUri' => 'nullable|url|max:500',
             'asaasBaseUrl' => 'nullable|url|max:255',
@@ -187,6 +191,12 @@ class ConfigAdminController extends Controller
             $globalConfig->selfServiceDefaultWebScreenModelId = $selectedModelId !== null ? (int) $selectedModelId : null;
         } elseif ($section === self::SECTION_CADASTRO_LOGIN && $request->has('selfServiceDefaultWebScreenModelId')) {
             $warningMessages[] = 'Configuracao do modelo padrao da TV para auto cadastro indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
+        }
+
+        if ($section === self::SECTION_CADASTRO_LOGIN && $selfServiceCloneDefaultWebScreenModelFeatureReady && $currentUser?->isDefaultAdmin()) {
+            $globalConfig->selfServiceCloneDefaultWebScreenModel = $request->boolean('selfServiceCloneDefaultWebScreenModel');
+        } elseif ($section === self::SECTION_CADASTRO_LOGIN && $request->has('selfServiceCloneDefaultWebScreenModel')) {
+            $warningMessages[] = 'Configuracao para clonar o modelo padrao da TV no auto cadastro indisponivel no momento. Execute as migrations pendentes no servidor e tente novamente.';
         }
 
         if ($section === self::SECTION_CADASTRO_LOGIN && $currentUser?->isDefaultAdmin()) {

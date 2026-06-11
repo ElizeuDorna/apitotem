@@ -141,6 +141,7 @@ class EmpresaOnboardingService
             ]);
 
             $this->applyDefaultSelfServiceWebScreenModel($empresa);
+            $this->cloneDefaultSelfServiceWebScreenModel($empresa);
 
             return [
                 'empresa' => $empresa->refresh(),
@@ -327,23 +328,7 @@ class EmpresaOnboardingService
 
     private function applyDefaultSelfServiceWebScreenModel(Empresa $empresa): void
     {
-        if (! Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId') || ! Schema::hasTable('web_screen_models')) {
-            return;
-        }
-
-        $globalConfig = Configuracao::query()
-            ->whereNull('empresa_id')
-            ->first();
-
-        $modelId = (int) ($globalConfig?->selfServiceDefaultWebScreenModelId ?? 0);
-        if ($modelId <= 0) {
-            return;
-        }
-
-        $model = WebScreenModel::query()
-            ->where('id', $modelId)
-            ->where('is_admin_default', true)
-            ->first();
+        $model = $this->resolveDefaultSelfServiceWebScreenModel();
 
         if (! $model || ! is_array($model->config_payload) || $model->config_payload === []) {
             return;
@@ -364,5 +349,72 @@ class EmpresaOnboardingService
         }
 
         $config->save();
+    }
+
+    private function cloneDefaultSelfServiceWebScreenModel(Empresa $empresa): void
+    {
+        if (! Schema::hasColumn('configuracoes', 'selfServiceCloneDefaultWebScreenModel')) {
+            return;
+        }
+
+        $globalConfig = Configuracao::query()
+            ->whereNull('empresa_id')
+            ->first();
+
+        if (! (bool) ($globalConfig?->selfServiceCloneDefaultWebScreenModel ?? false)) {
+            return;
+        }
+
+        $model = $this->resolveDefaultSelfServiceWebScreenModel();
+
+        if (! $model) {
+            return;
+        }
+
+        WebScreenModel::query()->create([
+            'empresa_id' => $empresa->id,
+            'nome' => $this->generateClonedSelfServiceWebScreenModelName($empresa->id, (string) $model->nome),
+            'is_admin_default' => false,
+            'source_model_id' => $model->id,
+            'config_payload' => is_array($model->config_payload) ? $model->config_payload : [],
+        ]);
+    }
+
+    private function resolveDefaultSelfServiceWebScreenModel(): ?WebScreenModel
+    {
+        if (! Schema::hasColumn('configuracoes', 'selfServiceDefaultWebScreenModelId') || ! Schema::hasTable('web_screen_models')) {
+            return null;
+        }
+
+        $globalConfig = Configuracao::query()
+            ->whereNull('empresa_id')
+            ->first();
+
+        $modelId = (int) ($globalConfig?->selfServiceDefaultWebScreenModelId ?? 0);
+        if ($modelId <= 0) {
+            return null;
+        }
+
+        return WebScreenModel::query()
+            ->where('id', $modelId)
+            ->where('is_admin_default', true)
+            ->first();
+    }
+
+    private function generateClonedSelfServiceWebScreenModelName(int $empresaId, string $baseName): string
+    {
+        $normalizedBaseName = trim($baseName) !== '' ? trim($baseName) : 'Modelo padrao';
+        $candidate = $normalizedBaseName;
+        $suffix = 2;
+
+        while (WebScreenModel::query()
+            ->where('empresa_id', $empresaId)
+            ->where('nome', $candidate)
+            ->exists()) {
+            $candidate = $normalizedBaseName.' '.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 }

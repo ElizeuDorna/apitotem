@@ -25,6 +25,8 @@ class ConfigAdminPanel extends Component
 
     public bool $selfServiceDefaultWebScreenModelFeatureReady = false;
 
+    public bool $selfServiceCloneDefaultWebScreenModelFeatureReady = false;
+
     public bool $asaasConfigFeatureReady = false;
 
     public bool $apkExists = false;
@@ -51,6 +53,7 @@ class ConfigAdminPanel extends Component
         bool $selfServiceLoginVisibilityFeatureReady,
         bool $selfServiceDefaultPermissionsFeatureReady,
         bool $selfServiceDefaultWebScreenModelFeatureReady,
+        bool $selfServiceCloneDefaultWebScreenModelFeatureReady,
         bool $asaasConfigFeatureReady,
         bool $apkExists,
         ?int $apkSizeBytes,
@@ -68,6 +71,7 @@ class ConfigAdminPanel extends Component
         $this->selfServiceLoginVisibilityFeatureReady = $selfServiceLoginVisibilityFeatureReady;
         $this->selfServiceDefaultPermissionsFeatureReady = $selfServiceDefaultPermissionsFeatureReady;
         $this->selfServiceDefaultWebScreenModelFeatureReady = $selfServiceDefaultWebScreenModelFeatureReady;
+        $this->selfServiceCloneDefaultWebScreenModelFeatureReady = $selfServiceCloneDefaultWebScreenModelFeatureReady;
         $this->asaasConfigFeatureReady = $asaasConfigFeatureReady;
         $this->apkExists = $apkExists;
         $this->apkSizeBytes = $apkSizeBytes;
