@@ -52,7 +52,7 @@ class FinanceiroTvAccessService
         return [
             'blocked' => true,
             'reason' => 'financeiro_blocked',
-            'message' => 'TV bloqueada por inadimplencia. A liberacao ocorre automaticamente apos a confirmacao do pagamento.',
+            'message' => 'TV bloqueada por Falta de pagamento. A liberacao ocorre automaticamente apos a confirmacao do pagamento.',
             'charge' => [
                 'id' => $cobranca->id,
                 'descricao' => $cobranca->descricao,
